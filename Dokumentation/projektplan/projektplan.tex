@@ -1,0 +1,65 @@
+	\documentclass[titlepage, a4paper]{article}
+\input{../mall/layout.tex}	% Importera generella layout-strukturer
+
+% Information nödvändig för generella layout-strukturer
+\newcommand{\LIPSredaktor}{Johan Isaksson}
+\newcommand{\LIPSversion}{0.1}
+\newcommand{\LIPSdokument}{Projektplan}
+	\newcommand{\LIPSdokumenttyp}{Projektplan}
+\newcommand{\LIPSgranskatdatum}{-}
+\newcommand{\LIPSgranskare}{Johan Isaksson}
+\newcommand{\LIPSgodkannare}{Johan Isaksson}
+\newcommand{\LIPSgodkantdatum}{-}
+\newcommand{\LIPSkursnamn}{-}
+\newcommand{\LIPSprojektnamn}{Quadcopter}
+\newcommand{\LIPSprojektgrupp}{-}
+\newcommand{\LIPSartaltermin}{VT, 2015}
+\newcommand{\LIPSgrupphemsida}{-}
+\newcommand{\LIPSkund}{-}
+\newcommand{\LIPSkundkontakt}{-}
+\newcommand{\LIPSkursansvarig}{-}
+\newcommand{\LIPShandledare}{-}
+
+% Dokument-specifika paket
+\usepackage{tabularx}
+\usepackage{pdfpages}
+\usepackage{tikz}
+\usepackage{float}
+\usetikzlibrary{shapes, arrows}
+
+\pagenumbering{roman}
+
+
+\DeclareGraphicsRule{.0.pdf}{pdf}{*}{}
+
+\begin{document}
+
+\LIPSTitelsida
+
+
+
+
+\tableofcontents	%Innehållsförteckning
+%\listoffigures
+%\listoftables
+
+
+\newpage
+\begin{LIPSdokumenthistorik}
+\LIPSversionsinfo{0.1}{2015-02-16}{Första utkast}{Johan Isaksson}{}
+\end{LIPSdokumenthistorik}
+
+
+\pagenumbering{arabic}	%Påbörja sidnumrering
+
+% Inledning, översikt osv
+
+\newpage
+
+\input{tex/projektplan-milstolpar}
+
+\input{tex/projektplan-aktiviteter}
+
+
+
+\end{document}
