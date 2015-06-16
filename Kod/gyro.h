@@ -1,13 +1,17 @@
-#include <I2Cdev.h>
-#include <MPU6050.h>
+#ifndef GYRO_H
+#define GYRO_H
+
+
+#include "I2Cdev.h"
+#include "MPU6050_6Axis_MotionApps20.h"
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-    #include <Wire.h>
+    #include "Wire.h"
 #endif
 
 
 struct gyro{
 	// MPU control/status vars
-	bool dmpReady = false;  // set true if DMP init was successful
+	bool dmpReady;  // set true if DMP init was successful
 	uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
 	uint8_t devStatus;      // return status after each device operation (0 = success, !0 = error)
 	uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
@@ -26,5 +30,13 @@ struct gyro{
 typedef struct gyro gyro;
 
 
-volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
+extern volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
+void dmpDataReady();
 
+void init_gyro(gyro* g);
+
+bool read_gyro(gyro* g);
+
+
+
+#endif

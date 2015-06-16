@@ -1,4 +1,6 @@
 
+#include "gyro.h"
+
 
 //INTERRUPT DETECTION ROUTINE
 void dmpDataReady() {
@@ -18,6 +20,8 @@ void init_gyro(gyro* g){
  	// initialize device
   g->mpu.initialize();
 
+  g->dmpReady = false;
+
 
   // load and configure the DMP
   g->devStatus = g->mpu.dmpInitialize();
@@ -34,7 +38,7 @@ void init_gyro(gyro* g){
     g->mpu.setDMPEnabled(true);
 
     // enable Arduino interrupt detection
-    attachInterrupt(0, g->dmpDataReady, RISING);
+    attachInterrupt(0, dmpDataReady, RISING);
     g->mpuIntStatus = g->mpu.getIntStatus();
 
     // set our DMP Ready flag so the main loop() function knows it's okay to use it
@@ -57,7 +61,7 @@ bool read_gyro(gyro* g){
 	}
 
 	//reset interrupt
-	g->mpuInterrupt = false;
+	mpuInterrupt = false;
   g->mpuIntStatus = g->mpu.getIntStatus();
 
  	// get current FIFO count
@@ -83,9 +87,9 @@ bool read_gyro(gyro* g){
     g->fifoCount -= g->packetSize;
 
     // display Euler angles in degrees
-    mpu.dmpGetQuaternion(&g->q, g->fifoBuffer);
-    mpu.dmpGetGravity(&g->gravity, &g->q);
-    mpu.dmpGetYawPitchRoll(g->ypr, &g->q, &g->gravity);
+    g->mpu.dmpGetQuaternion(&g->q, g->fifoBuffer);
+    g->mpu.dmpGetGravity(&g->gravity, &g->q);
+    g->mpu.dmpGetYawPitchRoll(g->ypr, &g->q, &g->gravity);
 
     //convert to degrees
     for (int i = 0; i < 3; i++){
