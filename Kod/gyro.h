@@ -3,39 +3,57 @@
 
 
 #include "I2Cdev.h"
-#include "MPU6050_6Axis_MotionApps20.h"
+#include "MPU6050.h"
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
     #include "Wire.h"
 #endif
 
 
 struct gyro{
-	// MPU control/status vars
-	bool dmpReady;  // set true if DMP init was successful
-	uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
-	uint8_t devStatus;      // return status after each device operation (0 = success, !0 = error)
-	uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
-	uint16_t fifoCount;     // count of all bytes currently in FIFO
-	uint8_t fifoBuffer[64]; // FIFO storage buffer
+	
+	MPU6050 gyro;
 
-	// orientation/motion vars
-	Quaternion q;           // [w, x, y, z]         quaternion container
-	VectorFloat gravity;    // [x, y, z]            gravity vector
-	float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
-	float ypr_offsets[3]; // offsets
+	// mpu6050 raw data
+	int16_t ax, ay, az;
+	int16_t gx, gy, gz;
 
-	MPU6050 mpu; // gyro
+	// accelerometer scalers
+	double scale_ax;
+	double scale_ay;
+	double scale_az;
+
+	// accelerometer offsets
+	int off_ax;
+	int off_ay;
+	int off_az;
+
+	// accelerometer angles
+	double x_acc, y_acc, z_acc;
+
+	// gyro scalers
+	double scale_gx, scale_gy, scale_gz; //not tested
+
+	// gyro offsets 
+	int off_gx, off_gy, off_gz;
+
+	// gyro angular rates
+	double x_gyr, y_gyr, z_gyr;
+
+	// angles
+	double ypr[3];
+
+	//constants
+	double p1, p2;
+	double r1, r2;
+	double y1, y2;
 
 };
-typedef struct gyro gyro;
+//typedef struct gyro gyro;
 
 
-extern volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
-void dmpDataReady();
+bool init_gyro(gyro* g);
 
-void init_gyro(gyro* g);
-
-bool read_gyro(gyro* g);
+void read_gyro(gyro* g);
 
 
 

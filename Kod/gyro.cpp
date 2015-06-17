@@ -2,102 +2,84 @@
 #include "gyro.h"
 
 
-//INTERRUPT DETECTION ROUTINE
-void dmpDataReady() {
-    mpuInterrupt = true;
-}
-
-
-void init_gyro(gyro* g){
+bool init_gyro(gyro* g){
 	// join I2C bus (I2Cdev library doesn't do this automatically)
   #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
       Wire.begin();
-      TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
   #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
       Fastwire::setup(400, true);
   #endif
 
  	// initialize device
-  g->mpu.initialize();
+  g->gyro.initialize();
 
-  g->dmpReady = false;
+  bool ret = g->gyro.testConnection(); 
+
+  // accelerometer scalers
+  g->scale_ax = 1.0/15800.0;
+  g->scale_ay = 1.0/16600.0;
+  g->scale_az = 1.0/15300.0;
+
+  // accelerometer offsets
+  g->off_ax = 360;
+  g->off_ay = -50;
+  g->off_az = -200;
 
 
-  // load and configure the DMP
-  g->devStatus = g->mpu.dmpInitialize();
+  // gyro scalers - not tested yet
+  g->scale_gx = 1.0/15800.0;
+  g->scale_gy = 1.0/15800.0;
+  g->scale_gz = 1.0/15800.0;
 
-  // supply your own gyro offsets here, scaled for min sensitivity
-  g->mpu.setXGyroOffset(220);
-  g->mpu.setYGyroOffset(76);
-  g->mpu.setZGyroOffset(-85);
-  g->mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
+  // gyro offsets 
+  g->off_gx = -320;
+  g->off_gy = -110;
+  g->off_gz = -30;
 
-  // make sure it worked (returns 0 if so)
-  if (g->devStatus == 0) {
-    // turn on the DMP, now that it's ready
-    g->mpu.setDMPEnabled(true);
-
-    // enable Arduino interrupt detection
-    attachInterrupt(0, dmpDataReady, RISING);
-    g->mpuIntStatus = g->mpu.getIntStatus();
-
-    // set our DMP Ready flag so the main loop() function knows it's okay to use it
-    g->dmpReady = true;
-
-    // get expected DMP packet size for later comparison
-    g->packetSize = g->mpu.dmpGetFIFOPacketSize();
-  } else {
-      // ERROR!
-      // 1 = initial memory load failed
-      // 2 = DMP configuration updates failed
-      // (if it's going to break, usually the code will be 1)
+  // angles
+  for (int i = 0; i < 3; i++){
+    g->ypr[i] =  0.0;
   }
+
+  //constants
+  g->p1 = 0.8; g->p2 = 0.2;
+  g->r1 = 0.8; g->r2 = 0.2;
+  g->y1 = 1.0; g->y2 = 0.0;
+
+  return ret;
 }
 
 
-bool read_gyro(gyro* g){
-	if (!mpuInterrupt && g->fifoCount < g->packetSize){
-		return false;
-	}
+void read_gyro(gyro* g){
 
-	//reset interrupt
-	mpuInterrupt = false;
-  g->mpuIntStatus = g->mpu.getIntStatus();
-
- 	// get current FIFO count
-  g->fifoCount = g->mpu.getFIFOCount();
-
-  // check for overflow (this should never happen unless our code is too inefficient)
-  if ((g->mpuIntStatus & 0x10) || g->fifoCount == 1024) {
-      // reset so we can continue cleanly
-      g->mpu.resetFIFO();
-
-  // otherwise, check for DMP data ready interrupt (this should happen frequently)
-  } 
-  else if (g->mpuIntStatus & 0x02) 
-  {
-    // wait for correct available data length, should be a VERY short wait
-    while (g->fifoCount < g->packetSize) g->fifoCount = g->mpu.getFIFOCount();
-
-    // read a packet from FIFO
-    g->mpu.getFIFOBytes(g->fifoBuffer, g->packetSize);
-    
-    // track FIFO count here in case there is > 1 packet available
-    // (this lets us immediately read more without waiting for an interrupt)
-    g->fifoCount -= g->packetSize;
-
-    // display Euler angles in degrees
-    g->mpu.dmpGetQuaternion(&g->q, g->fifoBuffer);
-    g->mpu.dmpGetGravity(&g->gravity, &g->q);
-    g->mpu.dmpGetYawPitchRoll(g->ypr, &g->q, &g->gravity);
-
-    //convert to degrees
-    for (int i = 0; i < 3; i++){
-    	g->ypr[i] = g->ypr[i] * 180/M_PI;
-    }
-    
+	// read raw accel/gyro measurements from device
+  g->gyro.getMotion6(&(g->ax), &(g->ay), &(g->az), &(g->gx), &(g->gy), &(g->gz));
 
 
- 	}
- 	return true;
+  /* ================== Complementary filter ================== */
+
+  /* remove offsets - needs to be tested better */
+  g->ax = g->ax - g->off_ax;
+  g->ay = g->ay - g->off_ay;
+  g->az = g->az - g->off_az;
+
+  g->gx = g->gx - g->off_gx;
+  g->gy = g->gy - g->off_gy;
+  g->gz = g->gz - g->off_gz;
+
+
+  /* calculate accelerometer angle and angular velocity */
+  g->x_acc = ((double)(g->ax)) * g->scale_ax;
+  g->y_gyr = ((double)(g->gy)) * g->scale_gy;
+
+  g->y_acc = ((double)(g->ay)) * g->scale_ay;
+  g->x_gyr = ((double)(g->gx)) * g->scale_gx;
+
+
+  /* calculate pitch and roll */
+  double deg = 89.0;
+  g->ypr[1] = (g->p1*(g->ypr[1]/deg + g->y_gyr*0.001) + g->p2*g->x_acc)*deg;
+  g->ypr[2] = (g->r1*(g->ypr[2]/deg + g->x_gyr*0.001) + g->r2*g->y_acc)*deg;
+
+  /* ========================================================== */
 }
