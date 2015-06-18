@@ -48,7 +48,7 @@ struct gyro{
 	double y1, y2;
 
 };
-//typedef struct gyro gyro;
+typedef struct gyro gyro;
 
 
 bool init_gyro(gyro* g);
