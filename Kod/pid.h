@@ -20,6 +20,8 @@ struct pid{
 };
 typedef struct pid pid;
 
+void init_pid(pid* p);
+
 void pid_pitch(pid* p, int* front, int* back, double gyro_pitch, int ref_pitch);
 
 void pid_roll(pid* p, int* left, int* right, double gyro_roll, int ref_roll);
