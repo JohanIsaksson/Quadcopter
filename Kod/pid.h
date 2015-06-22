@@ -1,10 +1,11 @@
 #ifndef PID_H
 #define PID_H
 
+#define PID_MAX 50.0
+
 struct pid{
 	//PID regulation for tilting
 	double Kp, Ki, Kd;
-
 
 	//roll
 	int roll_u;
@@ -15,7 +16,6 @@ struct pid{
 	int pitch_u;
 	double pitch_error, pitch_error_prev;
 	double pitch_integral;
-
 
 };
 typedef struct pid pid;

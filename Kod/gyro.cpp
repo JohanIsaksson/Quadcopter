@@ -21,8 +21,8 @@ bool init_gyro(gyro* g){
   g->scale_az = 1.0/15300.0;
 
   // accelerometer offsets
-  g->off_ax = 360;
-  g->off_ay = -50;
+  g->off_ax = 525;
+  g->off_ay = -128;
   g->off_az = -200;
 
 

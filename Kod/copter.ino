@@ -3,6 +3,8 @@
 #include <ServoTimer2.h>
 #include "pid.h"
 
+#define SPEED_MIN 800
+
 radio rad;
 gyro gyr;
 pid p;
@@ -30,13 +32,15 @@ void setup(){
   back_left.attach(5);
   back_right.attach(6);
 
+  //set init speed to motors
+  front_left.write(SPEED_MIN);
+  front_right.write(SPEED_MIN);
+  back_left.write(SPEED_MIN);
+  back_right.write(SPEED_MIN);
+
   init_pid(&p);
 }
 
-
-void PID(){
-
-}
 
 void loop(){
 
@@ -54,7 +58,7 @@ void loop(){
 
 	
 
-	/*int throttle = map((uint8_t)(rad.buffer[5]), 0, 255, 1000, 1999);
+	/*int throttle = map((uint8_t)(rad.buffer[5]), 0, 255, 800, 2200);
   front_left.write(throttle);
   front_right.write(throttle);
   back_left.write(throttle);
