@@ -1,7 +1,7 @@
 #ifndef PID_H
 #define PID_H
 
-#define PID_MAX 50.0
+#define PID_MAX 254.0
 
 struct pid{
 	//PID regulation for tilting

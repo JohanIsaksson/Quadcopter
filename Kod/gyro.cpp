@@ -31,7 +31,7 @@ bool init_gyro(gyro* g){
   g->scale_gy = 1.0/15800.0;
   g->scale_gz = 1.0/15800.0;
 
-  // gyro offsets 
+  // gyro offsets - not tested
   g->off_gx = -320;
   g->off_gy = -110;
   g->off_gz = -30;

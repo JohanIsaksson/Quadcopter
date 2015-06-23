@@ -21,7 +21,7 @@ void pid_pitch(pid* p, int* front, int* back, double gyro_pitch, int ref_pitch){
 
 	p->pitch_integral += p->pitch_error; 
 
-	p->pitch_u = p->Kp*p->pitch_error + p->Ki*p->pitch_integral + p->Kd*(p->pitch_error-p->pitch_error_prev);
+	p->pitch_u = (int)(p->Kp*p->pitch_error + p->Ki*p->pitch_integral + p->Kd*(p->pitch_error-p->pitch_error_prev));
 
 	//limit pitch
 	if (p->pitch_u > 0.0){
@@ -48,7 +48,7 @@ void pid_roll(pid* p, int* left, int* right, double gyro_roll, int ref_roll){
 
 	p->roll_integral += p->roll_error; 
 
-	p->roll_u = p->Kp*p->roll_error + p->Ki*p->roll_integral + p->Kd*(p->roll_error-p->roll_error_prev);
+	p->roll_u = (int)(p->Kp*p->roll_error + p->Ki*p->roll_integral + p->Kd*(p->roll_error-p->roll_error_prev));
 
 	//limit roll
 	if (p->roll_u > 0.0){
