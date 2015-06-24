@@ -77,9 +77,8 @@ void read_gyro(gyro* g){
 
 
   /* calculate pitch and roll */
-  double deg = 89.0;
-  g->ypr[1] = (g->p1*(g->ypr[1]/deg + g->y_gyr*0.001) + g->p2*g->x_acc)*deg;
-  g->ypr[2] = (g->r1*(g->ypr[2]/deg + g->x_gyr*0.001) + g->r2*g->y_acc)*deg;
+  g->ypr[1] = (g->p1*(g->ypr[1]/DEG_PITCH + g->y_gyr*0.001) + g->p2*g->x_acc)*DEG_PITCH;
+  g->ypr[2] = (g->r1*(g->ypr[2]/DEG_ROLL + g->x_gyr*0.001) + g->r2*g->y_acc)*DEG_ROLL;
 
   /* ========================================================== */
 }

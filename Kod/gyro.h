@@ -8,6 +8,9 @@
     #include "Wire.h"
 #endif
 
+#define DEG_PITCH 88.0
+#define DEG_ROLL 90.0
+
 
 struct gyro{
 	

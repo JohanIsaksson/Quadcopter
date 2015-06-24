@@ -3,8 +3,8 @@
 #include <ServoTimer2.h>
 #include "pid.h"
 
-#define SPEED_MIN 800
-#define SPEED_MAX 2200
+#define SPEED_MIN 1500
+#define SPEED_MAX 2000
 
 radio rad;
 gyro gyr;
@@ -23,6 +23,9 @@ int throttle[4];
 int front, back;
 int left, right;
 
+//test
+int count;
+
 void setup(){
 
   Serial.begin(38400);
@@ -40,13 +43,15 @@ void setup(){
   //set init speed to motors
   for (int i = 0; i < 4; i++){
     throttle[i] = 0;
-    motors[i].write(SPEED_MIN);
+    motors[i].write(1500);
   }
 
   init_pid(&p);
 
+  count = 0;
+
   //wait for esc init;
-  delay(2000);
+  delay(4000);
 }
 
 
@@ -60,19 +65,20 @@ void loop(){
 
   /* calculate pid */
   pid_pitch(&p, &front, &back, gyr.ypr[1], -(double)rad.buffer[3]);
+  pid_roll(&p, &left, &right, gyr.ypr[2], (double)rad.buffer[2]);
 
   /* calculate final motor speed */
   //front left
-  throttle[0] = rad.buffer[2] + front + left;
+  throttle[0] = (uint8_t)rad.buffer[5] + front + left;
 
   //front right
-  throttle[1] = rad.buffer[2] + front + right;
+  throttle[1] = (uint8_t)rad.buffer[5] + front + right;
 
   //back left
-  throttle[2] = rad.buffer[2] + back + left;
+  throttle[2] = (uint8_t)rad.buffer[5] + back + left;
 
   //back right
-  throttle[3] = rad.buffer[2] + back + right;
+  throttle[3] = (uint8_t)rad.buffer[5] + back + right;
 
   //check and set speeds
   for (int i = 0; i < 4; i++){
@@ -83,11 +89,29 @@ void loop(){
     }
     //motors[i].write(map(throttle[i], 0, 255, SPEED_MIN, SPEED_MAX));
   }
+  count++;
+  if (count == 100){
 
-  for (int i = 0; i < 4; i++){
-    Serial.print(throttle[i]);
+    Serial.print("throttle: ");
+    for (int i = 0; i < 4; i++){      
+      Serial.print(throttle[i]);
+      Serial.print("\t");
+    }
+
+    Serial.print("\tRoll: ");
+    Serial.print(gyr.ypr[2]);
     Serial.print("\t");
+    Serial.print(rad.buffer[2]);
+    Serial.print("\t");
+
+    Serial.print("\tPitch: ");
+    Serial.print(gyr.ypr[1]);
+    Serial.print("\t");
+    Serial.print(rad.buffer[3]);
+    Serial.print("\t");
+
+    count = 0;
+    Serial.println("");
   }
-  Serial.println("");
 
 }
