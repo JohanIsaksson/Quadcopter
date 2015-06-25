@@ -11,7 +11,7 @@
 #define DEG_PITCH 88.0
 #define DEG_ROLL 90.0
 
-
+/* Gyro structure containing necessary info */
 struct gyro{
 	
 	MPU6050 gyro;
@@ -53,9 +53,10 @@ struct gyro{
 };
 typedef struct gyro gyro;
 
-
+/* Initializes the gyro and sets parameters */
 bool init_gyro(gyro* g);
 
+/* Reads raw data from gyro and perform complementary filtering */
 void read_gyro(gyro* g);
 
 

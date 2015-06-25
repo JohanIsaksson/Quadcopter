@@ -1,6 +1,6 @@
 #include "radio.h"
 
-
+/* Initializes the radio and sets parameters */
 void init_radio(radio* r){
   // Initialise the IO and ISR
   vw_set_tx_pin(12);
@@ -17,6 +17,7 @@ void init_radio(radio* r){
   vw_rx_start();       // Start the receiver PLL running
 }
 
+/* Puts a recieved message in the buffer */
 bool read_message(radio * r){
 	uint8_t temp = VW_MAX_MESSAGE_LEN;
 	if (vw_get_message((uint8_t*)(r->buffer), &temp)) // Non-blocking

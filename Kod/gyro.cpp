@@ -1,7 +1,7 @@
 
 #include "gyro.h"
 
-
+/* Initializes the gyro and sets parameters */
 bool init_gyro(gyro* g){
 	// join I2C bus (I2Cdev library doesn't do this automatically)
   #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
@@ -49,11 +49,12 @@ bool init_gyro(gyro* g){
   return ret;
 }
 
-
+/* Reads raw data from gyro and perform complementary filtering */
 void read_gyro(gyro* g){
 
 	// read raw accel/gyro measurements from device
-  g->gyro.getMotion6(&(g->ax), &(g->ay), &(g->az), &(g->gx), &(g->gy), &(g->gz));
+  g->gyro.getMotion6(&(g->ax), &(g->ay), &(g->az), 
+                      &(g->gx), &(g->gy), &(g->gz));
 
 
   /* ================== Complementary filter ================== */

@@ -1,21 +1,26 @@
 #include <VirtualWire.h>
 
+/* Radio pin constants */
 const int transmit_pin = 12;
 const int receive_pin = 10;
 const int transmit_en_pin = 11;
 
+/* Joystick variables */
 uint16_t joy_axis[4]; //right x,y left x,y
+uint16_t throttle;
 uint8_t rsw, last_rsw, lsw, last_lsw; //joystick switches
 byte state, lights;
 
+/* Radio buffer variables */
 #define BUFFER_MAX VW_MAX_MESSAGE_LEN
 byte buffer[BUFFER_MAX];
 byte bufpos = 0;
 
+/* Values for angle calculation */
 #define K 0.059
 #define M -30.0
 
-
+/* Main setup */
 void setup(){
   //init switches
   rsw = 0;
@@ -52,6 +57,7 @@ void setup(){
   Serial.println("setup");
 }
 
+/* Changes the states using the joystick buttons - NOT WORKING */
 void change_state(){
   ///hover/flight
   if (lsw != last_lsw)
@@ -86,6 +92,7 @@ void change_state(){
   }
 }
 
+/* Clears the buffer */
 void clear_buffer(){
   for (byte i = 0; i < BUFFER_MAX; i++)
   {
@@ -94,6 +101,7 @@ void clear_buffer(){
   bufpos = 0;
 }
 
+/* Puts a byte in the buffer */
 void add_to_buffer(byte b){
   if (bufpos < BUFFER_MAX)
   {
@@ -102,19 +110,26 @@ void add_to_buffer(byte b){
   }  
 }
 
+/* Sending the buffer */
 void send_buffer(uint8_t * buf, uint8_t buflen){
   vw_send(buf,buflen);  
   vw_wait_tx(); //wait until the whole buffer has been sent
 }
 
+/* Converts joystick value to the corresponding angle */
 int get_desired_angle(uint16_t in){
   int t = 0 + in;
   double x = (double)t;
-
   return (int)(K*x + M);
-  //return (t-509)/7;
 }
 
+/* Maps throttle to quadratic curve to make it "feel" more linear */
+uint8_t get_throttle(uint16_t in){
+  uint16_t y = (uint16_t)((1.0/1024.0)*((double)in)*((double)in));
+  return (uint8_t)(y >> 2);
+}
+
+/* Puts all data in the buffer and transmits it */
 void send_to_copter(){
   clear_buffer();
   
@@ -138,7 +153,7 @@ void send_to_copter(){
   Serial.print(get_desired_angle(joy_axis[3]),DEC);
   
   Serial.print(", throttle = ");
-  Serial.print(joy_axis[2],DEC);
+  Serial.print(get_throttle(joy_axis[2]),DEC);
   
   Serial.println();
   
@@ -150,7 +165,7 @@ void send_to_copter(){
   send_buffer((uint8_t *)buffer, bufpos);
 }
 
-
+/* Main loop */
 void loop(){
   //temporary delay for debug
   

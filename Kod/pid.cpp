@@ -1,6 +1,7 @@
 
 #include "pid.h"
 
+/* Initializes gyro and sets parameters */
 void init_pid(pid* p){
 	//set pid constants
 	p->Kp = 0.1;
@@ -13,8 +14,7 @@ void init_pid(pid* p){
 
 }
 
-
-
+/* Performs PID calculation for pitch */
 void pid_pitch(pid* p, int* front, int* back, double gyro_pitch, int ref_pitch){
 
 	p->pitch_error = ref_pitch - gyro_pitch; // anlge error
@@ -40,8 +40,7 @@ void pid_pitch(pid* p, int* front, int* back, double gyro_pitch, int ref_pitch){
 
 }
 
-
-
+/* Performs PID calculation for roll */
 void pid_roll(pid* p, int* left, int* right, double gyro_roll, int ref_roll){
 
 	p->roll_error = ref_roll - gyro_roll; // anlge error
