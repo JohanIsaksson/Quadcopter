@@ -1,5 +1,5 @@
-#ifndef GYRO_H
-#define GYRO_H
+#ifndef IMU_H
+#define IMU_H
 
 
 #include "I2Cdev.h"
@@ -12,7 +12,7 @@
 #define DEG_ROLL 90.0
 
 /* Gyro structure containing necessary info */
-struct gyro{
+struct imu{
 	
 	MPU6050 gyro;
 
@@ -51,13 +51,13 @@ struct gyro{
 	double y1, y2;
 
 };
-typedef struct gyro gyro;
+typedef struct imu imu;
 
 /* Initializes the gyro and sets parameters */
-bool init_gyro(gyro* g);
+bool init_imu(imu* g);
 
 /* Reads raw data from gyro and perform complementary filtering */
-void read_gyro(gyro* g);
+void read_imu(imu* g);
 
 
 

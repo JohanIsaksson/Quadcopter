@@ -1,4 +1,4 @@
-#include "gyro.h"
+#include "imu.h"
 #include "radio.h"
 #include <ServoTimer2.h>
 #include "pid.h"
@@ -7,7 +7,7 @@
 #define SPEED_MAX 2000
 
 radio rad;
-gyro gyr;
+imu im;
 pid p;
 
 //motors
@@ -30,7 +30,7 @@ void setup(){
 
   Serial.begin(38400);
 
-	bool b = init_gyro(&gyr);
+	bool b = init_imu(&im);
 
 	init_radio(&rad);
 
@@ -59,13 +59,13 @@ void loop(){
 
   delay(1);
 
-  read_gyro(&gyr);
+  read_imu(&im);
   read_message(&rad);
 
 
   /* calculate pid */
-  pid_pitch(&p, &front, &back, gyr.ypr[1], -(double)rad.buffer[3]);
-  pid_roll(&p, &left, &right, gyr.ypr[2], (double)rad.buffer[2]);
+  pid_pitch(&p, &front, &back, im.ypr[1], -(double)rad.buffer[3]);
+  pid_roll(&p, &left, &right, im.ypr[2], (double)rad.buffer[2]);
 
   /* calculate final motor speed */
   //front left
@@ -99,13 +99,13 @@ void loop(){
     }
 
     Serial.print("\tRoll: ");
-    Serial.print(gyr.ypr[2]);
+    Serial.print(im.ypr[2]);
     Serial.print("\t");
     Serial.print(rad.buffer[2]);
     Serial.print("\t");
 
     Serial.print("\tPitch: ");
-    Serial.print(gyr.ypr[1]);
+    Serial.print(im.ypr[1]);
     Serial.print("\t");
     Serial.print(rad.buffer[3]);
     Serial.print("\t");
