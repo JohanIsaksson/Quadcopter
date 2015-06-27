@@ -1,5 +1,6 @@
 
 #include "imu.h"
+#include <math.h>
 
 /* Initializes the imu and sets parameters */
 bool init_imu(imu* g){
@@ -10,8 +11,14 @@ bool init_imu(imu* g){
       Fastwire::setup(400, true);
   #endif
 
- 	// initialize device
+ 	// initialize MPU6050
   g->gyro.initialize();
+
+  // intialize HMC5883L
+  Wire.beginTransmission(MAG_ADDR);
+  Wire.write(0x02); //select mode register
+  Wire.write(0x00); //continuous measurement mode
+  Wire.endTransmission();
 
   bool ret = g->gyro.testConnection(); 
 
@@ -49,16 +56,17 @@ bool init_imu(imu* g){
   return ret;
 }
 
-/* Reads raw data from gyro and perform complementary filtering */
-void read_imu(imu* g){
+void read_magnetometer(imu* g){
+  uint8_t buffer[6];
 
-	// read raw accel/gyro measurements from device
-  g->gyro.getMotion6(&(g->ax), &(g->ay), &(g->az), 
-                      &(g->gx), &(g->gy), &(g->gz));
+  //read from magnetometer
+  I2Cdev::readBytes(MAG_ADDR, 0x03, 6, buffer);
+  g->mx = (((int16_t)buffer[0]) << 8) | buffer[1];
+  g->my = (((int16_t)buffer[2]) << 8) | buffer[3];
+  g->mz = (((int16_t)buffer[4]) << 8) | buffer[5];
+}
 
-
-  /* ================== Complementary filter ================== */
-
+void remove_offsets(imu* g) {
   /* remove offsets - needs to be tested better */
   g->ax = g->ax - g->off_ax;
   g->ay = g->ay - g->off_ay;
@@ -67,7 +75,9 @@ void read_imu(imu* g){
   g->gx = g->gx - g->off_gx;
   g->gy = g->gy - g->off_gy;
   g->gz = g->gz - g->off_gz;
+}
 
+void complementary_filter(imu* g){
 
   /* calculate accelerometer angle and angular velocity */
   g->x_acc = ((double)(g->ax)) * g->scale_ax;
@@ -78,8 +88,45 @@ void read_imu(imu* g){
 
 
   /* calculate pitch and roll */
-  g->ypr[1] = (g->p1*(g->ypr[1]/DEG_PITCH + g->y_gyr*0.001) + g->p2*g->x_acc)*DEG_PITCH;
-  g->ypr[2] = (g->r1*(g->ypr[2]/DEG_ROLL + g->x_gyr*0.001) + g->r2*g->y_acc)*DEG_ROLL;
+  g->ypr[PITCH] = (g->p1*(g->ypr[PITCH]/DEG_PITCH + g->y_gyr*0.001) + g->p2*g->x_acc)*DEG_PITCH;
+  g->ypr[ROLL] = (g->r1*(g->ypr[ROLL]/DEG_ROLL + g->x_gyr*0.001) + g->r2*g->y_acc)*DEG_ROLL;
+}
 
-  /* ========================================================== */
+void tilt_compensation(imu* g){
+  /* calculate magnetometer angles */
+  g->x_mag = (double)(g->mx) * g->scale_mx;
+  g->y_mag = (double)(g->my) * g->scale_my;
+  g->z_mag = (double)(g->mz) * g->scale_mz;
+
+  g->xh = g->x_mag*cos(g->ypr[PITCH]) 
+          + g->y_mag*sin(g->ypr[PITCH])*sin(g->ypr[ROLL]) 
+          + g->z_mag*sin(g->ypr[PITCH])*cos(g->ypr[PITCH]);
+
+  g->yh = g->y_mag*cos(g->ypr[ROLL]) 
+          + g->z_mag*sin(g->ypr[ROLL]);
+
+  g->ypr[YAW] = atan2(-g->yh, g->xh);
+
+}
+
+/* Reads raw data from gyro and perform complementary filtering */
+void read_imu(imu* g){
+
+	// read raw accel/gyro measurements from device
+  g->gyro.getMotion6(&(g->ax), &(g->ay), &(g->az), 
+                      &(g->gx), &(g->gy), &(g->gz));
+
+  //offsets
+  remove_offsets(g);
+  
+  //get pitch and roll
+  complementary_filter(g);
+
+  //get yaw
+  tilt_compensation(g);
+
+
+
+
+
 }

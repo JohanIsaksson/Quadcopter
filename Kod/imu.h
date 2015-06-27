@@ -11,6 +11,12 @@
 #define DEG_PITCH 88.0
 #define DEG_ROLL 90.0
 
+#define YAW 0
+#define PITCH 1
+#define ROLL 2
+
+#define MAG_ADDR 0x1E
+
 /* Gyro structure containing necessary info */
 struct imu{
 	
@@ -41,6 +47,23 @@ struct imu{
 
 	// gyro angular rates
 	double x_gyr, y_gyr, z_gyr;
+
+
+	// HMC5883L raw data
+	int16_t mx, my, mz;
+
+	// magnetometer offsets
+	int off_mx, off_my, off_mz;
+
+	//magnetometer scalers
+	double scale_mx, scale_my, scale_my;
+
+	//magnetometer angles
+	double x_mag, y_mag, z_mag;
+
+	//tilt help parameters
+	double xh, yh;
+
 
 	// angles
 	double ypr[3];
