@@ -43,6 +43,17 @@ bool init_imu(imu* g){
   g->off_gy = -110;
   g->off_gz = -30;
 
+  // magnetometer offsets - needs to be retested at mount
+  g->off_mx = 61;
+  g->off_my = -154;
+  g->off_mz = 16;
+
+  // magnetometer scalers
+  g->scale_mx = 1.0/519.0;
+  g->scale_my = 1.0/526.0;
+  g->scale_mz = 1.0/449.0;
+
+
   // angles
   for (int i = 0; i < 3; i++){
     g->ypr[i] =  0.0;
@@ -75,7 +86,12 @@ void remove_offsets(imu* g) {
   g->gx = g->gx - g->off_gx;
   g->gy = g->gy - g->off_gy;
   g->gz = g->gz - g->off_gz;
+
+  g->mx = g->mx - g->off_mx;
+  g->my = g->my - g->off_my;
+  g->mz = g->mz - g->off_mz;
 }
+
 
 void complementary_filter(imu* g){
 
@@ -106,7 +122,20 @@ void tilt_compensation(imu* g){
           + g->z_mag*sin(g->ypr[ROLL]);
 
   g->ypr[YAW] = atan2(-g->yh, g->xh);
+  /* calculate magnetometer angles */
+  g->x_mag = (double)(g->mx) * g->scale_mx;
+  g->y_mag = (double)(g->my) * g->scale_my;
+  g->z_mag = (double)(g->mz) * g->scale_mz;
 
+  /* perform tilt compensation */
+  g->xh = g->x_mag*cos(g->ypr[PITCH]) 
+          + g->y_mag*sin(g->ypr[PITCH])*sin(g->ypr[ROLL]) 
+          + g->z_mag*sin(g->ypr[PITCH])*cos(g->ypr[PITCH]);
+
+  g->yh = g->y_mag*cos(g->ypr[ROLL]) 
+          + g->z_mag*sin(g->ypr[ROLL]);
+
+  g->ypr[YAW] = atan2(-g->yh, g->xh);
 }
 
 /* Reads raw data from gyro and perform complementary filtering */
@@ -124,9 +153,4 @@ void read_imu(imu* g){
 
   //get yaw
   tilt_compensation(g);
-
-
-
-
-
 }

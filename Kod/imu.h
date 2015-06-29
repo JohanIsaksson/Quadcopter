@@ -27,14 +27,10 @@ struct imu{
 	int16_t gx, gy, gz;
 
 	// accelerometer scalers
-	double scale_ax;
-	double scale_ay;
-	double scale_az;
+	double scale_ax, scale_ay, scale_az;
 
 	// accelerometer offsets
-	int off_ax;
-	int off_ay;
-	int off_az;
+	int off_ax, off_ay, off_az;
 
 	// accelerometer angles
 	double x_acc, y_acc, z_acc;
@@ -56,7 +52,7 @@ struct imu{
 	int off_mx, off_my, off_mz;
 
 	//magnetometer scalers
-	double scale_mx, scale_my, scale_my;
+	double scale_mx, scale_my, scale_mz;
 
 	//magnetometer angles
 	double x_mag, y_mag, z_mag;

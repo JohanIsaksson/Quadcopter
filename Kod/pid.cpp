@@ -11,7 +11,6 @@ void init_pid(pid* p){
 	//set integral
 	p->roll_integral = 0.0;
 	p->pitch_integral = 0.0;
-
 }
 
 /* Performs PID calculation for pitch */
@@ -37,7 +36,6 @@ void pid_pitch(pid* p, int* front, int* back, double gyro_pitch, int ref_pitch){
 	//set values
 	*front = p->pitch_u;
 	*back = -p->pitch_u;
-
 }
 
 /* Performs PID calculation for roll */
@@ -63,5 +61,9 @@ void pid_roll(pid* p, int* left, int* right, double gyro_roll, int ref_roll){
 	//set values
 	*left = p->roll_u;
 	*right = -p->roll_u;
+}
+
+/* Performs PID calculation for yaw */
+void pid_yaw(pid* p, int* cw, int* ccw, double gyro_yaw, int ref_yaw){
 
 }
