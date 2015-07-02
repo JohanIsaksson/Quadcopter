@@ -6,6 +6,10 @@
 #define SPEED_MIN 1500
 #define SPEED_MAX 2000
 
+#define YPR_DATA
+//#define COMP_DATA
+//#define PID_DATA
+
 radio rad;
 imu im;
 pid p;
@@ -90,28 +94,46 @@ void loop(){
     //motors[i].write(map(throttle[i], 0, 255, SPEED_MIN, SPEED_MAX));
   }
   count++;
-  if (count == 100){
+  if (count == 50){
+    #ifdef PID_DATA
+      for (int i = 0; i < 4; i++){      
+        Serial.print(throttle[i]);
+        Serial.print("\t");
+      }
+    #endif
 
-    Serial.print("throttle: ");
-    for (int i = 0; i < 4; i++){      
-      Serial.print(throttle[i]);
+    #ifdef YPR_DATA
+      Serial.print(im.ypr[0]);
       Serial.print("\t");
-    }
+      Serial.print(im.ypr[1]);
+      Serial.print("\t");
+      Serial.println(im.ypr[2]);
+    #endif
 
-    Serial.print("\tRoll: ");
-    Serial.print(im.ypr[2]);
-    Serial.print("\t");
-    Serial.print(rad.buffer[2]);
-    Serial.print("\t");
 
-    Serial.print("\tPitch: ");
-    Serial.print(im.ypr[1]);
-    Serial.print("\t");
-    Serial.print(rad.buffer[3]);
-    Serial.print("\t");
 
+    #ifdef COMP_DATA
+      Serial.print("throttle: ");
+      for (int i = 0; i < 4; i++){      
+        Serial.print(throttle[i]);
+        Serial.print("\t");
+      }
+
+      Serial.print("\tRoll: ");
+      Serial.print(im.ypr[2]);
+      Serial.print("\t");
+      Serial.print(rad.buffer[2]);
+      Serial.print("\t");
+
+      Serial.print("\tPitch: ");
+      Serial.print(im.ypr[1]);
+      Serial.print("\t");
+      Serial.print(rad.buffer[3]);
+      Serial.print("\t");
+
+      
+      Serial.println("");
+    #endif
     count = 0;
-    Serial.println("");
   }
-
 }

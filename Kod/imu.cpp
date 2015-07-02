@@ -114,28 +114,15 @@ void tilt_compensation(imu* g){
   g->y_mag = (double)(g->my) * g->scale_my;
   g->z_mag = (double)(g->mz) * g->scale_mz;
 
-  g->xh = g->x_mag*cos(g->ypr[PITCH]) 
-          + g->y_mag*sin(g->ypr[PITCH])*sin(g->ypr[ROLL]) 
-          + g->z_mag*sin(g->ypr[PITCH])*cos(g->ypr[PITCH]);
-
-  g->yh = g->y_mag*cos(g->ypr[ROLL]) 
-          + g->z_mag*sin(g->ypr[ROLL]);
-
-  g->ypr[YAW] = atan2(-g->yh, g->xh);
-  /* calculate magnetometer angles */
-  g->x_mag = (double)(g->mx) * g->scale_mx;
-  g->y_mag = (double)(g->my) * g->scale_my;
-  g->z_mag = (double)(g->mz) * g->scale_mz;
-
   /* perform tilt compensation */
-  g->xh = g->x_mag*cos(g->ypr[PITCH]) 
-          + g->y_mag*sin(g->ypr[PITCH])*sin(g->ypr[ROLL]) 
-          + g->z_mag*sin(g->ypr[PITCH])*cos(g->ypr[PITCH]);
+  g->xh = g->x_mag*cos(g->ypr[PITCH]*(M_PI/180.0)) 
+          + g->y_mag*sin(g->ypr[PITCH]*(M_PI/180.0))*sin(g->ypr[ROLL]*(M_PI/180.0)) 
+          + g->z_mag*sin(g->ypr[PITCH]*(M_PI/180.0))*cos(g->ypr[PITCH]*(M_PI/180.0));
 
-  g->yh = g->y_mag*cos(g->ypr[ROLL]) 
-          + g->z_mag*sin(g->ypr[ROLL]);
+  g->yh = g->y_mag*cos(g->ypr[ROLL]*(M_PI/180.0)) 
+          + g->z_mag*sin(g->ypr[ROLL]*(M_PI/180.0));
 
-  g->ypr[YAW] = atan2(-g->yh, g->xh);
+  g->ypr[YAW] = atan2(-g->yh, g->xh)*(180.0/M_PI);
 }
 
 /* Reads raw data from gyro and perform complementary filtering */
@@ -144,6 +131,9 @@ void read_imu(imu* g){
 	// read raw accel/gyro measurements from device
   g->gyro.getMotion6(&(g->ax), &(g->ay), &(g->az), 
                       &(g->gx), &(g->gy), &(g->gz));
+
+  // read raw data from magnetometer
+  read_magnetometer(g);
 
   //offsets
   remove_offsets(g);
