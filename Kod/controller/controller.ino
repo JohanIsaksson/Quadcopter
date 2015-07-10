@@ -20,6 +20,8 @@ byte bufpos = 0;
 #define K 0.059
 #define M -30.0
 
+int16_t yaw;
+
 /* Main setup */
 void setup(){
   //init switches
@@ -123,6 +125,20 @@ int get_desired_angle(uint16_t in){
   return (int)(K*x + M);
 }
 
+/* Integrates joystick value to calculate yaw*/
+int16_t get_yaw(uint16_t in){
+  int rate = map((int)in, 0, 1023, -9, 9);
+
+  yaw += rate;
+  if (yaw > 180){
+    yaw -= 360;
+  }
+  else if (yaw < -180){
+    yaw += 360;
+  }
+  return yaw;
+}
+
 /* Maps throttle to quadratic curve to make it "feel" more linear */
 uint8_t get_throttle(uint16_t in){
   uint16_t y = (uint16_t)((1.0/1024.0)*((double)in)*((double)in));
@@ -141,7 +157,9 @@ void send_to_copter(){
   
   add_to_buffer((byte)get_desired_angle(joy_axis[1])); //roll
   add_to_buffer((byte)get_desired_angle(joy_axis[0])); //pitch
-  add_to_buffer((byte)get_desired_angle(joy_axis[3])); //yaw
+  int16_t y = get_yaw(joy_axis[3]);
+  add_to_buffer((byte)(y >> 8))); //msb
+  add_to_buffer((byte)y); //lsb
 
   Serial.print(" roll = ");
   Serial.print(get_desired_angle(joy_axis[1]),DEC);

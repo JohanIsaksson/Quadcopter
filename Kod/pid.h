@@ -2,11 +2,12 @@
 #define PID_H
 
 #define PID_MAX 254.0
+#define KP 0.1
+#define KI 0.0001
+#define KD 0.5
 
 /* PID structure containing necessary info */
 struct pid{
-	//PID regulation for tilting
-	double Kp, Ki, Kd;
 
 	//roll
 	int roll_u;
@@ -25,11 +26,13 @@ typedef struct pid pid;
 void init_pid(pid* p);
 
 /* Performs PID calculation for pitch */
-void pid_pitch(pid* p, int* front, int* back, double gyro_pitch, int ref_pitch);
+void pid_pitch(pid* p, int* front, int* back, double gyro_pitch, double ref_pitch);
 
 /* Performs PID calculation for roll */
-void pid_roll(pid* p, int* left, int* right, double gyro_roll, int ref_roll);
+void pid_roll(pid* p, int* left, int* right, double gyro_roll, double ref_roll);
 
+/* Performs PID calculation for yaw */
+void pid_yaw(pid* p, int* cw, int* ccw, double gyro_yaw, int ref_yaw);
 
 
 

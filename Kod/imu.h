@@ -11,11 +11,14 @@
 #define DEG_PITCH 88.0
 #define DEG_ROLL 90.0
 
+#define LP_BUFFER_SIZE 10
+
 #define YAW 0
 #define PITCH 1
 #define ROLL 2
 
 #define MAG_ADDR 0x1E
+#define MAG_OFF_GAIN 20.0
 
 /* Gyro structure containing necessary info */
 struct imu{
@@ -35,6 +38,11 @@ struct imu{
 	// accelerometer angles
 	double x_acc, y_acc, z_acc;
 
+	// accelerometer low pass filter
+	int16_t ax_buf[LP_BUFFER_SIZE], ay_buf[LP_BUFFER_SIZE], az_buf[LP_BUFFER_SIZE];
+	int lp_pos;
+	int32_t ax_sum, ay_sum, az_sum;
+
 	// gyro scalers
 	double scale_gx, scale_gy, scale_gz; //not tested
 
@@ -50,6 +58,10 @@ struct imu{
 
 	// magnetometer offsets
 	int off_mx, off_my, off_mz;
+	double off_m[3];
+	double m[3], last_m[3];
+
+
 
 	//magnetometer scalers
 	double scale_mx, scale_my, scale_mz;

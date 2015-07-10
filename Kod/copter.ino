@@ -26,6 +26,7 @@ int throttle[4];
 //pid
 int front, back;
 int left, right;
+int cw, ccw;
 
 //test
 int count;
@@ -70,19 +71,20 @@ void loop(){
   /* calculate pid */
   pid_pitch(&p, &front, &back, im.ypr[1], -(double)rad.buffer[3]);
   pid_roll(&p, &left, &right, im.ypr[2], (double)rad.buffer[2]);
+  pid_yaw(&p, &cw, &ccw, im.ypr[0], (int)((((uint16_t)rad.buffer[4]) << 8) + (uint8_t)rad.buffer[5]);
 
   /* calculate final motor speed */
   //front left
-  throttle[0] = (uint8_t)rad.buffer[5] + front + left;
+  throttle[0] = (uint8_t)rad.buffer[6] + front + left + cw;
 
   //front right
-  throttle[1] = (uint8_t)rad.buffer[5] + front + right;
+  throttle[1] = (uint8_t)rad.buffer[6] + front + right + ccw;
 
   //back left
-  throttle[2] = (uint8_t)rad.buffer[5] + back + left;
+  throttle[2] = (uint8_t)rad.buffer[6] + back + left + ccw;
 
   //back right
-  throttle[3] = (uint8_t)rad.buffer[5] + back + right;
+  throttle[3] = (uint8_t)rad.buffer[6] + back + right + cw;
 
   //check and set speeds
   for (int i = 0; i < 4; i++){
