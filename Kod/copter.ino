@@ -3,11 +3,18 @@
 #include <ServoTimer2.h>
 #include "pid.h"
 
-#define SPEED_MIN 1500
-#define SPEED_MAX 2000
+#define SPEED_MIN_FRONT 1500
+#define SPEED_MAX_FRONT 2000
+#define SPEED_MIN_BACK 1250
+#define SPEED_MAX_BACK 1750
 
-#define YPR_DATA
-//#define COMP_DATA
+#define RADIO_THROTTLE 5 //6 in future
+
+#define CALIBRATION_COMP 10
+
+
+//#define YPR_DATA
+#define COMP_DATA
 //#define PID_DATA
 
 radio rad;
@@ -46,12 +53,21 @@ void setup(){
   motors[3].attach(6);
 
   //set init speed to motors
-  for (int i = 0; i < 4; i++){
-    throttle[i] = 0;
-    motors[i].write(1500);
-  }
+  motors[0].write(SPEED_MIN_FRONT);
+  motors[1].write(SPEED_MIN_FRONT);
+  motors[2].write(SPEED_MIN_BACK);
+  motors[3].write(SPEED_MIN_BACK);
 
   init_pid(&p);
+
+  front = 0;
+  back = 0;
+  left = 0;
+  right = 0;
+  cw = 0;
+  ccw = 0;
+
+
 
   count = 0;
 
@@ -69,22 +85,22 @@ void loop(){
 
 
   /* calculate pid */
-  pid_pitch(&p, &front, &back, im.ypr[1], -(double)rad.buffer[3]);
+  pid_pitch(&p, &front, &back, im.ypr[1], (double)rad.buffer[3]);
   pid_roll(&p, &left, &right, im.ypr[2], (double)rad.buffer[2]);
-  pid_yaw(&p, &cw, &ccw, im.ypr[0], (int)((((uint16_t)rad.buffer[4]) << 8) + (uint8_t)rad.buffer[5]);
+  //pid_yaw(&p, &cw, &ccw, im.ypr[0], (int)((((uint16_t)rad.buffer[4]) << 8) + (uint8_t)rad.buffer[5]);
 
   /* calculate final motor speed */
   //front left
-  throttle[0] = (uint8_t)rad.buffer[6] + front + left + cw;
+  throttle[0] = (uint8_t)rad.buffer[RADIO_THROTTLE] + front + left + cw + CALIBRATION_COMP;
 
   //front right
-  throttle[1] = (uint8_t)rad.buffer[6] + front + right + ccw;
+  throttle[1] = (uint8_t)rad.buffer[RADIO_THROTTLE] + front + right + ccw + CALIBRATION_COMP;
 
   //back left
-  throttle[2] = (uint8_t)rad.buffer[6] + back + left + ccw;
+  throttle[2] = (uint8_t)rad.buffer[RADIO_THROTTLE] + back + left + ccw - CALIBRATION_COMP;
 
   //back right
-  throttle[3] = (uint8_t)rad.buffer[6] + back + right + cw;
+  throttle[3] = (uint8_t)rad.buffer[RADIO_THROTTLE] + back + right + cw - CALIBRATION_COMP;
 
   //check and set speeds
   for (int i = 0; i < 4; i++){
@@ -93,7 +109,12 @@ void loop(){
     }else if (throttle[i] < 0){
       throttle[i] = 0;
     }
-    //motors[i].write(map(throttle[i], 0, 255, SPEED_MIN, SPEED_MAX));
+    if (i < 2){
+      motors[i].write(map(throttle[i], 0, 255, SPEED_MIN_FRONT, SPEED_MAX_FRONT));
+    }else{
+      motors[i].write(map(throttle[i], 0, 255, SPEED_MIN_BACK, SPEED_MAX_BACK));
+    }
+    
   }
   count++;
   if (count == 50){
@@ -102,6 +123,7 @@ void loop(){
         Serial.print(throttle[i]);
         Serial.print("\t");
       }
+      Serial.println();
     #endif
 
     #ifdef YPR_DATA
@@ -121,20 +143,13 @@ void loop(){
         Serial.print("\t");
       }
 
-      Serial.print("\tRoll: ");
-      Serial.print(im.ypr[2]);
+      Serial.print(im.ypr[0]);
       Serial.print("\t");
-      Serial.print(rad.buffer[2]);
-      Serial.print("\t");
-
-      Serial.print("\tPitch: ");
       Serial.print(im.ypr[1]);
       Serial.print("\t");
-      Serial.print(rad.buffer[3]);
-      Serial.print("\t");
+      Serial.println(im.ypr[2]);
 
       
-      Serial.println("");
     #endif
     count = 0;
   }

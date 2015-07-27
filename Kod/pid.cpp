@@ -31,8 +31,8 @@ void pid_pitch(pid* p, int* front, int* back, double gyro_pitch, double ref_pitc
 	p->pitch_error_prev = p->pitch_error;
 
 	//set values
-	*front = p->pitch_u;
-	*back = -p->pitch_u;
+	*front = -p->pitch_u;
+	*back = p->pitch_u;
 }
 
 /* Performs PID calculation for roll */
@@ -91,7 +91,7 @@ int get_yaw_error(int gyro_yaw, int ref_yaw){
 
 /* Performs PID calculation for yaw */
 void pid_yaw(pid* p, int* cw, int* ccw, double gyro_yaw, int ref_yaw){
-	p->yaw_error = get_yaw_error((int)gyro_roll, ref_roll); // anlge error
+	p->yaw_error = get_yaw_error((int)gyro_yaw, ref_yaw); // anlge error
 
 	/* Just PD here as no external forces should be present */
 	p->yaw_u = (int)(KP*p->yaw_error + KD*(p->yaw_error-p->yaw_error_prev));

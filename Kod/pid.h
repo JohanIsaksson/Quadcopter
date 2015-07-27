@@ -2,9 +2,9 @@
 #define PID_H
 
 #define PID_MAX 254.0
-#define KP 0.1
+#define KP 3.0
 #define KI 0.0001
-#define KD 0.5
+#define KD 0.05
 
 /* PID structure containing necessary info */
 struct pid{
@@ -18,6 +18,10 @@ struct pid{
 	int pitch_u;
 	double pitch_error, pitch_error_prev;
 	double pitch_integral;
+
+	/* yaw */
+	int yaw_u;
+	double yaw_error, yaw_error_prev;
 
 };
 typedef struct pid pid;

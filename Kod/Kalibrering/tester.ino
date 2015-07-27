@@ -1,8 +1,8 @@
 #include "radio.h"
 #include <ServoTimer2.h>
 
-#define SPEED_MIN 1500
-#define SPEED_MAX 2000
+#define SPEED_MIN 1250
+#define SPEED_MAX 1750
 
 radio rad;
 

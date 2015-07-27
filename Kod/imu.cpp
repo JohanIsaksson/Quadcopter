@@ -159,12 +159,23 @@ void complementary_filter(imu* g){
   
 
   /* calculate accelerometer angle and angular velocity */
-  g->x_acc = ((double)(g->ax)) * g->scale_ax;
+  //g->x_acc = ((double)(g->ax)) * g->scale_ax;
+  double x = (double)g->ax * g->scale_ax;
+  double y = (double)g->ay * g->scale_ay;
+  double z = (double)g->az * g->scale_az;
+
+  g->x_acc = atan(x/sqrt(y*y + z*z));
+
   g->y_gyr = ((double)(g->gy)) * g->scale_gy;
 
-  g->y_acc = ((double)(g->ay)) * g->scale_ay;
+  //g->y_acc = ((double)(g->ay)) * g->scale_ay;
+  g->y_acc = atan(y/sqrt(x*x + z*z));
+
   g->x_gyr = ((double)(g->gx)) * g->scale_gx;
 
+
+  //g->ypr[PITCH] = g->x_acc;
+  //g->ypr[ROLL] = g->y_acc;
 
   g->ypr[PITCH] = -(g->p1*(-g->ypr[PITCH]/DEG_PITCH + g->y_gyr*0.001) + g->p2*g->x_acc)*DEG_PITCH;
   g->ypr[ROLL] = (g->r1*(g->ypr[ROLL]/DEG_ROLL + g->x_gyr*0.001) + g->r2*g->y_acc)*DEG_ROLL;

@@ -8,8 +8,8 @@
     #include "Wire.h"
 #endif
 
-#define DEG_PITCH 88.0
-#define DEG_ROLL 90.0
+#define DEG_PITCH 70.0
+#define DEG_ROLL 70.0
 
 #define LP_BUFFER_SIZE 10
 
