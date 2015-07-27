@@ -2,9 +2,9 @@
 #define PID_H
 
 #define PID_MAX 254.0
-#define KP 3.0
+#define KP 1.5
 #define KI 0.0001
-#define KD 0.05
+#define KD 0.5
 
 /* PID structure containing necessary info */
 struct pid{
