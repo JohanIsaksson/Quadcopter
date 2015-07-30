@@ -8,8 +8,10 @@
     #include "Wire.h"
 #endif
 
-#define DEG_PITCH 70.0
-#define DEG_ROLL 70.0
+#include <math.h>
+
+
+#define RAD_TO_DEG 180.0/M_PI
 
 #define LP_BUFFER_SIZE 10
 
@@ -17,8 +19,46 @@
 #define PITCH 1
 #define ROLL 2
 
+#define P1 0.9
+#define P2 0.9
+#define P3 0.9
+
 #define MAG_ADDR 0x1E
 #define MAG_OFF_GAIN 20.0
+
+
+// gyro offsets 
+#define GYRO_OFF_X -395
+#define GYRO_OFF_Y -110
+#define GYRO_OFF_Z -60
+
+// gyro scalers
+#define GYRO_SCALE_X M_PI/23870.0
+#define GYRO_SCALE_Y M_PI/23870.0
+#define GYRO_SCALE_Z M_PI/23870.0
+
+// accelerometer offsets
+#define ACC_OFF_X 525
+#define ACC_OFF_Y -128
+#define ACC_OFF_Z -200
+
+// accelerometer scalers
+#define ACC_SCALE_X 1.0/15800.0
+#define ACC_SCALE_Y 1.0/16600.0
+#define ACC_SCALE_Z 1.0/15300.0
+
+#define MAG_OFF_X
+#define MAG_OFF_Y
+#define MAG_OFF_Z
+
+#define MAG_SCALE_X
+#define MAG_SCALE_Y
+#define MAG_SCALE_Z
+
+
+
+
+
 
 /* Gyro structure containing necessary info */
 struct imu{
@@ -29,11 +69,6 @@ struct imu{
 	int16_t ax, ay, az;
 	int16_t gx, gy, gz;
 
-	// accelerometer scalers
-	double scale_ax, scale_ay, scale_az;
-
-	// accelerometer offsets
-	int off_ax, off_ay, off_az;
 
 	// accelerometer angles
 	double x_acc, y_acc, z_acc;
@@ -43,11 +78,6 @@ struct imu{
 	int lp_pos;
 	int32_t ax_sum, ay_sum, az_sum;
 
-	// gyro scalers
-	double scale_gx, scale_gy, scale_gz; //not tested
-
-	// gyro offsets 
-	int off_gx, off_gy, off_gz;
 
 	// gyro angular rates
 	double x_gyr, y_gyr, z_gyr;
@@ -75,6 +105,7 @@ struct imu{
 
 	// angles
 	double ypr[3];
+	double ypr_rad[3];
 
 	//constants
 	double p1, p2;

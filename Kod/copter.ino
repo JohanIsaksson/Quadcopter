@@ -13,8 +13,8 @@
 #define CALIBRATION_COMP 10
 
 
-//#define YPR_DATA
-#define COMP_DATA
+#define YPR_DATA
+//#define COMP_DATA
 //#define PID_DATA
 
 radio rad;
@@ -72,7 +72,7 @@ void setup(){
   count = 0;
 
   //wait for esc init;
-  delay(4000);
+  delay(3000);
 }
 
 
@@ -137,7 +137,7 @@ void loop(){
 
 
     #ifdef COMP_DATA
-      Serial.print("throttle: ");
+      /*Serial.print("throttle: ");
       for (int i = 0; i < 4; i++){      
         Serial.print(throttle[i]);
         Serial.print("\t");
@@ -148,8 +148,14 @@ void loop(){
       Serial.print(im.ypr[1]);
       Serial.print("\t");
       Serial.println(im.ypr[2]);
-
-      
+*/
+      Serial.print("Gyro xyz: ");  
+      Serial.print(im.gx);
+      Serial.print("\t");
+      Serial.print(im.gy);
+      Serial.print("\t"); 
+      Serial.print(im.gz);
+      Serial.println(); 
     #endif
     count = 0;
   }

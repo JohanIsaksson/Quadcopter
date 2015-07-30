@@ -1,6 +1,5 @@
 
 #include "imu.h"
-#include <math.h>
 
 /* Initializes the imu and sets parameters */
 bool init_imu(imu* g){
@@ -22,15 +21,6 @@ bool init_imu(imu* g){
 
   bool ret = g->gyro.testConnection(); 
 
-  // accelerometer scalers
-  g->scale_ax = 1.0/15800.0;
-  g->scale_ay = 1.0/16600.0;
-  g->scale_az = 1.0/15300.0;
-
-  // accelerometer offsets
-  g->off_ax = 525;
-  g->off_ay = -128;
-  g->off_az = -200;
 
   // lp filter
   for (int i = 0; i < LP_BUFFER_SIZE; i++){
@@ -43,17 +33,6 @@ bool init_imu(imu* g){
   g->az_sum = 0;
   g->lp_pos = 0;
 
-
-
-  // gyro scalers - not tested yet
-  g->scale_gx = 1.0/15800.0;
-  g->scale_gy = 1.0/15800.0;
-  g->scale_gz = 1.0/15800.0;
-
-  // gyro offsets - not tested
-  g->off_gx = -320;
-  g->off_gy = -110;
-  g->off_gz = -30;
 
   // magnetometer offsets - needs to be retested at mount
   g->off_mx = 0; //61;
@@ -71,10 +50,6 @@ bool init_imu(imu* g){
     g->ypr[i] =  0.0;
   }
 
-  //constants
-  g->p1 = 0.8; g->p2 = 0.2;
-  g->r1 = 0.8; g->r2 = 0.2;
-  g->y1 = 1.0; g->y2 = 0.0;
 
   return ret;
 }
@@ -91,13 +66,13 @@ void read_magnetometer(imu* g){
 
 void remove_offsets(imu* g) {
   /* remove offset for each imu axis */
-  g->ax = g->ax - g->off_ax;
-  g->ay = g->ay - g->off_ay;
-  g->az = g->az - g->off_az;
+  g->ax = g->ax - ACC_OFF_X;
+  g->ay = g->ay - ACC_OFF_Y;
+  g->az = g->az - ACC_OFF_Z;
 
-  g->gx = g->gx - g->off_gx;
-  g->gy = g->gy - g->off_gy;
-  g->gz = g->gz - g->off_gz;
+  g->gx = g->gx - GYRO_OFF_X;
+  g->gy = g->gy - GYRO_OFF_Y;
+  g->gz = g->gz - GYRO_OFF_Z;
 
   /* special offset removal for magnetometer */
   g->m[0] = (double)(g->mx);
@@ -160,25 +135,28 @@ void complementary_filter(imu* g){
 
   /* calculate accelerometer angle and angular velocity */
   //g->x_acc = ((double)(g->ax)) * g->scale_ax;
-  double x = (double)g->ax * g->scale_ax;
-  double y = (double)g->ay * g->scale_ay;
-  double z = (double)g->az * g->scale_az;
+  double x = (double)g->ax * ACC_SCALE_X;
+  double y = (double)g->ay * ACC_SCALE_Y;
+  double z = (double)g->az * ACC_SCALE_Z;
 
   g->x_acc = atan(x/sqrt(y*y + z*z));
 
-  g->y_gyr = ((double)(g->gy)) * g->scale_gy;
+  g->y_gyr = ((double)(g->gy)) * GYRO_SCALE_Y;
 
   //g->y_acc = ((double)(g->ay)) * g->scale_ay;
   g->y_acc = atan(y/sqrt(x*x + z*z));
 
-  g->x_gyr = ((double)(g->gx)) * g->scale_gx;
+  g->x_gyr = ((double)(g->gx)) * GYRO_SCALE_X;
 
 
   //g->ypr[PITCH] = g->x_acc;
   //g->ypr[ROLL] = g->y_acc;
 
-  g->ypr[PITCH] = -(g->p1*(-g->ypr[PITCH]/DEG_PITCH + g->y_gyr*0.001) + g->p2*g->x_acc)*DEG_PITCH;
-  g->ypr[ROLL] = (g->r1*(g->ypr[ROLL]/DEG_ROLL + g->x_gyr*0.001) + g->r2*g->y_acc)*DEG_ROLL;
+  g->ypr_rad[PITCH] = -(P1*(-g->ypr[PITCH] + g->y_gyr*0.001) + (1.0-P1)*g->x_acc);
+  g->ypr_rad[ROLL] = (P2*(g->ypr[ROLL] + g->x_gyr*0.001) + (1.0-P2)*g->y_acc);
+
+  g->ypr[PITCH] = g->ypr_rad[PITCH]*RAD_TO_DEG;
+  g->ypr[ROLL] = g->ypr_rad[ROLL]*RAD_TO_DEG;
   
 }
 
