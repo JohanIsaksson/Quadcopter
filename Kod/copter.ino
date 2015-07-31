@@ -12,9 +12,12 @@
 
 #define CALIBRATION_COMP 10
 
+#define LOST_CONNECTION_COUNT 2000
+#define EMERGENCY_THROTTLE 200
 
-#define YPR_DATA
-//#define COMP_DATA
+
+//#define YPR_DATA
+#define COMP_DATA
 //#define PID_DATA
 
 radio rad;
@@ -35,8 +38,13 @@ int front, back;
 int left, right;
 int cw, ccw;
 
-//test
+//output
 int count;
+
+//safety stuff
+int radio_off_counter;
+
+
 
 void setup(){
 
@@ -45,6 +53,7 @@ void setup(){
 	bool b = init_imu(&im);
 
 	init_radio(&rad);
+  radio_off_counter = 0;
 
 	//asign motors to pins
   motors[0].attach(3);
@@ -81,7 +90,19 @@ void loop(){
   delay(1);
 
   read_imu(&im);
-  read_message(&rad);
+  
+  //check for lost radio connetion
+  if (!read_message(&rad)){    
+    if (radio_off_counter >= LOST_CONNECTION_COUNT){
+      rad.buffer[RADIO_THROTTLE] = EMERGENCY_THROTTLE;
+    }else{
+      radio_off_counter++;
+    }
+
+  }else{
+    radio_off_counter = 0;
+  }
+  
 
 
   /* calculate pid */
@@ -116,6 +137,20 @@ void loop(){
     }
     
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   count++;
   if (count == 50){
     #ifdef PID_DATA
@@ -127,6 +162,13 @@ void loop(){
     #endif
 
     #ifdef YPR_DATA
+      /*
+      Serial.print(im.ypr_rad[0]);
+      Serial.print("\t");
+      Serial.print(im.ypr_rad[1]);
+      Serial.print("\t");
+      Serial.print(im.ypr_rad[2]);
+      Serial.print("\t");*/
       Serial.print(im.ypr[0]);
       Serial.print("\t");
       Serial.print(im.ypr[1]);
@@ -137,26 +179,36 @@ void loop(){
 
 
     #ifdef COMP_DATA
-      /*Serial.print("throttle: ");
-      for (int i = 0; i < 4; i++){      
-        Serial.print(throttle[i]);
-        Serial.print("\t");
-      }
-
       Serial.print(im.ypr[0]);
       Serial.print("\t");
       Serial.print(im.ypr[1]);
       Serial.print("\t");
-      Serial.println(im.ypr[2]);
-*/
-      Serial.print("Gyro xyz: ");  
-      Serial.print(im.gx);
-      Serial.print("\t");
-      Serial.print(im.gy);
-      Serial.print("\t"); 
-      Serial.print(im.gz);
-      Serial.println(); 
+      Serial.print(im.ypr[2]);
+
+      Serial.print("\t\t");
+
+      for (int i = 0; i < 4; i++){      
+        Serial.print(throttle[i]);
+        Serial.print("\t");
+      }
+      Serial.println();
     #endif
+
+
+    #ifdef MAG_DATA
+      Serial.print("xyz:\t");
+      Serial.print(im.mx);
+      Serial.print("\t");
+      Serial.print(im.my);
+      Serial.print("\t");
+      Serial.println(im.mz);
+    #endif
+
+
+
+
+
+
     count = 0;
   }
 }

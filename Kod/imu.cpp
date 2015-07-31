@@ -75,7 +75,7 @@ void remove_offsets(imu* g) {
   g->gz = g->gz - GYRO_OFF_Z;
 
   /* special offset removal for magnetometer */
-  g->m[0] = (double)(g->mx);
+  /*g->m[0] = (double)(g->mx);
   g->m[1] = (double)(g->my);
   g->m[2] = (double)(g->mz);
 
@@ -104,7 +104,9 @@ void remove_offsets(imu* g) {
 
   g->mx = g->mx - (int)g->off_m[0];
   g->my = g->my - (int)g->off_m[1];
-  g->mz = g->mz - (int)g->off_m[2];
+  g->mz = g->mz - (int)g->off_m[2];*/
+
+  
 }
 
 
@@ -152,11 +154,11 @@ void complementary_filter(imu* g){
   //g->ypr[PITCH] = g->x_acc;
   //g->ypr[ROLL] = g->y_acc;
 
-  g->ypr_rad[PITCH] = -(P1*(-g->ypr[PITCH] + g->y_gyr*0.001) + (1.0-P1)*g->x_acc);
-  g->ypr_rad[ROLL] = (P2*(g->ypr[ROLL] + g->x_gyr*0.001) + (1.0-P2)*g->y_acc);
+  g->ypr_rad[PITCH] = -(P1*(-g->ypr_rad[PITCH] + g->y_gyr*0.001) + (1.0-P1)*g->x_acc);
+  g->ypr_rad[ROLL] = (P2*(g->ypr_rad[ROLL] + g->x_gyr*0.001) + (1.0-P2)*g->y_acc);
 
-  g->ypr[PITCH] = g->ypr_rad[PITCH]*RAD_TO_DEG;
-  g->ypr[ROLL] = g->ypr_rad[ROLL]*RAD_TO_DEG;
+  g->ypr[PITCH] = g->ypr_rad[PITCH] * RAD_TO_DEG;
+  g->ypr[ROLL] = g->ypr_rad[ROLL] * RAD_TO_DEG;
   
 }
 

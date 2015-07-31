@@ -12,16 +12,18 @@
 
 
 #define RAD_TO_DEG 180.0/M_PI
+#define DEG_TO_RAD M_PI/180.0
 
-#define LP_BUFFER_SIZE 10
+#define LP_BUFFER_SIZE 20
 
 #define YAW 0
 #define PITCH 1
 #define ROLL 2
 
-#define P1 0.9
-#define P2 0.9
-#define P3 0.9
+/*  */
+#define P1 0.95
+#define P2 0.95
+#define P3 0.95
 
 #define MAG_ADDR 0x1E
 #define MAG_OFF_GAIN 20.0
@@ -46,7 +48,7 @@
 #define ACC_SCALE_X 1.0/15800.0
 #define ACC_SCALE_Y 1.0/16600.0
 #define ACC_SCALE_Z 1.0/15300.0
-
+/*
 #define MAG_OFF_X
 #define MAG_OFF_Y
 #define MAG_OFF_Z
@@ -54,7 +56,7 @@
 #define MAG_SCALE_X
 #define MAG_SCALE_Y
 #define MAG_SCALE_Z
-
+*/
 
 
 
