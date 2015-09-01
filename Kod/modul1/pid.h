@@ -3,24 +3,34 @@
 
 #define PID_MAX 254.0
 
-#define KP 1.0
-#define KI 0.0001
-#define KD 0.8
+#define KP 0.16
+#define KI 0.0004
+#define KD 2.8
 
-#define KP_Y 0.2
-#define KI_Y 0.001
-#define KD_Y 1.0
+#define KP_Y 0.00
+#define KI_Y 0.00
+#define KD_Y 0.00
 
 /* PID structure containing necessary info */
 struct pid{
 
 	//roll
 	int roll_u;
+
+	double roll_p;
+	double roll_i;
+	double roll_d;
+
 	double roll_error, roll_error_prev;
 	double roll_integral; 
 
 	//pitch
 	int pitch_u;
+
+	double pitch_p;
+	double pitch_i;
+	double pitch_d;
+
 	double pitch_error, pitch_error_prev;
 	double pitch_integral;
 

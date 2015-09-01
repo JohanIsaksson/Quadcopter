@@ -3,23 +3,22 @@
 #include <ServoTimer2.h>
 #include "pid.h"
 
-#define SPEED_MIN_FRONT 1500
-#define SPEED_MAX_FRONT 2000
-#define SPEED_MIN_BACK 1250
-#define SPEED_MAX_BACK 1750
+#define SPEED_MIN 1250
+#define SPEED_MAX 1750
 
 #define RADIO_THROTTLE 5 //6 in future
 
 #define CALIBRATION_COMP 10
 
-#define LOST_CONNECTION_COUNT 500
-#define EMERGENCY_THROTTLE 150
+#define LOST_CONNECTION_COUNT 100
+#define EMERGENCY_THROTTLE 0
 
 
 //#define YPR_DATA
 //#define COMP_DATA
-#define PID_DATA
+//#define PID_DATA
 //#define MAG_DATA
+#define JAVA_DATA
 
 radio rad;
 imu im;
@@ -69,10 +68,10 @@ void setup(){
   motors[3].attach(6);
 
   //set init speed to motors
-  motors[0].write(SPEED_MIN_FRONT);
-  motors[1].write(SPEED_MIN_FRONT);
-  motors[2].write(SPEED_MIN_BACK);
-  motors[3].write(SPEED_MIN_BACK);
+  motors[0].write(SPEED_MIN);
+  motors[1].write(SPEED_MIN);
+  motors[2].write(SPEED_MIN);
+  motors[3].write(SPEED_MIN);
 
   init_pid(&p);
 
@@ -94,7 +93,7 @@ void setup(){
 
 
 void loop(){
-  time_diff = millis() - time_last;
+  
   time_last = millis();
 
 
@@ -104,6 +103,9 @@ void loop(){
   if (!read_message(&rad)){    
     if (radio_off_counter >= LOST_CONNECTION_COUNT){
       rad.buffer[RADIO_THROTTLE] = EMERGENCY_THROTTLE;
+      p.pitch_integral = 0.0;
+      p.roll_integral = 0.0;
+      
     }else{
       radio_off_counter++;
     }
@@ -111,40 +113,46 @@ void loop(){
   }else{
     radio_off_counter = 0;
   }
+
+  time_diff = millis() - time_last;
   
 
 
   /* calculate pid */
   pid_pitch(&p, &front, &back, im.ypr[1], (double)rad.buffer[3]);
   pid_roll(&p, &left, &right, im.ypr[2], (double)rad.buffer[2]);
-  pid_yaw(&p, &cw, &ccw, -im.z_gyr*RAD_TO_DEG, (double)rad.buffer[4]);
+  pid_yaw_temp(&p, &cw, &ccw, -im.z_gyr*RAD_TO_DEG, (double)rad.buffer[4]);
   //pid_yaw(&p, &cw, &ccw, im.ypr[0], (int)((((uint16_t)rad.buffer[4]) << 8) + (uint8_t)rad.buffer[5]);
 
   /* calculate final motor speed */
   //front left
-  throttle[0] = (uint8_t)rad.buffer[RADIO_THROTTLE] + front + left + cw + CALIBRATION_COMP;
+  throttle[0] = (uint8_t)rad.buffer[RADIO_THROTTLE] + front + left + cw; //+ CALIBRATION_COMP;
 
   //front right
-  throttle[1] = (uint8_t)rad.buffer[RADIO_THROTTLE] + front + right + ccw + CALIBRATION_COMP;
+  throttle[1] = (uint8_t)rad.buffer[RADIO_THROTTLE] + front + right + ccw; //+ CALIBRATION_COMP;
 
   //back left
-  throttle[2] = (uint8_t)rad.buffer[RADIO_THROTTLE] + back + left + ccw - CALIBRATION_COMP;
+  throttle[2] = (uint8_t)rad.buffer[RADIO_THROTTLE] + back + left + ccw; //- CALIBRATION_COMP;
 
   //back right
-  throttle[3] = (uint8_t)rad.buffer[RADIO_THROTTLE] + back + right + cw - CALIBRATION_COMP;
+  throttle[3] = (uint8_t)rad.buffer[RADIO_THROTTLE] + back + right + cw; //- CALIBRATION_COMP;
 
   //check and set speeds
-  for (int i = 0; i < 4; i++){
-    if (throttle[i] > 255){
-      throttle[i] = 255;
-    }else if (throttle[i] < 0){
+  if (radio_off_counter >= LOST_CONNECTION_COUNT){
+    for (int i = 0; i < 4; i++){
+      motors[i].write(SPEED_MIN);
       throttle[i] = 0;
-    }         
+    }
+  }else{
+    for (int i = 0; i < 4; i++){
+      if (throttle[i] > 255){
+        throttle[i] = 255;
+      }else if (throttle[i] < 0){
+        throttle[i] = 0;
+      }     
+      motors[i].write(map(throttle[i], 0, 255, SPEED_MIN, SPEED_MAX));    
+    }
   }
-  motors[0].write(map(throttle[0], 0, 255, SPEED_MIN_FRONT, SPEED_MAX_FRONT));
-  motors[1].write(map(throttle[0], 0, 255, SPEED_MIN_BACK, SPEED_MAX_BACK));
-  motors[2].write(map(throttle[0], 0, 255, SPEED_MIN_BACK, SPEED_MAX_BACK));
-  motors[3].write(map(throttle[0], 0, 255, SPEED_MIN_BACK, SPEED_MAX_BACK));
 
 
 
@@ -157,18 +165,18 @@ void loop(){
 
 
 
-
+  /* DEBUG DATA OUTPUT */
 
   count++;
-  if (count == 8){
+  if (count == 5){
 
-    Serial.print(time_diff);
-    Serial.print("\t\t");
+    //Serial.print(time_diff);
+    //Serial.print(",");
 
     #ifdef PID_DATA
       for (int i = 0; i < 4; i++){      
         Serial.print(throttle[i]);
-        Serial.print("\t");
+        Serial.print(",");
       }
     #endif
 
@@ -190,34 +198,27 @@ void loop(){
 
 
     #ifdef COMP_DATA
-      Serial.print("Pitch:\t");
-      Serial.print(im.ypr[1]);      
+      //Serial.print("Pitch:\t");
+      /*Serial.print(im.ax); 
+      Serial.print(",");
+      Serial.print(im.ay); 
+      Serial.print(",");
+      Serial.print(im.az); 
 
-      Serial.print("\t");
+      Serial.print(",");*/
+      Serial.print(im.ypr[1]); 
+
+      Serial.print(",");
       Serial.print(im.x_acc);
-      Serial.print("\t");
+      Serial.print(",");
       Serial.print(im.y_gyr);
-
-      Serial.print("\t\tRoll\t");
+      Serial.print(",");
+      //Serial.print("\t\tRoll\t");
       Serial.print(im.ypr[2]);
-      Serial.print("\t");
+      Serial.print(",");
       Serial.print(im.y_acc);
-      Serial.print("\t");
+      Serial.print(",");
       Serial.print(im.x_gyr);
-/*
-      Serial.print("\t\t");
-
-      for (int i = 0; i < 4; i++){      
-        Serial.print(throttle[i]);
-        Serial.print("\t");
-      }
-      //Serial.println();
-
-      Serial.print("\t\t");
-      Serial.print(front);
-      Serial.print("\t");
-      Serial.println(left);
-*/
 
     #endif
 
@@ -229,6 +230,56 @@ void loop(){
       Serial.print(im.my);
       Serial.print("\t");
       Serial.print(im.mz);
+    #endif
+
+    #ifdef JAVA_DATA
+      Serial.print(im.ypr[0]);
+      Serial.print(",");
+      Serial.print(rad.buffer[4]);
+      Serial.print(",");
+
+      Serial.print(im.ypr[1]);
+      Serial.print(",");
+      Serial.print(rad.buffer[3]);
+      Serial.print(",");
+
+      Serial.print(im.ypr[2]);
+      Serial.print(",");
+      Serial.print(rad.buffer[2]);
+      Serial.print(",");
+
+      for (int i = 0; i < 4; i++){      
+        Serial.print(throttle[i]);
+        Serial.print(",");
+      }
+
+      Serial.print(im.height);
+      Serial.print(",");
+      Serial.print(im.vertical_speed);
+      Serial.print(",");
+      Serial.print(im.vertical_acc);
+      Serial.print(",");
+      
+      Serial.print(p.pitch_p);
+      Serial.print(",");
+      Serial.print(p.pitch_i);
+      Serial.print(",");
+      Serial.print(p.pitch_d);
+      Serial.print(",");
+
+      Serial.print(time_diff);
+      Serial.print(",");
+
+      /*Serial.print(",");
+
+      Serial.print(",");
+
+      Serial.print(",");
+
+      Serial.print(",");*/
+
+
+
     #endif
 
 

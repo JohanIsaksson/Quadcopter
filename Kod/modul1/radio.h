@@ -4,9 +4,11 @@
 
 #include <VirtualWire.h>
 
+#define BUFFER_MAX 8
+
 /* Radio structure containing necessary info */
 struct radio {
-	signed char buffer[VW_MAX_MESSAGE_LEN];
+	signed char buffer[BUFFER_MAX];
 	byte bufpos;
 };
 

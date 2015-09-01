@@ -13,9 +13,13 @@ void pid_pitch(pid* p, int* front, int* back, double gyro_pitch, double ref_pitc
 
 	p->pitch_error = ref_pitch - gyro_pitch; // anlge error
 
-	p->pitch_integral += p->pitch_error; 
+	p->pitch_integral += p->pitch_error;
 
-	p->pitch_u = (int)(KP*p->pitch_error + KI*p->pitch_integral + KD*(p->pitch_error-p->pitch_error_prev));
+	p->pitch_p = KP * p->pitch_error;
+	p->pitch_i = KI * p->pitch_integral;
+	p->pitch_d = KD * (p->pitch_error - p->pitch_error_prev);
+
+	p->pitch_u =  (int)(p->pitch_p + p->pitch_i + p->pitch_d);
 
 	//limit pitch
 	if (p->pitch_u > 0.0){
@@ -117,9 +121,9 @@ void pid_yaw(pid* p, int* cw, int* ccw, double gyro_yaw, int ref_yaw){
 void pid_yaw_temp(pid* p, int* cw, int* ccw, double gyro_yaw, double ref_yaw){
 	p->yaw_error = ref_yaw - gyro_yaw; // anlge error
 
-	p->yaw_integral += p->yaw_error; 
+	//p->yaw_integral += p->yaw_error; 
 
-	p->yaw_u = (int)(KP_Y*p->yaw_error + KI_Y*p->yaw_integral + KD_Y*(p->yaw_error-p->yaw_error_prev));
+	p->yaw_u = (int)(KP_Y*p->yaw_error + KD_Y*(p->yaw_error-p->yaw_error_prev)); // + KI_Y*p->yaw_integral
 
 	//limit pitch
 	if (p->pitch_u > 0.0){
@@ -135,7 +139,7 @@ void pid_yaw_temp(pid* p, int* cw, int* ccw, double gyro_yaw, double ref_yaw){
 	p->yaw_error_prev = p->yaw_error;
 
 	//set values
-	*cw = -p->yaw_u;
-	*ccw = p->yaw_u;
+	*cw = p->yaw_u;
+	*ccw = -p->yaw_u;
 
 }

@@ -12,7 +12,7 @@ uint8_t rsw, last_rsw, lsw, last_lsw; //joystick switches
 byte state, lights;
 
 /* Radio buffer variables */
-#define BUFFER_MAX VW_MAX_MESSAGE_LEN
+#define BUFFER_MAX 8
 byte buffer[BUFFER_MAX];
 byte bufpos = 0;
 
@@ -38,7 +38,7 @@ void setup(){
   vw_set_rx_pin(receive_pin);
   vw_set_ptt_pin(transmit_en_pin);
   vw_set_ptt_inverted(true); // Required for DR3100
-  vw_setup(6000); // Bits per sec
+  vw_setup(2000); // Bits per sec
   
   //joystick inputs
   pinMode(A0,INPUT); //rx
@@ -157,9 +157,12 @@ void send_to_copter(){
   
   add_to_buffer((byte)get_desired_angle(joy_axis[1])); //roll
   add_to_buffer((byte)get_desired_angle(joy_axis[0])); //pitch
-  int16_t y = get_yaw(joy_axis[3]);
+
+  add_to_buffer((byte)get_desired_angle(joy_axis[3]));
+
+  /*int16_t y = get_yaw(joy_axis[3]);
   add_to_buffer((byte)(y >> 8))); //msb
-  add_to_buffer((byte)y); //lsb
+  add_to_buffer((byte)y); //lsb*/
 
   Serial.print(" roll = ");
   Serial.print(get_desired_angle(joy_axis[1]),DEC);
@@ -171,7 +174,7 @@ void send_to_copter(){
   Serial.print(get_desired_angle(joy_axis[3]),DEC);
   
   Serial.print(", throttle = ");
-  Serial.print(get_throttle(joy_axis[2]),DEC);
+  Serial.print((uint8_t)((joy_axis[2] >> 2)),DEC);
   
   Serial.println();
   
@@ -187,7 +190,7 @@ void send_to_copter(){
 void loop(){
   //temporary delay for debug
   
-  delay(50);
+  delay(32);
   
   digitalWrite(13,HIGH);
   

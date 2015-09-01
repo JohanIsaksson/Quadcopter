@@ -20,10 +20,6 @@
 #define PITCH 1
 #define ROLL 2
 
-/*  */
-#define P1 0.95
-#define P2 0.95
-#define P3 0.9
 
 #define MAG_ADDR 0x1E
 #define MAG_OFF_GAIN 20.0
@@ -45,9 +41,9 @@
 #define ACC_OFF_Z -200
 
 // accelerometer scalers
-#define ACC_SCALE_X 1.0/15800.0
-#define ACC_SCALE_Y 1.0/16600.0
-#define ACC_SCALE_Z 1.0/15300.0
+#define ACC_SCALE_X 1.0/16384.0 //15800.0
+#define ACC_SCALE_Y 1.0/16384.0 //16600.0
+#define ACC_SCALE_Z 1.0/16384.0 //15300.0
 
 #define MAG_OFF_X 64
 #define MAG_OFF_Y 144
@@ -59,8 +55,11 @@
 
 
 // complementary parameters
-#define GYRO_GAIN 1.0
-
+#define GYRO_GAIN_PITCH 1.2
+#define GYRO_GAIN_ROLL 1.3
+#define P1 0.99
+#define P2 0.99
+#define P3 0.99
 
 
 
@@ -103,7 +102,9 @@ struct imu{
 	double xh, yh;
 
 	//barometer data
-	int height;
+	double height;
+	double vertical_speed;
+	double vertical_acc;
 	
 
 

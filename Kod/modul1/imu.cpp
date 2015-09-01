@@ -13,6 +13,14 @@ bool init_imu(imu* g){
  	// initialize MPU6050
   g->gyro.initialize();
 
+  g->gyro.setXAccelOffset(-2601);
+  g->gyro.setYAccelOffset(-1688);
+  g->gyro.setZAccelOffset(1344);
+
+  g->gyro.setXGyroOffset(98);
+  g->gyro.setYGyroOffset(32);
+  g->gyro.setZGyroOffset(18);
+
   // initialize HMC5883L
   Wire.beginTransmission(MAG_ADDR);
   Wire.write(0x02); //select mode register
@@ -39,6 +47,10 @@ bool init_imu(imu* g){
     g->ypr[i] =  0.0;
   }
 
+  g->height = 0.0;
+  g->vertical_speed = 0.0;
+  g->vertical_acc = 0.0;
+
 
   return ret;
 }
@@ -54,16 +66,18 @@ void read_magnetometer(imu* g){
 }
 
 void remove_offsets(imu* g) {
+
   /* remove offset for each imu axis */
-  g->ax = g->ax - ACC_OFF_X;
+  /*g->ax = g->ax - ACC_OFF_X;
   g->ay = g->ay - ACC_OFF_Y;
   g->az = g->az - ACC_OFF_Z;
 
   g->gx = g->gx - GYRO_OFF_X;
   g->gy = g->gy - GYRO_OFF_Y;
-  g->gz = g->gz - GYRO_OFF_Z;
+  g->gz = g->gz - GYRO_OFF_Z;*/
 
   /* special offset removal for magnetometer */
+  
 
   /* remove hard iron offset */
   g->mx = g->mx - MAG_OFF_X;
@@ -134,7 +148,6 @@ void complementary_filter(imu* g, double tim){
   
 
   /* calculate accelerometer angle and angular velocity */
-  //g->x_acc = ((double)(g->ax)) * g->scale_ax;
   double x = (double)g->ax * ACC_SCALE_X;
   double y = (double)g->ay * ACC_SCALE_Y;
   double z = (double)g->az * ACC_SCALE_Z;
@@ -152,8 +165,9 @@ void complementary_filter(imu* g, double tim){
   //g->ypr[PITCH] = g->x_acc;
   //g->ypr[ROLL] = g->y_acc;
 
-  g->ypr_rad[PITCH] = -(P1*(-g->ypr_rad[PITCH] - g->y_gyr*tim*GYRO_GAIN) + (1.0-P1)*g->x_acc);
-  g->ypr_rad[ROLL] = (P2*(g->ypr_rad[ROLL] + g->x_gyr*tim*GYRO_GAIN) + (1.0-P2)*g->y_acc);
+  g->ypr_rad[PITCH] = -(P1*(-g->ypr_rad[PITCH] - g->y_gyr*tim*GYRO_GAIN_PITCH) + (1.0-P1)*g->x_acc);
+  g->ypr_rad[ROLL] = (P2*(g->ypr_rad[ROLL] + g->x_gyr*tim*GYRO_GAIN_ROLL) + (1.0-P2)*g->y_acc);
+
 
   g->ypr[PITCH] = g->ypr_rad[PITCH] * RAD_TO_DEG;
   g->ypr[ROLL] = g->ypr_rad[ROLL] * RAD_TO_DEG;
@@ -183,6 +197,17 @@ void tilt_compensation(imu* g){
 
 }
 
+
+void height_estimation(imu* g, double tim){
+  double x = (double)g->ax * ACC_SCALE_X * sin(g->ypr_rad[ROLL]);
+  double y = (double)g->ay * ACC_SCALE_Y * sin(g->ypr_rad[PITCH]);
+  double z = (double)g->az * ACC_SCALE_Z;
+
+  g->vertical_acc = z - sqrt(1.0 - (x*x + y*y)) + 0.002;
+  g->vertical_speed = g->vertical_acc * 9.82 * tim;
+  g->height += g->vertical_speed * tim;
+}
+
 /* Reads raw data from gyro and calculates yaw, pitch and roll */
 void read_imu(imu* g, uint32_t tim){
 
@@ -202,4 +227,7 @@ void read_imu(imu* g, uint32_t tim){
 
   //get yaw
   tilt_compensation(g);
+
+  //get height
+  height_estimation(g, t);
 }
