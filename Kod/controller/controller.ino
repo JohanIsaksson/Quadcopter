@@ -11,6 +11,9 @@ uint16_t throttle;
 uint8_t rsw, last_rsw, lsw, last_lsw; //joystick switches
 byte state, lights;
 
+uint32_t time_diff;
+uint32_t time_last;
+
 /* Radio buffer variables */
 #define BUFFER_MAX 8
 byte buffer[BUFFER_MAX];
@@ -57,6 +60,8 @@ void setup(){
   
   Serial.begin(38400);
   Serial.println("setup");
+
+  time_last = millis();
 }
 
 /* Changes the states using the joystick buttons - NOT WORKING */
@@ -176,7 +181,7 @@ void send_to_copter(){
   Serial.print(", throttle = ");
   Serial.print((uint8_t)((joy_axis[2] >> 2)),DEC);
   
-  Serial.println();
+
   
   //add throttle
   add_to_buffer((uint8_t)((joy_axis[2] >> 2))); //pick most significant bits
@@ -188,9 +193,9 @@ void send_to_copter(){
 
 /* Main loop */
 void loop(){
-  //temporary delay for debug
-  
-  delay(32);
+
+  time_diff = millis() - time_last;
+  time_last = millis();
   
   digitalWrite(13,HIGH);
   
@@ -208,6 +213,9 @@ void loop(){
   change_state();
   
   send_to_copter();
+
+  Serial.print("\t");
+  Serial.println(time_diff);
 
   
   digitalWrite(13,LOW);

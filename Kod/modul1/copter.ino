@@ -94,7 +94,9 @@ void setup(){
 
 void loop(){
   
+  time_diff = millis() - time_last;
   time_last = millis();
+
 
 
   read_imu(&im, time_diff);
@@ -114,7 +116,7 @@ void loop(){
     radio_off_counter = 0;
   }
 
-  time_diff = millis() - time_last;
+  
   
 
 
