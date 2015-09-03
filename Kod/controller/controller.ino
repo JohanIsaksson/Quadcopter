@@ -188,7 +188,7 @@ void send_to_copter(){
   
   
   //send  
-  send_buffer((uint8_t *)buffer, bufpos);
+  send_buffer((uint8_t *)buffer, BUFFER_MAX);
 }
 
 /* Main loop */

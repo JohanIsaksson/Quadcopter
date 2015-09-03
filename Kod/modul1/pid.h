@@ -5,7 +5,7 @@
 
 #define KP 0.16
 #define KI 0.0004
-#define KD 2.8
+#define KD 3.4
 
 #define KP_Y 0.00
 #define KI_Y 0.00
