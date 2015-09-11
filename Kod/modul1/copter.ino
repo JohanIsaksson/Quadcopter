@@ -111,13 +111,9 @@ void loop(){
     }else{
       radio_off_counter++;
     }
-
   }else{
     radio_off_counter = 0;
-  }
-
-  
-  
+  }  
 
 
   /* calculate pid */

@@ -45,9 +45,20 @@
 #define ACC_SCALE_Y 1.0/16384.0 //16600.0
 #define ACC_SCALE_Z 1.0/16384.0 //15300.0
 
-#define MAG_OFF_X 64
-#define MAG_OFF_Y 144
-#define MAG_OFF_Z 7
+// magnetometer offsets
+#define MAG_OFF_X 96
+#define MAG_OFF_Y -967
+#define MAG_OFF_Z -42
+
+#define M11 1.623
+#define M21 0.024
+#define M31 0.059
+#define M12 -0.009
+#define M22 1.66
+#define M32 0.065
+#define M13 0.0
+#define M23 0.123
+#define M33 1.87
 
 #define MAG_SCALE_X 1.0/505.0
 #define MAG_SCALE_Y 1.0/513.0

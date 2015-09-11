@@ -1,5 +1,10 @@
 #include <VirtualWire.h>
 
+
+#define RADIO_SPEED 2000
+#define MAX_ANGLE 15.0
+
+
 /* Radio pin constants */
 const int transmit_pin = 12;
 const int receive_pin = 10;
@@ -20,8 +25,6 @@ byte buffer[BUFFER_MAX];
 byte bufpos = 0;
 
 /* Values for angle calculation */
-#define K 0.059
-#define M -30.0
 
 int16_t yaw;
 
@@ -41,7 +44,7 @@ void setup(){
   vw_set_rx_pin(receive_pin);
   vw_set_ptt_pin(transmit_en_pin);
   vw_set_ptt_inverted(true); // Required for DR3100
-  vw_setup(2000); // Bits per sec
+  vw_setup(RADIO_SPEED); // Bits per sec
   
   //joystick inputs
   pinMode(A0,INPUT); //rx
@@ -127,7 +130,7 @@ void send_buffer(uint8_t * buf, uint8_t buflen){
 int get_desired_angle(uint16_t in){
   int t = 0 + in;
   double x = (double)t;
-  return (int)(K*x + M);
+  return (int)((MAX_ANGLE/512.0)*x - MAX_ANGLE);
 }
 
 /* Integrates joystick value to calculate yaw*/

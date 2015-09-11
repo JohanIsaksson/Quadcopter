@@ -65,60 +65,17 @@ void read_magnetometer(imu* g){
   g->my = (((int16_t)buffer[4]) << 8) | buffer[5];
 }
 
+/* special offset removal for magnetometer */  
 void remove_offsets(imu* g) {
-
-  /* remove offset for each imu axis */
-  /*g->ax = g->ax - ACC_OFF_X;
-  g->ay = g->ay - ACC_OFF_Y;
-  g->az = g->az - ACC_OFF_Z;
-
-  g->gx = g->gx - GYRO_OFF_X;
-  g->gy = g->gy - GYRO_OFF_Y;
-  g->gz = g->gz - GYRO_OFF_Z;*/
-
-  /* special offset removal for magnetometer */
-  
-
-  /* remove hard iron offset */
+  /* remove bias */
   g->mx = g->mx - MAG_OFF_X;
   g->my = g->my - MAG_OFF_Y;
   g->mz = g->mz - MAG_OFF_Z;
 
-
-  /* remove soft iron offset */
-
-  /*g->m[0] = (double)(g->mx);
-  g->m[1] = (double)(g->my);
-  g->m[2] = (double)(g->mz);
-
-  double len_m = sqrt(g->m[0]*g->m[0]
-                    + g->m[1]*g->m[1]
-                    + g->m[2]*g->m[2]);
-
-  double len_last_m = sqrt(g->last_m[0]*g->last_m[0]
-                         + g->last_m[1]*g->last_m[1]
-                         + g->last_m[2]*g->last_m[2]);
-
-  double len_diff = sqrt((g->m[0]-g->last_m[0])*(g->m[0]-g->last_m[0])
-                       + (g->m[1]-g->last_m[1])*(g->m[1]-g->last_m[1])
-                       + (g->m[2]-g->last_m[2])*(g->m[2]-g->last_m[2]));
-  
-  if (abs(len_diff) > 0.00001){
-    g->off_m[0] = g->off_m[0] + MAG_OFF_GAIN*((g->m[0]-g->last_m[0])/len_diff)*(len_m-len_last_m);
-    g->off_m[1] = g->off_m[1] + MAG_OFF_GAIN*((g->m[1]-g->last_m[1])/len_diff)*(len_m-len_last_m);
-    g->off_m[2] = g->off_m[2] + MAG_OFF_GAIN*((g->m[2]-g->last_m[2])/len_diff)*(len_m-len_last_m);
-  
-  }
-  
-  g->last_m[0] = (double)(g->mx);
-  g->last_m[1] = (double)(g->my);
-  g->last_m[2] = (double)(g->mz);
-
-  g->mx = g->mx - (int)g->off_m[0];
-  g->my = g->my - (int)g->off_m[1];
-  g->mz = g->mz - (int)g->off_m[2];*/
-
-
+  /* remove hard and soft iron offset */
+  g->x_mag = M11*((double)g->mx) + M12*((double)g->my) + M13*((double)g->mz);
+  g->y_mag = M21*((double)g->mx) + M22*((double)g->my) + M23*((double)g->mz);
+  g->z_mag = M31*((double)g->mx) + M32*((double)g->my) + M33*((double)g->mz);
 }
 
 
@@ -178,17 +135,17 @@ void complementary_filter(imu* g, double tim){
 void tilt_compensation(imu* g){
   /* calculate magnetometer angles */
 
-  g->x_mag = (double)(g->mx) * MAG_SCALE_X;
-  g->y_mag = (double)(g->my) * MAG_SCALE_Y;
-  g->z_mag = (double)(g->mz) * MAG_SCALE_Z;
+  //g->x_mag = (double)(g->mx) * MAG_SCALE_X;
+  //g->y_mag = (double)(g->my) * MAG_SCALE_Y;
+  //g->z_mag = (double)(g->mz) * MAG_SCALE_Z;
 
   /* perform tilt compensation */
-  g->xh = g->x_mag*cos(g->ypr[PITCH]*(M_PI/180.0)) 
-          + g->y_mag*sin(g->ypr[PITCH]*(M_PI/180.0))*sin(g->ypr[ROLL]*(M_PI/180.0)) 
-          + g->z_mag*sin(g->ypr[PITCH]*(M_PI/180.0))*cos(g->ypr[PITCH]*(M_PI/180.0));
+  g->xh = g->x_mag*cos(g->ypr_rad[PITCH]) 
+          + g->y_mag*sin(g->ypr_rad[PITCH])*sin(g->ypr_rad[ROLL]) 
+          + g->z_mag*sin(g->ypr_rad[PITCH])*cos(g->ypr_rad[PITCH]);
 
-  g->yh = g->y_mag*cos(g->ypr[ROLL]*(M_PI/180.0)) 
-          - g->z_mag*sin(g->ypr[ROLL]*(M_PI/180.0));
+  g->yh = g->y_mag*cos(g->ypr_rad[ROLL]) 
+          - g->z_mag*sin(g->ypr_rad[ROLL]);
 
   g->ypr[YAW] = atan2(-g->yh, g->xh)*(180.0/M_PI);
 
