@@ -1,3 +1,5 @@
+#pragma GCC optimize("-O3")
+
 #include "imu.h"
 #include "radio.h"
 #include <ServoTimer2.h>
@@ -14,13 +16,13 @@
 #define EMERGENCY_THROTTLE 0
 
 
-//#define YPR_DATA
+#define YPR_DATA
 //#define COMP_DATA
 //#define PID_DATA
 //#define MAG_DATA
-#define JAVA_DATA
+//#define JAVA_DATA
 
-radio rad;
+//radio rad;
 imu im;
 pid p;
 
@@ -32,11 +34,12 @@ ServoTimer2 motors[4];
 //3 = back right
 
 int throttle[4];
+uint16_t rad_throttle;
 
 //pid
-int front, back;
-int left, right;
-int cw, ccw;
+int front;
+int left;
+int cw;
 
 //output
 int count;
@@ -55,10 +58,11 @@ void setup(){
 
 
   Serial.begin(38400);
+  Serial.println("Starting up");
 
-	bool b = init_imu(&im);
+	imu_init(&im);
 
-	init_radio(&rad);
+	//init_radio(&rad);
   radio_off_counter = 0;
 
 	//asign motors to pins
@@ -76,33 +80,31 @@ void setup(){
   init_pid(&p);
 
   front = 0;
-  back = 0;
   left = 0;
-  right = 0;
   cw = 0;
-  ccw = 0;
 
 
   count = 0;
 
   //wait for esc init;
+  Serial.println("Initializing ESCs...");
   delay(3000);
 
   time_last = millis();
+   Serial.println("Running...");
 }
 
 
 void loop(){
-  
   time_diff = millis() - time_last;
   time_last = millis();
 
 
 
-  read_imu(&im, time_diff);
+  imu_update(&im, time_diff);
   
   //check for lost radio connetion
-  if (!read_message(&rad)){    
+  /*if (false){ //!read_message(&rad)){    
     if (radio_off_counter >= LOST_CONNECTION_COUNT){
       rad.buffer[RADIO_THROTTLE] = EMERGENCY_THROTTLE;
       p.pitch_integral = 0.0;
@@ -113,42 +115,49 @@ void loop(){
     }
   }else{
     radio_off_counter = 0;
-  }  
+  }  */
 
 
   /* calculate pid */
-  pid_pitch(&p, &front, &back, im.ypr[1], (double)rad.buffer[3]);
-  pid_roll(&p, &left, &right, im.ypr[2], (double)rad.buffer[2]);
-  pid_yaw_temp(&p, &cw, &ccw, -im.z_gyr*RAD_TO_DEG, (double)rad.buffer[4]);
-  //pid_yaw(&p, &cw, &ccw, im.ypr[0], (int)((((uint16_t)rad.buffer[4]) << 8) + (uint8_t)rad.buffer[5]);
+  pid_pitch(&p, &front, im.ypr[1], 0.0);
+  pid_roll(&p, &left, im.ypr[2], 0.0);
+  pid_yaw_temp(&p, &cw, -im.z_gyr*RAD_TO_DEG, 0.0);
+
+  /*pid_pitch(&p, &front, im.ypr[1], (double)rad.buffer[3]);
+  pid_roll(&p, &left, im.ypr[2], (double)rad.buffer[2]);
+  pid_yaw_temp(&p, &cw, -im.z_gyr*RAD_TO_DEG, (double)rad.buffer[4]);*/
+
+
 
   /* calculate final motor speed */
+  //rad_throttle = map(0, 0, 255, SPEED_MIN, SPEED_MAX); //map((uint8_t)rad.buffer[RADIO_THROTTLE], 0, 255, SPEED_MIN, SPEED_MAX);
+  rad_throttle = (((uint16_t)0) << 1) + 1250; //rad_throttle = (((uint16_t)rad.buffer(RADIO_THROTTLE)) << 1) + 1250;
   //front left
-  throttle[0] = (uint8_t)rad.buffer[RADIO_THROTTLE] + front + left + cw; //+ CALIBRATION_COMP;
+  throttle[0] = rad_throttle + front + left + cw; //+ CALIBRATION_COMP;
 
   //front right
-  throttle[1] = (uint8_t)rad.buffer[RADIO_THROTTLE] + front + right + ccw; //+ CALIBRATION_COMP;
+  throttle[1] = rad_throttle + front - left - cw; //+ CALIBRATION_COMP;
 
   //back left
-  throttle[2] = (uint8_t)rad.buffer[RADIO_THROTTLE] + back + left + ccw; //- CALIBRATION_COMP;
+  throttle[2] = rad_throttle - front + left - cw; //- CALIBRATION_COMP;
 
   //back right
-  throttle[3] = (uint8_t)rad.buffer[RADIO_THROTTLE] + back + right + cw; //- CALIBRATION_COMP;
+  throttle[3] = rad_throttle -front - left + cw; //- CALIBRATION_COMP;
 
   //check and set speeds
   if (radio_off_counter >= LOST_CONNECTION_COUNT){
     for (int i = 0; i < 4; i++){
       motors[i].write(SPEED_MIN);
-      throttle[i] = 0;
+      throttle[i] = SPEED_MIN;
     }
   }else{
     for (int i = 0; i < 4; i++){
-      if (throttle[i] > 255){
-        throttle[i] = 255;
-      }else if (throttle[i] < 0){
-        throttle[i] = 0;
+      if (throttle[i] > SPEED_MAX){
+        throttle[i] = SPEED_MAX;
+      }else if (throttle[i] < SPEED_MIN){
+        throttle[i] = SPEED_MIN;
       }     
-      motors[i].write(map(throttle[i], 0, 255, SPEED_MIN, SPEED_MAX));    
+      motors[i].write(throttle[i]);    
     }
   }
 
@@ -166,7 +175,7 @@ void loop(){
   /* DEBUG DATA OUTPUT */
 
   count++;
-  if (count == 5){
+  if (count == 25){
 
     //Serial.print(time_diff);
     //Serial.print(",");
@@ -176,6 +185,15 @@ void loop(){
         Serial.print(throttle[i]);
         Serial.print(",");
       }
+
+      Serial.print(cw);
+      Serial.print(",");
+      Serial.print(ccw);
+      Serial.print(",");
+
+
+
+
     #endif
 
     #ifdef YPR_DATA
@@ -233,17 +251,17 @@ void loop(){
     #ifdef JAVA_DATA
       Serial.print(im.ypr[0]);
       Serial.print(",");
-      Serial.print(rad.buffer[4]);
+     // Serial.print(rad.buffer[4]);
       Serial.print(",");
 
       Serial.print(im.ypr[1]);
       Serial.print(",");
-      Serial.print(rad.buffer[3]);
+      //Serial.print(rad.buffer[3]);
       Serial.print(",");
 
       Serial.print(im.ypr[2]);
       Serial.print(",");
-      Serial.print(rad.buffer[2]);
+      //Serial.print(rad.buffer[2]);
       Serial.print(",");
 
       for (int i = 0; i < 4; i++){      
@@ -265,8 +283,8 @@ void loop(){
       Serial.print(p.pitch_d);
       Serial.print(",");
 
-      Serial.print(time_diff);
-      Serial.print(",");
+      //Serial.print(time_diff);
+      //Serial.print(",");
 
       /*Serial.print(",");
 
@@ -281,7 +299,7 @@ void loop(){
     #endif
 
 
-    Serial.println();
+    Serial.println(time_diff);
 
 
 

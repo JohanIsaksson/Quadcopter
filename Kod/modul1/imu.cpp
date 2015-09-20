@@ -1,59 +1,44 @@
 
 #include "imu.h"
 
-/* Initializes the imu and sets parameters */
-bool init_imu(imu* g){
-	// join I2C bus (I2Cdev library doesn't do this automatically)
-  #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-      Wire.begin();
-  #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-      Fastwire::setup(400, true);
-  #endif
-
- 	// initialize MPU6050
-  g->gyro.initialize();
-
-  g->gyro.setXAccelOffset(-2601);
-  g->gyro.setYAccelOffset(-1688);
-  g->gyro.setZAccelOffset(1344);
-
-  g->gyro.setXGyroOffset(98);
-  g->gyro.setYGyroOffset(32);
-  g->gyro.setZGyroOffset(18);
-
-  // initialize HMC5883L
-  Wire.beginTransmission(MAG_ADDR);
-  Wire.write(0x02); //select mode register
-  Wire.write(0x00); //continuous measurement mode
-  Wire.endTransmission();
-
-  bool ret = g->gyro.testConnection(); 
 
 
-  // lp filter
-  for (int i = 0; i < LP_BUFFER_SIZE; i++){
-    g->ax_buf[i] = 0;
-    g->ay_buf[i] = 0;
-    g->az_buf[i] = 0;
-  }
-  g->ax_sum = 0;
-  g->ay_sum = 0;
-  g->az_sum = 0;
-  g->lp_pos = 0;
+void MPU6050_init(){
+  I2Cdev::writeBits(MPU6050_ADDR, 0x6B, 2, 3, 0x01); //set internal clock to XGYRO - should be best
+
+  I2Cdev::writeBits(MPU6050_ADDR, 0x1B, 4, 2, 0x00); //set full scale gyro range +- 250 deg/s
+
+  I2Cdev::writeBits(MPU6050_ADDR, 0x1C, 4, 2, 0x00); //set full scale accelerometer range +- 2g
+
+  I2Cdev::writeBit(MPU6050_ADDR, 0x6B, 6, false); //set sleep to false
+
+  //set offsets
+  I2Cdev::writeWord(MPU6050_ADDR, 0x06, -2601); //x acc
+
+  I2Cdev::writeWord(MPU6050_ADDR, 0x08, -1688); //y acc
+
+  I2Cdev::writeWord(MPU6050_ADDR, 0x0A, 1344); //z acc
 
 
-  // angles
-  for (int i = 0; i < 3; i++){
-    g->ypr[i] =  0.0;
-  }
+  I2Cdev::writeWord(MPU6050_ADDR, 0x13, 98); //x gyro
 
-  g->height = 0.0;
-  g->vertical_speed = 0.0;
-  g->vertical_acc = 0.0;
+  I2Cdev::writeWord(MPU6050_ADDR, 0x15, 32); //y gyro
 
+  I2Cdev::writeWord(MPU6050_ADDR, 0x17, 18); //z gyro
 
-  return ret;
 }
+
+void MPU6050_read(imu* g){
+  I2Cdev::readBytes(MPU6050_ADDR, MPU6050_DATAREG, 14, g->I2C_buffer);
+  g->ax = (((int16_t)g->I2C_buffer[0]) << 8) | g->I2C_buffer[1];
+  g->ay = (((int16_t)g->I2C_buffer[2]) << 8) | g->I2C_buffer[3];
+  g->az = (((int16_t)g->I2C_buffer[4]) << 8) | g->I2C_buffer[5];
+  g->gx = (((int16_t)g->I2C_buffer[8]) << 8) | g->I2C_buffer[9];
+  g->gy = (((int16_t)g->I2C_buffer[10]) << 8) | g->I2C_buffer[11];
+  g->gz = (((int16_t)g->I2C_buffer[12]) << 8) | g->I2C_buffer[13];
+}
+
+
 
 void read_magnetometer(imu* g){
   uint8_t buffer[6];
@@ -65,8 +50,30 @@ void read_magnetometer(imu* g){
   g->my = (((int16_t)buffer[4]) << 8) | buffer[5];
 }
 
+void imu_read(imu* g){
+
+
+
+
+
+
+}
+
 /* special offset removal for magnetometer */  
 void remove_offsets(imu* g) {
+  /* remove bias */
+  g->mx = g->mx - MAG_OFF_X;
+  g->my = g->my - MAG_OFF_Y;
+  g->mz = g->mz - MAG_OFF_Z;
+
+  /* remove hard and soft iron offset */
+  g->x_mag = M11*((double)g->mx) + M12*((double)g->my) + M13*((double)g->mz);
+  g->y_mag = M21*((double)g->mx) + M22*((double)g->my) + M23*((double)g->mz);
+  g->z_mag = M31*((double)g->mx) + M32*((double)g->my) + M33*((double)g->mz);
+}
+
+
+void magnetometer_calibration(imu* g){
   /* remove bias */
   g->mx = g->mx - MAG_OFF_X;
   g->my = g->my - MAG_OFF_Y;
@@ -165,12 +172,55 @@ void height_estimation(imu* g, double tim){
   g->height += g->vertical_speed * tim;
 }
 
+
+
+/* Initializes the imu and sets parameters */
+void imu_init(imu* g){
+  // join I2C bus (I2Cdev library doesn't do this automatically)
+  #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+      Wire.begin();
+  #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+      Fastwire::setup(400, true);
+  #endif
+
+  // initialize MPU6050
+  MPU6050_init();
+
+  // initialize HMC5883L
+  Wire.beginTransmission(MAG_ADDR);
+  Wire.write(0x02); //select mode register
+  Wire.write(0x00); //continuous measurement mode
+  Wire.endTransmission();
+
+  // lp filter
+  for (int i = 0; i < LP_BUFFER_SIZE; i++){
+    g->ax_buf[i] = 0;
+    g->ay_buf[i] = 0;
+    g->az_buf[i] = 0;
+  }
+  g->ax_sum = 0;
+  g->ay_sum = 0;
+  g->az_sum = 0;
+  g->lp_pos = 0;
+
+  // angles
+  for (int i = 0; i < 3; i++){
+    g->ypr[i] =  0.0;
+  }
+
+  g->height = 0.0;
+  g->vertical_speed = 0.0;
+  g->vertical_acc = 0.0;
+}
+
 /* Reads raw data from gyro and calculates yaw, pitch and roll */
-void read_imu(imu* g, uint32_t tim){
+void imu_update(imu* g, uint32_t tim){
 
 	// read raw accel/gyro measurements from device
-  g->gyro.getMotion6(&(g->ax), &(g->ay), &(g->az), 
-                      &(g->gx), &(g->gy), &(g->gz));
+  MPU6050_read(g);
+  
+  /*g->gyro.getMotion6(&(g->ax), &(g->ay), &(g->az), 
+                      &(g->gx), &(g->gy), &(g->gz));*/
 
   // read raw data from magnetometer
   read_magnetometer(g);

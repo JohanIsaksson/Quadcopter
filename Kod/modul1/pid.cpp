@@ -9,7 +9,7 @@ void init_pid(pid* p){
 }
 
 /* Performs PID calculation for pitch */
-void pid_pitch(pid* p, int* front, int* back, double gyro_pitch, double ref_pitch){
+void pid_pitch(pid* p, int* front, double gyro_pitch, double ref_pitch){
 
 	p->pitch_error = ref_pitch - gyro_pitch; // anlge error
 
@@ -36,11 +36,10 @@ void pid_pitch(pid* p, int* front, int* back, double gyro_pitch, double ref_pitc
 
 	//set values
 	*front = -p->pitch_u;
-	*back = p->pitch_u;
 }
 
 /* Performs PID calculation for roll */
-void pid_roll(pid* p, int* left, int* right, double gyro_roll, double ref_roll){
+void pid_roll(pid* p, int* left, double gyro_roll, double ref_roll){
 
 	p->roll_error = ref_roll - gyro_roll; // anlge error
 
@@ -63,7 +62,6 @@ void pid_roll(pid* p, int* left, int* right, double gyro_roll, double ref_roll){
 
 	//set values
 	*left = p->roll_u;
-	*right = -p->roll_u;
 }
 
 /* special error calculation for yaw */
@@ -114,11 +112,11 @@ void pid_yaw(pid* p, int* cw, int* ccw, double gyro_yaw, int ref_yaw){
 	p->yaw_error_prev = p->yaw_error;
 
 	//set values
-	*cw = p->yaw_u;
-	*ccw = -p->yaw_u;
+	*cw = -p->yaw_u;
+	*ccw = p->yaw_u;
 }
 
-void pid_yaw_temp(pid* p, int* cw, int* ccw, double gyro_yaw, double ref_yaw){
+void pid_yaw_temp(pid* p, int* cw, double gyro_yaw, double ref_yaw){
 	p->yaw_error = ref_yaw - gyro_yaw; // anlge error
 
 	//p->yaw_integral += p->yaw_error; 
@@ -139,7 +137,6 @@ void pid_yaw_temp(pid* p, int* cw, int* ccw, double gyro_yaw, double ref_yaw){
 	p->yaw_error_prev = p->yaw_error;
 
 	//set values
-	*cw = p->yaw_u;
-	*ccw = -p->yaw_u;
+	*cw = -p->yaw_u;
 
 }

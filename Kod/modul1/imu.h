@@ -3,7 +3,6 @@
 
 
 #include "I2Cdev.h"
-#include "MPU6050.h"
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
     #include "Wire.h"
 #endif
@@ -23,6 +22,10 @@
 
 #define MAG_ADDR 0x1E
 #define MAG_OFF_GAIN 20.0
+
+#define MPU6050_ADDR 0x68
+#define MPU6050_DATAREG 0x3B
+
 
 
 // gyro offsets 
@@ -78,7 +81,7 @@
 /* Gyro structure containing necessary info */
 struct imu{
 	
-	MPU6050 gyro;
+	uint8_t I2C_buffer[14];
 
 	// mpu6050 raw data
 	int16_t ax, ay, az;
@@ -132,10 +135,10 @@ struct imu{
 typedef struct imu imu;
 
 /* Initializes the gyro and sets parameters */
-bool init_imu(imu* g);
+void imu_init(imu* g);
 
 /* Reads raw data from gyro and perform complementary filtering */
-void read_imu(imu* g, uint32_t tim);
+void imu_update(imu* g, uint32_t tim);
 
 
 
