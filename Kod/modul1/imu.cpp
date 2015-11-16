@@ -112,22 +112,17 @@ void complementary_filter(imu* g, double tim){
   
 
   /* calculate accelerometer angle and angular velocity */
-  double x = (double)g->ax * ACC_SCALE_X;
-  double y = (double)g->ay * ACC_SCALE_Y;
-  double z = (double)g->az * ACC_SCALE_Z;
+  g->axs = (double)g->ax * ACC_SCALE_X;
+  g->ays = (double)g->ay * ACC_SCALE_Y;
+  g->azs = (double)g->az * ACC_SCALE_Z;
 
-  g->x_acc = atan(x/sqrt(y*y + z*z));
 
+  g->x_acc = atan(g->axs/sqrt(g->ays*g->ays + g->azs*g->azs));
   g->y_gyr = ((double)(g->gy)) * GYRO_SCALE_Y;
 
-  //g->y_acc = ((double)(g->ay)) * g->scale_ay;
-  g->y_acc = atan(y/sqrt(x*x + z*z));
-
+  g->y_acc = atan(g->ays/sqrt(g->axs*g->axs + g->azs*g->azs));
   g->x_gyr = ((double)(g->gx)) * GYRO_SCALE_X;
 
-
-  //g->ypr[PITCH] = g->x_acc;
-  //g->ypr[ROLL] = g->y_acc;
 
   g->ypr_rad[PITCH] = -(P1*(-g->ypr_rad[PITCH] - g->y_gyr*tim*GYRO_GAIN_PITCH) + (1.0-P1)*g->x_acc);
   g->ypr_rad[ROLL] = (P2*(g->ypr_rad[ROLL] + g->x_gyr*tim*GYRO_GAIN_ROLL) + (1.0-P2)*g->y_acc);
@@ -135,26 +130,27 @@ void complementary_filter(imu* g, double tim){
 
   g->ypr[PITCH] = g->ypr_rad[PITCH] * RAD_TO_DEG;
   g->ypr[ROLL] = g->ypr_rad[ROLL] * RAD_TO_DEG;
+
+  g->cosr = cos(g->ypr_rad[ROLL]);
+  g->sinr = sin(g->ypr_rad[ROLL]);
+  g->sinp = sin(g->ypr_rad[PITCH]);
+  g->cosp = cos(g->ypr_rad[PITCH]);
   
 }
 
 
 void tilt_compensation(imu* g){
-  /* calculate magnetometer angles */
-
-  //g->x_mag = (double)(g->mx) * MAG_SCALE_X;
-  //g->y_mag = (double)(g->my) * MAG_SCALE_Y;
-  //g->z_mag = (double)(g->mz) * MAG_SCALE_Z;
 
   /* perform tilt compensation */
-  g->xh = g->x_mag*cos(g->ypr_rad[PITCH]) 
-          + g->y_mag*sin(g->ypr_rad[PITCH])*sin(g->ypr_rad[ROLL]) 
-          + g->z_mag*sin(g->ypr_rad[PITCH])*cos(g->ypr_rad[PITCH]);
+  g->xh = g->x_mag*g->cosp 
+          + g->y_mag*g->sinp*g->sinr 
+          + g->z_mag*g->sinp*g->cosr;
 
-  g->yh = g->y_mag*cos(g->ypr_rad[ROLL]) 
-          - g->z_mag*sin(g->ypr_rad[ROLL]);
+  g->yh = g->y_mag*g->cosr 
+          - g->z_mag*g->sinr;
 
-  g->ypr[YAW] = atan2(-g->yh, g->xh)*(180.0/M_PI);
+  g->ypr_rad[YAW] = atan2(-g->yh, g->xh);
+  g->ypr[YAW] = g->ypr_rad[YAW]*RAD_TO_DEG;
 
   /* get yaw rate from gyro */
   g->z_gyr = (double)g->gz * GYRO_SCALE_Z;
@@ -163,11 +159,10 @@ void tilt_compensation(imu* g){
 
 
 void height_estimation(imu* g, double tim){
-  double x = (double)g->ax * ACC_SCALE_X * sin(g->ypr_rad[ROLL]);
-  double y = (double)g->ay * ACC_SCALE_Y * sin(g->ypr_rad[PITCH]);
-  double z = (double)g->az * ACC_SCALE_Z;
+  double x = g->axs * g->sinr;
+  double y = g->ays * g->sinp;
 
-  g->vertical_acc = z - sqrt(1.0 - (x*x + y*y)) + 0.002;
+  g->vertical_acc = g->azs - sqrt(1.0 - (x*x + y*y)) + 0.002;
   g->vertical_speed = g->vertical_acc * 9.82 * tim;
   g->height += g->vertical_speed * tim;
 }
@@ -218,18 +213,15 @@ void imu_update(imu* g, uint32_t tim){
 
 	// read raw accel/gyro measurements from device
   MPU6050_read(g);
-  
-  /*g->gyro.getMotion6(&(g->ax), &(g->ay), &(g->az), 
-                      &(g->gx), &(g->gy), &(g->gz));*/
 
   // read raw data from magnetometer
   read_magnetometer(g);
 
   //offsets
-  remove_offsets(g);
+  //remove_offsets(g);
   
   //get pitch and roll
-  double t = ((double)tim)/1000.0;
+  double t = ((double)tim)/10000000.0;
   complementary_filter(g, t);
 
   //get yaw

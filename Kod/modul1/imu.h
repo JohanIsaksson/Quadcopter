@@ -87,6 +87,8 @@ struct imu{
 	int16_t ax, ay, az;
 	int16_t gx, gy, gz;
 
+	//mpu6050 scaled data
+	double axs, ays, azs;
 
 	// accelerometer angles
 	double x_acc, y_acc, z_acc;
@@ -125,6 +127,12 @@ struct imu{
 	// angles
 	double ypr[3];
 	double ypr_rad[3];
+
+	//sinuses
+	double cosr;
+	double sinr;
+	double cosp;
+	double sinp;
 
 	//constants
 	double p1, p2;

@@ -16,13 +16,13 @@
 #define EMERGENCY_THROTTLE 0
 
 
-#define YPR_DATA
+//#define YPR_DATA
 //#define COMP_DATA
 //#define PID_DATA
 //#define MAG_DATA
-//#define JAVA_DATA
+#define JAVA_DATA
 
-//radio rad;
+radio rad;
 imu im;
 pid p;
 
@@ -62,7 +62,7 @@ void setup(){
 
 	imu_init(&im);
 
-	//init_radio(&rad);
+	init_radio(&rad);
   radio_off_counter = 0;
 
 	//asign motors to pins
@@ -90,21 +90,21 @@ void setup(){
   Serial.println("Initializing ESCs...");
   delay(3000);
 
-  time_last = millis();
+  time_last = micros();
    Serial.println("Running...");
 }
 
 
 void loop(){
-  time_diff = millis() - time_last;
-  time_last = millis();
+  time_diff = micros() - time_last;
+  time_last = micros();
 
 
 
   imu_update(&im, time_diff);
   
   //check for lost radio connetion
-  /*if (false){ //!read_message(&rad)){    
+  if (!read_message(&rad)){    
     if (radio_off_counter >= LOST_CONNECTION_COUNT){
       rad.buffer[RADIO_THROTTLE] = EMERGENCY_THROTTLE;
       p.pitch_integral = 0.0;
@@ -115,7 +115,7 @@ void loop(){
     }
   }else{
     radio_off_counter = 0;
-  }  */
+  } 
 
 
   /* calculate pid */
@@ -131,7 +131,8 @@ void loop(){
 
   /* calculate final motor speed */
   //rad_throttle = map(0, 0, 255, SPEED_MIN, SPEED_MAX); //map((uint8_t)rad.buffer[RADIO_THROTTLE], 0, 255, SPEED_MIN, SPEED_MAX);
-  rad_throttle = (((uint16_t)0) << 1) + 1250; //rad_throttle = (((uint16_t)rad.buffer(RADIO_THROTTLE)) << 1) + 1250;
+  //rad_throttle = (((uint16_t)0) << 1) + 1250; 
+  rad_throttle = (((uint16_t)rad.buffer[RADIO_THROTTLE]) << 1) + 1250;
   //front left
   throttle[0] = rad_throttle + front + left + cw; //+ CALIBRATION_COMP;
 
@@ -189,7 +190,7 @@ void loop(){
       Serial.print(cw);
       Serial.print(",");
       Serial.print(ccw);
-      Serial.print(",");
+      
 
 
 
@@ -205,9 +206,9 @@ void loop(){
       Serial.print(im.ypr_rad[2]);
       Serial.print("\t");*/
       Serial.print(im.ypr[0]);
-      Serial.print("\t");
+      Serial.print(",");
       Serial.print(im.ypr[1]);
-      Serial.print("\t");
+      Serial.print(",");
       Serial.print(im.ypr[2]);
     #endif
 
@@ -242,9 +243,9 @@ void loop(){
     #ifdef MAG_DATA
       Serial.print("xyz:\t");
       Serial.print(im.mx);
-      Serial.print("\t");
+      Serial.print(",");
       Serial.print(im.my);
-      Serial.print("\t");
+      Serial.print(",");
       Serial.print(im.mz);
     #endif
 
@@ -281,10 +282,8 @@ void loop(){
       Serial.print(p.pitch_i);
       Serial.print(",");
       Serial.print(p.pitch_d);
-      Serial.print(",");
-
-      //Serial.print(time_diff);
       //Serial.print(",");
+
 
       /*Serial.print(",");
 
@@ -298,7 +297,7 @@ void loop(){
 
     #endif
 
-
+    Serial.print(",");
     Serial.println(time_diff);
 
 

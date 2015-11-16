@@ -1,10 +1,8 @@
 #include "radio.h"
 #include <ServoTimer2.h>
 
-#define SPEED_MIN_FRONT 1500
-#define SPEED_MAX_FRONT 2000
-#define SPEED_MIN_BACK 1250
-#define SPEED_MAX_BACK 1750
+#define SPEED_MIN 1250
+#define SPEED_MAX 1750
 
 radio rad;
 
@@ -27,7 +25,7 @@ void setup(){
   throttle = 0;
   mout = 0;
   count = 0;
-  motor.write(SPEED_MAX_BACK);
+  motor.write(SPEED_MAX);
 
 }
 
@@ -37,7 +35,7 @@ void loop(){
   read_message(&rad);
 
   throttle = ((uint8_t)rad.buffer[5]);
-  mout = map(throttle, 0, 255, SPEED_MIN_BACK, SPEED_MAX_BACK);
+  mout = map(throttle, 0, 255, SPEED_MIN, SPEED_MAX);
   count++;
 
   motor.write(mout);
