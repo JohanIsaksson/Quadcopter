@@ -13,18 +13,18 @@ void MPU6050_init(){
   I2Cdev::writeBit(MPU6050_ADDR, 0x6B, 6, false); //set sleep to false
 
   //set offsets
-  I2Cdev::writeWord(MPU6050_ADDR, 0x06, -2601); //x acc
+  I2Cdev::writeWord(MPU6050_ADDR, 0x06, 251);// -2601); //x acc
 
-  I2Cdev::writeWord(MPU6050_ADDR, 0x08, -1688); //y acc
+  I2Cdev::writeWord(MPU6050_ADDR, 0x08, -3198);// -1688); //y acc
 
-  I2Cdev::writeWord(MPU6050_ADDR, 0x0A, 1344); //z acc
+  I2Cdev::writeWord(MPU6050_ADDR, 0x0A, 2482);// 1344); //z acc
 
 
-  I2Cdev::writeWord(MPU6050_ADDR, 0x13, 98); //x gyro
+  I2Cdev::writeWord(MPU6050_ADDR, 0x13, 39);// 98); //x gyro
 
-  I2Cdev::writeWord(MPU6050_ADDR, 0x15, 32); //y gyro
+  I2Cdev::writeWord(MPU6050_ADDR, 0x15, -13);// 32); //y gyro
 
-  I2Cdev::writeWord(MPU6050_ADDR, 0x17, 18); //z gyro
+  I2Cdev::writeWord(MPU6050_ADDR, 0x17, 75);// 18); //z gyro
 
 }
 
@@ -221,7 +221,7 @@ void imu_update(imu* g, uint32_t tim){
   //remove_offsets(g);
   
   //get pitch and roll
-  double t = ((double)tim)/10000000.0;
+  double t = ((double)tim)/1000000.0;
   complementary_filter(g, t);
 
   //get yaw
