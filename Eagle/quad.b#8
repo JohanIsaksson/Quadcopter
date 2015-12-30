@@ -57,10 +57,10 @@
 </layers>
 <board>
 <plain>
-<wire x1="-1.51" y1="8" x2="84.22" y2="8" width="0" layer="20"/>
-<wire x1="84.22" y1="8" x2="84.22" y2="50.41" width="0" layer="20"/>
-<wire x1="84.22" y1="50.41" x2="-1.51" y2="50.41" width="0" layer="20"/>
-<wire x1="-1.51" y1="50.41" x2="-1.51" y2="8" width="0" layer="20"/>
+<wire x1="-3.51" y1="6" x2="86.22" y2="6" width="0" layer="20"/>
+<wire x1="86.22" y1="6" x2="86.22" y2="52.41" width="0" layer="20"/>
+<wire x1="86.22" y1="52.41" x2="-3.51" y2="52.41" width="0" layer="20"/>
+<wire x1="-3.51" y1="52.41" x2="-3.51" y2="6" width="0" layer="20"/>
 <circle x="80" y="12" radius="2.828425" width="0.254" layer="16"/>
 <circle x="80" y="46" radius="2.828425" width="0.254" layer="16"/>
 <circle x="20" y="12" radius="3" width="0.254" layer="16"/>
@@ -1223,17 +1223,17 @@ design rules under a new name.</description>
 <attribute name="MF" value="" x="81.2" y="28.86" size="1.778" layer="27" rot="R270" display="off"/>
 <attribute name="OC_FARNELL" value="unknown" x="81.2" y="28.86" size="1.778" layer="27" rot="R270" display="off"/>
 </element>
-<element name="GPS" library="con-lsta" package="FE08" value="" x="65.99" y="48.8" rot="R180">
-<attribute name="MPN" value="" x="65.99" y="48.8" size="1.778" layer="27" rot="R180" display="off"/>
-<attribute name="OC_NEWARK" value="unknown" x="65.99" y="48.8" size="1.778" layer="27" rot="R180" display="off"/>
-<attribute name="MF" value="" x="65.99" y="48.8" size="1.778" layer="27" rot="R180" display="off"/>
-<attribute name="OC_FARNELL" value="unknown" x="65.99" y="48.8" size="1.778" layer="27" rot="R180" display="off"/>
+<element name="GPS" library="con-lsta" package="FE08" value="" x="35.99" y="10.8" rot="R180">
+<attribute name="MPN" value="" x="35.99" y="10.8" size="1.778" layer="27" rot="R180" display="off"/>
+<attribute name="OC_NEWARK" value="unknown" x="35.99" y="10.8" size="1.778" layer="27" rot="R180" display="off"/>
+<attribute name="MF" value="" x="35.99" y="10.8" size="1.778" layer="27" rot="R180" display="off"/>
+<attribute name="OC_FARNELL" value="unknown" x="35.99" y="10.8" size="1.778" layer="27" rot="R180" display="off"/>
 </element>
-<element name="MPU6050BMP180" library="con-lsta" package="FE12" value="" x="43.17" y="34.52" rot="R90">
-<attribute name="MPN" value="" x="43.17" y="34.52" size="1.778" layer="27" rot="R90" display="off"/>
-<attribute name="OC_NEWARK" value="unknown" x="43.17" y="34.52" size="1.778" layer="27" rot="R90" display="off"/>
-<attribute name="MF" value="" x="43.17" y="34.52" size="1.778" layer="27" rot="R90" display="off"/>
-<attribute name="OC_FARNELL" value="unknown" x="43.17" y="34.52" size="1.778" layer="27" rot="R90" display="off"/>
+<element name="MPU6050BMP180" library="con-lsta" package="FE12" value="" x="42.83" y="34.48" rot="R270">
+<attribute name="MPN" value="" x="42.83" y="34.48" size="1.778" layer="27" rot="R270" display="off"/>
+<attribute name="OC_NEWARK" value="unknown" x="42.83" y="34.48" size="1.778" layer="27" rot="R270" display="off"/>
+<attribute name="MF" value="" x="42.83" y="34.48" size="1.778" layer="27" rot="R270" display="off"/>
+<attribute name="OC_FARNELL" value="unknown" x="42.83" y="34.48" size="1.778" layer="27" rot="R270" display="off"/>
 </element>
 <element name="LV" library="con-lsta" package="FE06" value="" x="12.85" y="15.53" rot="R270">
 <attribute name="MPN" value="" x="12.85" y="15.53" size="1.778" layer="27" rot="R270" display="off"/>

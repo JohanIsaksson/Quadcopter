@@ -146,8 +146,9 @@ typedef struct imu imu;
 void imu_init(imu* g);
 
 /* Reads raw data from gyro and perform complementary filtering */
-void imu_update(imu* g, uint32_t tim);
+void imu_update_horizon(imu* g, uint32_t tim);
 
-
+/* only reads mpu6050 for gyroscope */
+void imu_update_acro(imu* g, uint32_t tim);
 
 #endif

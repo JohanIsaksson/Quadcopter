@@ -50,14 +50,6 @@ void read_magnetometer(imu* g){
   g->my = (((int16_t)buffer[4]) << 8) | buffer[5];
 }
 
-void imu_read(imu* g){
-
-
-
-
-
-
-}
 
 /* special offset removal for magnetometer */  
 void remove_offsets(imu* g) {
@@ -209,7 +201,7 @@ void imu_init(imu* g){
 }
 
 /* Reads raw data from gyro and calculates yaw, pitch and roll */
-void imu_update(imu* g, uint32_t tim){
+void imu_update_horizon(imu* g, uint32_t tim){
 
 	// read raw accel/gyro measurements from device
   MPU6050_read(g);
@@ -229,4 +221,16 @@ void imu_update(imu* g, uint32_t tim){
 
   //get height
   height_estimation(g, t);
+}
+
+//only reads mpu6050 for gyro
+void imu_update_acro(imu* g, uint32_t tim){
+
+  // read raw accel/gyro measurements from device
+  MPU6050_read(g);
+
+  ///* scale angular velocity */
+  g->axs = (double)g->ax * ACC_SCALE_X;
+  g->ays = (double)g->ay * ACC_SCALE_Y;
+  g->azs = (double)g->az * ACC_SCALE_Z;
 }
