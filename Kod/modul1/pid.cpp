@@ -6,12 +6,6 @@ void init_pid(pid* p){
 	//set integral
 	p->roll_integral = 0.0;
 	p->pitch_integral = 0.0;
-	p->K_P = KP;
-	p->K_D = KD;
-	p->K_I = KI;
-
-	p->K_P_yaw = KP_Y;
-	p->K_D_yaw = KD_Y;
 }
 
 /* Performs PID calculation for pitch */
@@ -44,6 +38,36 @@ void pid_pitch(pid* p, int* front, double gyro_pitch, double ref_pitch, uint32_t
 	*front = -p->pitch_u;
 }
 
+/* Performs PID calculation for pitch rate*/
+void pid_pitch_rate(pid* p, int* front, double gyro_rate, double ref_rate, uint32_t t){
+
+	p->pitch_error = ref_rate - gyro_rate; // anlge rate error
+
+	p->pitch_integral += p->pitch_error*((double)t)/1000000.0;
+
+	p->pitch_p = KP_A * p->pitch_error;
+	p->pitch_i = KI_A * p->pitch_integral;
+	p->pitch_d = KD_A * (p->pitch_error - p->pitch_error_prev) / (((double)t)/1000000.0);
+
+	p->pitch_u =  (int)(p->pitch_p + p->pitch_i + p->pitch_d);
+
+	//limit pitch
+	if (p->pitch_u > 0.0){
+		if (p->pitch_u > PID_MAX){
+			p->pitch_u = PID_MAX;
+		}
+	}else{
+		if (-p->pitch_u > PID_MAX){
+			p->pitch_u = -PID_MAX;
+		}
+	}
+
+	p->pitch_error_prev = p->pitch_error;
+
+	//set values
+	*front = -p->pitch_u;
+}
+
 /* Performs PID calculation for roll */
 void pid_roll(pid* p, int* left, double gyro_roll, double ref_roll, uint32_t t){
 
@@ -54,6 +78,36 @@ void pid_roll(pid* p, int* left, double gyro_roll, double ref_roll, uint32_t t){
 	p->roll_p = KP * p->roll_error;
 	p->roll_i = KI * p->roll_integral;
 	p->roll_d = KD * (p->roll_error - p->roll_error_prev) / (((double)t)/1000000.0);
+
+	p->roll_u =  (int)(p->roll_p + p->roll_i + p->roll_d);
+
+	//limit roll
+	if (p->roll_u > 0.0){
+		if (p->roll_u > PID_MAX){
+			p->roll_u = PID_MAX;
+		}
+	}else{
+		if (-p->roll_u > PID_MAX){
+			p->roll_u = -PID_MAX;
+		}
+	}
+
+	p->roll_error_prev = p->roll_error;
+
+	//set values
+	*left = p->roll_u;
+}
+
+/* Performs PID calculation for roll rate */
+void pid_roll_rate(pid* p, int* left, double gyro_rate, double ref_rate, uint32_t t){
+
+	p->roll_error = ref_rate - gyro_rate; // anlge error
+
+	p->roll_integral += p->roll_error*((double)t)/1000000.0;
+
+	p->roll_p = KP_A * p->roll_error;
+	p->roll_i = KI_A * p->roll_integral;
+	p->roll_d = KD_A * (p->roll_error - p->roll_error_prev) / (((double)t)/1000000.0);
 
 	p->roll_u =  (int)(p->roll_p + p->roll_i + p->roll_d);
 
@@ -131,7 +185,7 @@ void pid_yaw_temp(pid* p, int* cw, double gyro_yaw, double ref_yaw){
 
 	//p->yaw_integral += p->yaw_error; 
 
-	p->yaw_u = (int)(KP_Y*p->yaw_error + KD_Y*(p->yaw_error-p->yaw_error_prev)); // + KI_Y*p->yaw_integral
+	p->yaw_u = (int)(KP_A*p->yaw_error + KD_A*(p->yaw_error-p->yaw_error_prev)); // + KI_Y*p->yaw_integral
 
 	//limit pitch
 	if (p->pitch_u > 0.0){

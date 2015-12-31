@@ -5,13 +5,13 @@
 
 #define PID_MAX 254.0
 
-#define KP 0.75 //0.2
+#define KP 0.7 //0.75
 #define KI 0.012
-#define KD 0.07 //0.03
+#define KD 0.06 //0.07
 
-#define KP_Y 0.43 
-#define KI_Y 0.00
-#define KD_Y 0.05
+#define KP_A 0.4 
+#define KI_A 0.00
+#define KD_A 0.05
 
 /* PID structure containing necessary info */
 struct pid{
@@ -41,9 +41,6 @@ struct pid{
 	double yaw_error, yaw_error_prev;
 	double yaw_integral;
 
-	double K_P, K_I, K_D;
-	double K_P_yaw, K_D_yaw;
-
 };
 typedef struct pid pid;
 
@@ -53,8 +50,14 @@ void init_pid(pid* p);
 /* Performs PID calculation for pitch */
 void pid_pitch(pid* p, int* front, double gyro_pitch, double ref_pitch, uint32_t t);
 
+/* Performs PID calculation for pitch  rate*/
+void pid_pitch_rate(pid* p, int* front, double gyro_rate, double ref_rate, uint32_t t);
+
 /* Performs PID calculation for roll */
 void pid_roll(pid* p, int* left, double gyro_roll, double ref_roll, uint32_t t);
+
+/* Performs PID calculation for roll rate */
+void pid_roll_rate(pid* p, int* left, double gyro_rate, double ref_rate, uint32_t t);
 
 /* Performs PID calculation for yaw */
 void pid_yaw(pid* p, int* cw, int* ccw, double gyro_yaw, int ref_yaw);

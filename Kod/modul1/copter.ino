@@ -152,6 +152,7 @@ void set_motor_speeds(){
     if (esc_time - start_time >= throttle[3]) PORTB &= B11110111; //front left
     esc_time = micros();
   }
+  PORTB &= B11110000; //turn all pulses of for safety
 
     
   while(micros() - time_last < 4500);
@@ -173,8 +174,8 @@ void setup(){
   PCMSK2 |= (1 << PCINT19); //  2           pitch
   PCMSK2 |= (1 << PCINT20); //  3           throttle
   PCMSK2 |= (1 << PCINT21); //  4           yaw
-  //PCMSK2 |= (1 << PCINT22); //  5           -
-  //PCMSK2 |= (1 << PCINT23); //  6           -
+  PCMSK2 |= (1 << PCINT22); //  5           ACRO/HORIZON
+  PCMSK2 |= (1 << PCINT23); //  6           -
 
   radio_off_counter = 0;
 
@@ -250,7 +251,7 @@ void update_horizon(uint32_t t){
 void update_acro(uint32_t t){
 
   //update only the gyroscope on the imu
-  imu_update_horizon(&im, t); 
+  imu_update_acro(&im, t); 
 
   //start esc pulses
   start_time = micros(); 
@@ -278,8 +279,8 @@ void update_acro(uint32_t t){
     rad_yaw = 0.0;
   }
   //calculate pids
-  pid_pitch(&p, &front, im.y_gyr*RAD_TO_DEG, rad_pitch, t); //y_gyr may need to be reversed
-  pid_roll(&p, &left, im.x_gyr*RAD_TO_DEG, rad_roll, t);    //x_gyr may need to be reversed
+  pid_pitch_rate(&p, &front, im.y_gyr*RAD_TO_DEG, rad_pitch, t); //y_gyr may need to be reversed
+  pid_roll_rate(&p, &left, im.x_gyr*RAD_TO_DEG, rad_roll, t);    //x_gyr may need to be reversed
   pid_yaw_temp(&p, &cw, -im.z_gyr*RAD_TO_DEG, rad_yaw);
 }
 
@@ -305,7 +306,7 @@ void loop(){
 
   if (motors_on){
     //change on/off state
-    if (disable_sticks && receiver_input_channel_4 > 1730){
+    if (disable_sticks && receiver_input_channel_4 > 1710){
       motors_on = false;
     }
     //update according to set flight mode
@@ -318,7 +319,7 @@ void loop(){
     set_motor_speeds();
   }else{
     //change on/off
-    if (disable_sticks && receiver_input_channel_4 < 1270){
+    if (disable_sticks && receiver_input_channel_4 < 1290){
       motors_on = true;  
     }
     //keep motors updated
@@ -327,8 +328,6 @@ void loop(){
 
 
  } 
-
-
 
 
 /* DEBUG DATA OUTPUT */
@@ -380,10 +379,6 @@ void print_data(uint32_t time){
 
     #ifdef PID_DATA
 
-      Serial.print(p.K_P_yaw, 6); 
-      Serial.print("\t");
-      Serial.print(p.K_D_yaw, 6); 
-      Serial.print("\t");
 
 
     #endif
@@ -484,11 +479,6 @@ void print_data(uint32_t time){
     count = 0;
   }
 }
-
-
-
-
-
 
 
 //This routine is called every time input 8, 9, 10 or 11 changed state
