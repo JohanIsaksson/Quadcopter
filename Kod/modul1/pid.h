@@ -13,7 +13,7 @@
 #define KI_A 0.1
 #define KD_A 0.0015
 
-#define KP_Y 0.4
+#define KP_Y 2.20
 #define KI_Y 0.00
 #define KD_Y 0.02
 

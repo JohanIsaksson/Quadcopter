@@ -186,7 +186,7 @@ void pid_yaw_temp(pid* p, int* cw, double gyro_yaw, double ref_yaw){
 
 	//p->yaw_integral += p->yaw_error; 
 
-	p->yaw_u = (int)(p->K_tmp*p->yaw_error + KD_Y*(p->yaw_error-p->yaw_error_prev)); // + KI_Y*p->yaw_integral
+	p->yaw_u = (int)(KP_Y*p->yaw_error + KD_Y*(p->yaw_error-p->yaw_error_prev)); // + KI_Y*p->yaw_integral
 
 	//limit pitch
 	if (p->pitch_u > 0.0){

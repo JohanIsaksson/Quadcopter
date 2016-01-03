@@ -21,7 +21,7 @@
 
 //#define YPR_DATA
 //#define COMP_DATA
-#define PID_DATA
+//#define PID_DATA
 //#define MAG_DATA
 //#define JAVA_DATA
 //#define RADIO_DATA
@@ -296,7 +296,7 @@ void update_acro(uint32_t t){
   if (receiver_input_channel_4 > 1485 && receiver_input_channel_4 < 1515) receiver_input_channel_4 = 1500;
 
   rad_throttle = receiver_input_channel_3;
-  p.K_tmp = map_d((double)receiver_input_channel_6,1000.0, 2000.0, 0.0, 4.0);
+  //p.K_tmp = map_d((double)receiver_input_channel_6,1000.0, 2000.0, 0.0, 4.0);
 
   //map inputs to anglerates
   if (!disable_sticks){
@@ -355,7 +355,7 @@ void loop(){
     set_motor_speeds_min();
   }
 
-  print_data(time_diff);
+  //print_data(time_diff);
 } 
 
 /* DEBUG DATA OUTPUT */
