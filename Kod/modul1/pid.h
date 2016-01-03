@@ -5,16 +5,22 @@
 
 #define PID_MAX 254.0
 
-#define KP 0.7 //0.75
+#define KP 0.75
 #define KI 0.012
-#define KD 0.06 //0.07
+#define KD 0.07
 
-#define KP_A 0.4 
-#define KI_A 0.00
-#define KD_A 0.05
+#define KP_A 0.53//1.06
+#define KI_A 0.1
+#define KD_A 0.0015
+
+#define KP_Y 0.4
+#define KI_Y 0.00
+#define KD_Y 0.02
 
 /* PID structure containing necessary info */
 struct pid{
+
+	double K_tmp;
 
 	//roll
 	int roll_u;

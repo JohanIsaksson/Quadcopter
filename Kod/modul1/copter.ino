@@ -7,11 +7,10 @@
 #define SPEED_MAX 1750
 
 #define REF_MAX_HORIZON 20.0
-#define REF_MAX_ACRO 180.0
+#define REF_MAX_ACRO 90.0
+#define REF_MAX_YAW 90.0
 
 #define RADIO_THROTTLE 5 //6 in future
-
-#define CALIBRATION_COMP 10
 
 #define LOST_CONNECTION_COUNT 100
 #define EMERGENCY_THROTTLE 0
@@ -32,14 +31,13 @@ imu im;
 pid p;
 
 //motors 
-//0 = front left
-//1 = front right
-//2 = back left
-//3 = back right
 
-int throttle[4];
-uint16_t rad_throttle;
-double rad_roll, rad_pitch, rad_yaw;
+
+int throttle[4]; /* 0 = front left
+                    1 = front right
+                    2 = back left
+                    3 = back right
+                  */
 
 //pid
 int front;
@@ -75,15 +73,18 @@ uint32_t timer_1,
           timer_4,
           timer_5,
           timer_6;
+double rad_roll, rad_pitch, rad_yaw;
+uint16_t rad_throttle;
 
+//motor control variables
+bool motors_on, disable_sticks;
 uint32_t us, esc_time, start_time, end_time;
 
-bool motors_on, disable_sticks;
+//flight mode control
 uint8_t flight_mode;
 
 
-double map_d(double x, double in_min, double in_max, double out_min, double out_max)
-{
+double map_d(double x, double in_min, double in_max, double out_min, double out_max){
  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
@@ -126,7 +127,7 @@ void set_motor_speeds(){
   throttle[2] = rad_throttle - front + left - cw; //- CALIBRATION_COMP;
 
   //back right
-  throttle[3] = rad_throttle -front - left + cw; //- CALIBRATION_COMP;
+  throttle[3] = rad_throttle - front - left + cw; //- CALIBRATION_COMP;
 
   //check and set speeds
   if (radio_off_counter >= LOST_CONNECTION_COUNT){
@@ -152,13 +153,35 @@ void set_motor_speeds(){
     if (esc_time - start_time >= throttle[3]) PORTB &= B11110111; //front left
     esc_time = micros();
   }
-  PORTB &= B11110000; //turn all pulses of for safety
+  PORTB &= B11110000; //turn all pulses off for safety
+
+  if (flight_mode == MODE_HORIZON){
+    while(micros() - time_last < 4000);
+    }else{
+      while(micros() - time_last < 2800);
+    }
+}
+
+void set_motor_speeds_min(){
+  //start esc pulses
+  start_time = micros(); 
+  end_time = start_time + 1750;
+  PORTB |= B00001111;
+
+  esc_time = micros();
+
+  while(end_time > esc_time){                         //Start the pulse after 1250 micro seconds.
+    if (esc_time - start_time >= throttle[0]) PORTB &= B11111110; //front left
+    if (esc_time - start_time >= throttle[1]) PORTB &= B11111101; //front left
+    if (esc_time - start_time >= throttle[2]) PORTB &= B11111011; //front left
+    if (esc_time - start_time >= throttle[3]) PORTB &= B11110111; //front left
+    esc_time = micros();
+  }
+  PORTB &= B11110000; //turn all pulses off for safety
 
     
   while(micros() - time_last < 4500);
 }
-
-
 
 void setup(){
 
@@ -178,6 +201,12 @@ void setup(){
   PCMSK2 |= (1 << PCINT23); //  6           -
 
   radio_off_counter = 0;
+  receiver_input_channel_1 = 1500;
+  receiver_input_channel_2 = 1500;
+  receiver_input_channel_3 = 1250;
+  receiver_input_channel_4 = 1500;
+  receiver_input_channel_5 = 1000;
+  receiver_input_channel_6 = 1000;
 
 	
 
@@ -207,9 +236,6 @@ void setup(){
   PCICR |= (1 << PCIE2);    // set PCIE2 to enable PCMSK0 scan
 }
 
-
-
-
 void update_horizon(uint32_t t){
 
   //update all sensor on the imu
@@ -234,7 +260,7 @@ void update_horizon(uint32_t t){
   if (!disable_sticks){
     rad_roll = map_d((double)receiver_input_channel_1,1250.0, 1750.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
     rad_pitch = map_d((double)receiver_input_channel_2,1250.0, 1750.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
-    rad_yaw = map_d((double)receiver_input_channel_4,1250.0, 1750.0, -REF_MAX_ACRO/2, REF_MAX_ACRO/2);
+    rad_yaw = map_d((double)receiver_input_channel_4,1250.0, 1750.0, -REF_MAX_ACRO, REF_MAX_ACRO);
   }else{
     rad_roll = 0.0;
     rad_pitch = 0.0;
@@ -244,9 +270,7 @@ void update_horizon(uint32_t t){
   pid_pitch(&p, &front, im.ypr[1], rad_pitch, t);
   pid_roll(&p, &left, im.ypr[2], rad_roll, t);
   pid_yaw_temp(&p, &cw, -im.z_gyr*RAD_TO_DEG, rad_yaw);
-  
 }
-
 
 void update_acro(uint32_t t){
 
@@ -266,13 +290,19 @@ void update_acro(uint32_t t){
   //p.K_D_yaw = map_d((double)receiver_input_channel_5, 975.0, 2000.0, 0.0, 0.1);
   //p.K_P_yaw = map_d((double)receiver_input_channel_6, 975.0, 2000.0, 0.0, 1.5);
 
+  //compensate for mistimings
+  if (receiver_input_channel_1 > 1485 && receiver_input_channel_1 < 1515) receiver_input_channel_1 = 1500;
+  if (receiver_input_channel_2 > 1485 && receiver_input_channel_2 < 1515) receiver_input_channel_2 = 1500;
+  if (receiver_input_channel_4 > 1485 && receiver_input_channel_4 < 1515) receiver_input_channel_4 = 1500;
+
   rad_throttle = receiver_input_channel_3;
+  p.K_tmp = map_d((double)receiver_input_channel_6,1000.0, 2000.0, 0.0, 4.0);
 
   //map inputs to anglerates
   if (!disable_sticks){
     rad_roll = map_d((double)receiver_input_channel_1,1250.0, 1750.0, -REF_MAX_ACRO, REF_MAX_ACRO);
     rad_pitch = map_d((double)receiver_input_channel_2,1250.0, 1750.0, -REF_MAX_ACRO, REF_MAX_ACRO);
-    rad_yaw = map_d((double)receiver_input_channel_4,1250.0, 1750.0, -REF_MAX_ACRO, REF_MAX_ACRO);
+    rad_yaw = map_d((double)receiver_input_channel_4,1250.0, 1750.0, -REF_MAX_YAW, REF_MAX_YAW);
   }else{
     rad_roll = 0.0;
     rad_pitch = 0.0;
@@ -283,7 +313,6 @@ void update_acro(uint32_t t){
   pid_roll_rate(&p, &left, im.x_gyr*RAD_TO_DEG, rad_roll, t);    //x_gyr may need to be reversed
   pid_yaw_temp(&p, &cw, -im.z_gyr*RAD_TO_DEG, rad_yaw);
 }
-
 
 void loop(){
   time_diff = micros() - time_last;
@@ -323,12 +352,11 @@ void loop(){
       motors_on = true;  
     }
     //keep motors updated
-    init_motors();
+    set_motor_speeds_min();
   }
 
-
- } 
-
+  print_data(time_diff);
+} 
 
 /* DEBUG DATA OUTPUT */
 void print_data(uint32_t time){ 
@@ -378,8 +406,8 @@ void print_data(uint32_t time){
 
 
     #ifdef PID_DATA
-
-
+      Serial.print(p.K_tmp,5);
+      Serial.print(",");
 
     #endif
 
@@ -474,12 +502,17 @@ void print_data(uint32_t time){
     Serial.print(",");
     Serial.println(time);
 
+    if (flight_mode == MODE_HORIZON){
+      Serial.print("horizon");
+    }else{
+      Serial.println("acro");
+    }
+
 
 
     count = 0;
   }
 }
-
 
 //This routine is called every time input 8, 9, 10 or 11 changed state
 ISR(PCINT2_vect){

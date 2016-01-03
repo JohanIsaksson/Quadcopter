@@ -6,6 +6,7 @@ void init_pid(pid* p){
 	//set integral
 	p->roll_integral = 0.0;
 	p->pitch_integral = 0.0;
+	p->K_tmp = 0.0;
 }
 
 /* Performs PID calculation for pitch */
@@ -47,7 +48,7 @@ void pid_pitch_rate(pid* p, int* front, double gyro_rate, double ref_rate, uint3
 
 	p->pitch_p = KP_A * p->pitch_error;
 	p->pitch_i = KI_A * p->pitch_integral;
-	p->pitch_d = KD_A * (p->pitch_error - p->pitch_error_prev) / (((double)t)/1000000.0);
+	p->pitch_d = KD_A * ((p->pitch_error - p->pitch_error_prev) / (((double)t)/1000000.0));
 
 	p->pitch_u =  (int)(p->pitch_p + p->pitch_i + p->pitch_d);
 
@@ -185,7 +186,7 @@ void pid_yaw_temp(pid* p, int* cw, double gyro_yaw, double ref_yaw){
 
 	//p->yaw_integral += p->yaw_error; 
 
-	p->yaw_u = (int)(KP_A*p->yaw_error + KD_A*(p->yaw_error-p->yaw_error_prev)); // + KI_Y*p->yaw_integral
+	p->yaw_u = (int)(p->K_tmp*p->yaw_error + KD_Y*(p->yaw_error-p->yaw_error_prev)); // + KI_Y*p->yaw_integral
 
 	//limit pitch
 	if (p->pitch_u > 0.0){

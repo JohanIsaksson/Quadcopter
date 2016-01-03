@@ -25,7 +25,6 @@ void MPU6050_init(){
   I2Cdev::writeWord(MPU6050_ADDR, 0x15, -13);// 32); //y gyro
 
   I2Cdev::writeWord(MPU6050_ADDR, 0x17, 75);// 18); //z gyro
-
 }
 
 void MPU6050_read(imu* g){
@@ -38,8 +37,6 @@ void MPU6050_read(imu* g){
   g->gz = (((int16_t)g->I2C_buffer[12]) << 8) | g->I2C_buffer[13];
 }
 
-
-
 void read_magnetometer(imu* g){
   uint8_t buffer[6];
 
@@ -49,8 +46,6 @@ void read_magnetometer(imu* g){
   g->mz = (((int16_t)buffer[2]) << 8) | buffer[3];
   g->my = (((int16_t)buffer[4]) << 8) | buffer[5];
 }
-
-
 /* special offset removal for magnetometer */  
 void remove_offsets(imu* g) {
   /* remove bias */
@@ -64,7 +59,6 @@ void remove_offsets(imu* g) {
   g->z_mag = M31*((double)g->mx) + M32*((double)g->my) + M33*((double)g->mz);
 }
 
-
 void magnetometer_calibration(imu* g){
   /* remove bias */
   g->mx = g->mx - MAG_OFF_X;
@@ -76,7 +70,6 @@ void magnetometer_calibration(imu* g){
   g->y_mag = M21*((double)g->mx) + M22*((double)g->my) + M23*((double)g->mz);
   g->z_mag = M31*((double)g->mx) + M32*((double)g->my) + M33*((double)g->mz);
 }
-
 
 void complementary_filter(imu* g, double tim){
 
@@ -127,9 +120,7 @@ void complementary_filter(imu* g, double tim){
   g->sinr = sin(g->ypr_rad[ROLL]);
   g->sinp = sin(g->ypr_rad[PITCH]);
   g->cosp = cos(g->ypr_rad[PITCH]);
-  
 }
-
 
 void tilt_compensation(imu* g){
 
@@ -146,9 +137,7 @@ void tilt_compensation(imu* g){
 
   /* get yaw rate from gyro */
   g->z_gyr = (double)g->gz * GYRO_SCALE_Z;
-
 }
-
 
 void height_estimation(imu* g, double tim){
   double x = g->axs * g->sinr;
@@ -158,8 +147,6 @@ void height_estimation(imu* g, double tim){
   g->vertical_speed = g->vertical_acc * 9.82 * tim;
   g->height += g->vertical_speed * tim;
 }
-
-
 
 /* Initializes the imu and sets parameters */
 void imu_init(imu* g){
@@ -200,14 +187,14 @@ void imu_init(imu* g){
   g->vertical_acc = 0.0;
 }
 
-/* Reads raw data from gyro and calculates yaw, pitch and roll */
+/* Reads raw data from sensors and calculates yaw, pitch and roll */
 void imu_update_horizon(imu* g, uint32_t tim){
 
 	// read raw accel/gyro measurements from device
   MPU6050_read(g);
 
   // read raw data from magnetometer
-  read_magnetometer(g);
+  //read_magnetometer(g);
 
   //offsets
   //remove_offsets(g);
@@ -220,7 +207,7 @@ void imu_update_horizon(imu* g, uint32_t tim){
   tilt_compensation(g);
 
   //get height
-  height_estimation(g, t);
+  //height_estimation(g, t);
 }
 
 //only reads mpu6050 for gyro
@@ -230,7 +217,8 @@ void imu_update_acro(imu* g, uint32_t tim){
   MPU6050_read(g);
 
   ///* scale angular velocity */
-  g->axs = (double)g->ax * ACC_SCALE_X;
-  g->ays = (double)g->ay * ACC_SCALE_Y;
-  g->azs = (double)g->az * ACC_SCALE_Z;
+  g->y_gyr = ((double)(g->gy)) * GYRO_SCALE_Y;
+  g->x_gyr = ((double)(g->gx)) * GYRO_SCALE_X;
+  g->z_gyr = (double)g->gz * GYRO_SCALE_Z;
+
 }
