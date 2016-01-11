@@ -53,6 +53,7 @@ int radio_off_counter;
 //time keeping
 uint32_t time_diff;
 uint32_t time_last;
+double timed;
 
 //radio variables
 byte last_channel_1, 
@@ -267,9 +268,10 @@ void update_horizon(uint32_t t){
     rad_yaw = 0.0;
   }
   //calculate pids
-  pid_pitch(&p, &front, im.ypr[1], rad_pitch, t);
-  pid_roll(&p, &left, im.ypr[2], rad_roll, t);
-  pid_yaw_temp(&p, &cw, -im.z_gyr*RAD_TO_DEG, rad_yaw);
+  timed = (double)t/1000000.0;
+  pid_pitch(&p, &front, im.y_gyr*RAD_TO_DEG, im.ypr[1], rad_pitch, timed);
+  pid_roll(&p, &left, im.x_gyr*RAD_TO_DEG, im.ypr[2], rad_roll, timed);
+  pid_yaw_rate(&p, &cw, -im.z_gyr*RAD_TO_DEG, rad_yaw);
 }
 
 void update_acro(uint32_t t){
@@ -309,9 +311,10 @@ void update_acro(uint32_t t){
     rad_yaw = 0.0;
   }
   //calculate pids
-  pid_pitch_rate(&p, &front, im.y_gyr*RAD_TO_DEG, rad_pitch, t); //y_gyr may need to be reversed
-  pid_roll_rate(&p, &left, im.x_gyr*RAD_TO_DEG, rad_roll, t);    //x_gyr may need to be reversed
-  pid_yaw_temp(&p, &cw, -im.z_gyr*RAD_TO_DEG, rad_yaw);
+  timed = (double)t/1000000.0;
+  pid_pitch_rate(&p, &front, im.y_gyr*RAD_TO_DEG, rad_pitch, timed); //y_gyr may need to be reversed
+  pid_roll_rate(&p, &left, im.x_gyr*RAD_TO_DEG, rad_roll, timed);    //x_gyr may need to be reversed
+  pid_yaw_rate(&p, &cw, -im.z_gyr*RAD_TO_DEG, rad_yaw);
 }
 
 void loop(){
