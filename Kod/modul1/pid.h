@@ -17,7 +17,7 @@
 
 //yaw pid values
 #define KP_Y 1.80
-#define KI_Y 0.2
+#define KI_Y 0.0001
 #define KD_Y 0.02
 
 //Rate pid impact constant for horizon mode

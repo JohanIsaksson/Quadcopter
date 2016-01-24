@@ -6,7 +6,7 @@
 #define SPEED_MIN 1250
 #define SPEED_MAX 1750
 
-#define REF_MAX_HORIZON 20.0
+#define REF_MAX_HORIZON 25.0
 #define REF_MAX_ACRO 90.0
 #define REF_MAX_YAW 90.0
 
@@ -318,6 +318,8 @@ void update_acro(uint32_t t){
 }
 
 void loop(){
+
+
   time_diff = micros() - time_last;
   time_last = micros();
 
