@@ -12,19 +12,23 @@ void MPU6050_init(){
 
   I2Cdev::writeBit(MPU6050_ADDR, 0x6B, 6, false); //set sleep to false
 
-  //set offsets
-  I2Cdev::writeWord(MPU6050_ADDR, 0x06, 251);// -2601); //x acc
-
+  //set offsets (off chip)
+  /*I2Cdev::writeWord(MPU6050_ADDR, 0x06, 251);// -2601); //x acc
   I2Cdev::writeWord(MPU6050_ADDR, 0x08, -3198);// -1688); //y acc
-
   I2Cdev::writeWord(MPU6050_ADDR, 0x0A, 2482);// 1344); //z acc
 
-
   I2Cdev::writeWord(MPU6050_ADDR, 0x13, 39);// 98); //x gyro
-
   I2Cdev::writeWord(MPU6050_ADDR, 0x15, -13);// 32); //y gyro
+  I2Cdev::writeWord(MPU6050_ADDR, 0x17, 75);// 18); //z gyro*/
 
-  I2Cdev::writeWord(MPU6050_ADDR, 0x17, 75);// 18); //z gyro
+  //set offsets (on chip 1)
+  I2Cdev::writeWord(MPU6050_ADDR, 0x06, 308); //x acc
+  I2Cdev::writeWord(MPU6050_ADDR, 0x08, 2564); //y acc
+  I2Cdev::writeWord(MPU6050_ADDR, 0x0A, 1469); //z acc
+
+  I2Cdev::writeWord(MPU6050_ADDR, 0x13, 29);// 98); //x gyro
+  I2Cdev::writeWord(MPU6050_ADDR, 0x15, -13);// 32); //y gyro
+  I2Cdev::writeWord(MPU6050_ADDR, 0x17, -19);// 18); //z gyro
 }
 
 void MPU6050_read(imu* g){
