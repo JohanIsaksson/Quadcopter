@@ -6,12 +6,12 @@
 #define PID_MAX 254.0
 
 //Horizon mode pid values
-#define KP 0.75
+#define KP 0.65//0.75
 #define KI 0.012
 #define KD 0.07
 
 //Acrobatic mode pid values
-#define KP_A 0.5//1.06
+#define KP_A 0.4 //0.5//1.06
 #define KI_A 0.1
 #define KD_A 0.001
 
