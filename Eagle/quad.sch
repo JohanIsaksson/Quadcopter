@@ -4029,21 +4029,25 @@ drill 1.1 mm</description>
 <nets>
 <net name="N$1" class="0">
 <segment>
-<pinref part="MODUL1" gate="MODUL" pin="D8"/>
-<wire x1="35.56" y1="53.34" x2="45.72" y2="53.34" width="0.1524" layer="91"/>
-<wire x1="45.72" y1="53.34" x2="45.72" y2="111.76" width="0.1524" layer="91"/>
 <pinref part="FRONTLEFT" gate="1" pin="MP"/>
-<wire x1="45.72" y1="111.76" x2="210.82" y2="111.76" width="0.1524" layer="91"/>
+<pinref part="MODUL2" gate="MODUL" pin="D8"/>
+<wire x1="208.28" y1="111.76" x2="210.82" y2="111.76" width="0.1524" layer="91"/>
+<wire x1="241.3" y1="43.18" x2="248.92" y2="43.18" width="0.1524" layer="91"/>
+<wire x1="248.92" y1="43.18" x2="248.92" y2="104.14" width="0.1524" layer="91"/>
+<wire x1="248.92" y1="104.14" x2="208.28" y2="104.14" width="0.1524" layer="91"/>
+<wire x1="208.28" y1="104.14" x2="208.28" y2="111.76" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$3" class="0">
 <segment>
-<pinref part="MODUL1" gate="MODUL" pin="D10"/>
-<wire x1="35.56" y1="48.26" x2="53.34" y2="48.26" width="0.1524" layer="91"/>
-<wire x1="-38.1" y1="2.54" x2="53.34" y2="2.54" width="0.1524" layer="91"/>
-<wire x1="53.34" y1="2.54" x2="53.34" y2="48.26" width="0.1524" layer="91"/>
 <pinref part="BACKLEFT" gate="1" pin="MP"/>
-<wire x1="-38.1" y1="2.54" x2="-38.1" y2="101.6" width="0.1524" layer="91"/>
+<pinref part="MODUL2" gate="MODUL" pin="D10"/>
+<wire x1="-38.1" y1="99.06" x2="-38.1" y2="101.6" width="0.1524" layer="91"/>
+<wire x1="241.3" y1="38.1" x2="254" y2="38.1" width="0.1524" layer="91"/>
+<wire x1="254" y1="38.1" x2="254" y2="116.84" width="0.1524" layer="91"/>
+<wire x1="254" y1="116.84" x2="-22.86" y2="116.84" width="0.1524" layer="91"/>
+<wire x1="-22.86" y1="116.84" x2="-22.86" y2="99.06" width="0.1524" layer="91"/>
+<wire x1="-22.86" y1="99.06" x2="-38.1" y2="99.06" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$5" class="0">
@@ -4102,12 +4106,12 @@ drill 1.1 mm</description>
 </net>
 <net name="N$6" class="0">
 <segment>
-<pinref part="MODUL1" gate="MODUL" pin="D9"/>
-<wire x1="35.56" y1="50.8" x2="81.28" y2="50.8" width="0.1524" layer="91"/>
-<wire x1="81.28" y1="50.8" x2="81.28" y2="-15.24" width="0.1524" layer="91"/>
 <pinref part="FRONTRIGHT" gate="1" pin="MP"/>
-<wire x1="81.28" y1="-15.24" x2="203.2" y2="-15.24" width="0.1524" layer="91"/>
 <wire x1="203.2" y1="-15.24" x2="203.2" y2="-20.32" width="0.1524" layer="91"/>
+<pinref part="MODUL2" gate="MODUL" pin="D9"/>
+<wire x1="241.3" y1="40.64" x2="256.54" y2="40.64" width="0.1524" layer="91"/>
+<wire x1="256.54" y1="40.64" x2="256.54" y2="-15.24" width="0.1524" layer="91"/>
+<wire x1="256.54" y1="-15.24" x2="203.2" y2="-15.24" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$2" class="0">
@@ -4179,14 +4183,10 @@ drill 1.1 mm</description>
 <junction x="139.7" y="-2.54"/>
 <pinref part="R2" gate="G$1" pin="1"/>
 <wire x1="139.7" y1="0" x2="139.7" y2="-2.54" width="0.1524" layer="91"/>
-<pinref part="MODUL1" gate="MODUL" pin="COM"/>
-<wire x1="7.62" y1="10.16" x2="7.62" y2="-2.54" width="0.1524" layer="91"/>
-<wire x1="7.62" y1="-2.54" x2="15.24" y2="-2.54" width="0.1524" layer="91"/>
 <wire x1="15.24" y1="-2.54" x2="45.72" y2="-2.54" width="0.1524" layer="91"/>
 <wire x1="45.72" y1="-2.54" x2="45.72" y2="12.7" width="0.1524" layer="91"/>
 <wire x1="45.72" y1="12.7" x2="68.58" y2="12.7" width="0.1524" layer="91"/>
 <pinref part="MODUL1" gate="MODUL" pin="COM@1"/>
-<junction x="15.24" y="-2.54"/>
 <wire x1="15.24" y1="-2.54" x2="15.24" y2="10.16" width="0.1524" layer="91"/>
 <pinref part="RADIO" gate="1" pin="8"/>
 <pinref part="MODUL2" gate="MODUL" pin="COM@1"/>
@@ -4253,43 +4253,12 @@ drill 1.1 mm</description>
 <net name="N$14" class="0">
 <segment>
 <wire x1="170.18" y1="66.04" x2="170.18" y2="58.42" width="0.1524" layer="91"/>
-<wire x1="170.18" y1="58.42" x2="170.18" y2="-5.08" width="0.1524" layer="91"/>
-<wire x1="170.18" y1="-5.08" x2="50.8" y2="-5.08" width="0.1524" layer="91"/>
-<wire x1="50.8" y1="83.82" x2="50.8" y2="-5.08" width="0.1524" layer="91"/>
-<wire x1="50.8" y1="83.82" x2="12.7" y2="83.82" width="0.1524" layer="91"/>
-<pinref part="MODUL1" gate="MODUL" pin="3V3"/>
-<wire x1="12.7" y1="83.82" x2="12.7" y2="81.28" width="0.1524" layer="91"/>
 <pinref part="HMC5883L" gate="G$1" pin="5"/>
 <pinref part="MODUL2" gate="MODUL" pin="3V3"/>
 <wire x1="218.44" y1="71.12" x2="218.44" y2="73.66" width="0.1524" layer="91"/>
 <wire x1="218.44" y1="73.66" x2="177.8" y2="73.66" width="0.1524" layer="91"/>
 <wire x1="177.8" y1="73.66" x2="177.8" y2="58.42" width="0.1524" layer="91"/>
 <wire x1="177.8" y1="58.42" x2="170.18" y2="58.42" width="0.1524" layer="91"/>
-<junction x="170.18" y="58.42"/>
-</segment>
-</net>
-<net name="N$15" class="0">
-<segment>
-<pinref part="R3" gate="G$1" pin="2"/>
-<wire x1="149.86" y1="30.48" x2="177.8" y2="30.48" width="0.1524" layer="91"/>
-<wire x1="177.8" y1="30.48" x2="177.8" y2="-10.16" width="0.1524" layer="91"/>
-<wire x1="177.8" y1="-10.16" x2="248.92" y2="-10.16" width="0.1524" layer="91"/>
-<wire x1="248.92" y1="-10.16" x2="248.92" y2="25.4" width="0.1524" layer="91"/>
-<pinref part="MODUL2" gate="MODUL" pin="A7"/>
-<wire x1="248.92" y1="25.4" x2="241.3" y2="25.4" width="0.1524" layer="91"/>
-</segment>
-</net>
-<net name="N$18" class="0">
-<segment>
-<pinref part="R1" gate="G$1" pin="2"/>
-<pinref part="MODUL2" gate="MODUL" pin="A6"/>
-<wire x1="241.3" y1="22.86" x2="251.46" y2="22.86" width="0.1524" layer="91"/>
-<wire x1="251.46" y1="22.86" x2="251.46" y2="-12.7" width="0.1524" layer="91"/>
-<wire x1="251.46" y1="-12.7" x2="175.26" y2="-12.7" width="0.1524" layer="91"/>
-<wire x1="175.26" y1="-12.7" x2="175.26" y2="17.78" width="0.1524" layer="91"/>
-<wire x1="175.26" y1="17.78" x2="144.78" y2="17.78" width="0.1524" layer="91"/>
-<wire x1="144.78" y1="17.78" x2="144.78" y2="27.94" width="0.1524" layer="91"/>
-<wire x1="144.78" y1="27.94" x2="139.7" y2="27.94" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$20" class="0">
@@ -4322,13 +4291,41 @@ drill 1.1 mm</description>
 </net>
 <net name="N$4" class="0">
 <segment>
-<pinref part="MODUL1" gate="MODUL" pin="D11/MOSI"/>
-<wire x1="35.56" y1="45.72" x2="55.88" y2="45.72" width="0.1524" layer="91"/>
-<wire x1="55.88" y1="45.72" x2="55.88" y2="0" width="0.1524" layer="91"/>
-<wire x1="55.88" y1="0" x2="-15.24" y2="0" width="0.1524" layer="91"/>
 <pinref part="BACKRIGHT" gate="1" pin="MP"/>
 <wire x1="-38.1" y1="-17.78" x2="-15.24" y2="-17.78" width="0.1524" layer="91"/>
-<wire x1="-15.24" y1="-17.78" x2="-15.24" y2="0" width="0.1524" layer="91"/>
+<pinref part="MODUL2" gate="MODUL" pin="D11/MOSI"/>
+<wire x1="241.3" y1="35.56" x2="259.08" y2="35.56" width="0.1524" layer="91"/>
+<wire x1="259.08" y1="35.56" x2="259.08" y2="-27.94" width="0.1524" layer="91"/>
+<wire x1="259.08" y1="-27.94" x2="-15.24" y2="-27.94" width="0.1524" layer="91"/>
+<wire x1="-15.24" y1="-27.94" x2="-15.24" y2="-17.78" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$10" class="0">
+<segment>
+<pinref part="R1" gate="G$1" pin="2"/>
+<wire x1="127" y1="27.94" x2="139.7" y2="27.94" width="0.1524" layer="91"/>
+<wire x1="127" y1="20.32" x2="127" y2="27.94" width="0.1524" layer="91"/>
+<wire x1="81.28" y1="20.32" x2="127" y2="20.32" width="0.1524" layer="91"/>
+<wire x1="81.28" y1="33.02" x2="81.28" y2="20.32" width="0.1524" layer="91"/>
+<pinref part="MODUL1" gate="MODUL" pin="A6"/>
+<wire x1="35.56" y1="33.02" x2="81.28" y2="33.02" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$18" class="0">
+<segment>
+<pinref part="R3" gate="G$1" pin="2"/>
+<wire x1="124.46" y1="30.48" x2="149.86" y2="30.48" width="0.1524" layer="91"/>
+<wire x1="124.46" y1="22.86" x2="124.46" y2="30.48" width="0.1524" layer="91"/>
+<wire x1="83.82" y1="22.86" x2="124.46" y2="22.86" width="0.1524" layer="91"/>
+<wire x1="83.82" y1="35.56" x2="83.82" y2="22.86" width="0.1524" layer="91"/>
+<pinref part="MODUL1" gate="MODUL" pin="A7"/>
+<wire x1="35.56" y1="35.56" x2="83.82" y2="35.56" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$15" class="0">
+<segment>
+<pinref part="MODUL1" gate="MODUL" pin="3V3"/>
+<wire x1="12.7" y1="83.82" x2="12.7" y2="81.28" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>
