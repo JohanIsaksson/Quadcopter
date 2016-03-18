@@ -3,17 +3,14 @@
 #include "imu.h"
 #include "pid.h"
 
-#define SPEED_MIN 1250
-#define SPEED_MAX 1750
+#define SPEED_MIN 1000
+#define SPEED_MAX 2000
+
+#define SYSTEM_PERIOD 4000
 
 #define REF_MAX_HORIZON 25.0
 #define REF_MAX_ACRO 90.0
 #define REF_MAX_YAW 90.0
-
-#define RADIO_THROTTLE 5 //6 in future
-
-#define LOST_CONNECTION_COUNT 100
-#define EMERGENCY_THROTTLE 0
 
 #define MODE_HORIZON 0
 #define MODE_ACRO 1
@@ -55,13 +52,16 @@ uint32_t time_diff;
 uint32_t time_last;
 double timed;
 
+//I2C stuff
+uint8_t I2C_cur;
+
 
 double rad_roll, rad_pitch, rad_yaw;
-uint16_t rad_throttle;
+uint16_t receiver_throttle, receiver_roll, receiver_pitch, receiver_yaw;
 
 //motor control variables
 bool motors_on, disable_sticks;
-uint32_t us, esc_time, start_time, end_time;
+uint32_t us, esc_time, start_time, end_time, esc_t;
 
 //flight mode control
 uint8_t flight_mode;
@@ -80,90 +80,117 @@ void init_motors(){
   while (micros() < init_esc_time){ //run for 3s approx
 
     start_time = micros();
-    end_time = start_time + 1750;
+    end_time = start_time + 2000;
     PORTB |= B00001111; // set all inputs to 1
 
     esc_time = micros();
 
-    while(end_time > esc_time){                         
-      if (esc_time - start_time >= throttle[0]) PORTB &= B11111110; //front left
-      if (esc_time - start_time >= throttle[1]) PORTB &= B11111101; //front right
-      if (esc_time - start_time >= throttle[2]) PORTB &= B11111011; //back left
-      if (esc_time - start_time >= throttle[3]) PORTB &= B11110111; //back right
+    while(end_time > esc_time){ 
+    	esc_t = esc_time - start_time;                        
+      if (esc_t >= throttle[0]) PORTB &= B11111110; //front left
+      if (esc_t >= throttle[1]) PORTB &= B11111101; //front right
+      if (esc_t >= throttle[2]) PORTB &= B11111011; //back left
+      if (esc_t >= throttle[3]) PORTB &= B11110111; //back right
       esc_time = micros();
     }
 
     PORTB &= B11110000; //for sfety, set all outputs to 0
       
-    while(micros() - time_last < 4500);
+    while(micros() - time_last < 4000);
   }
 }
 
 void set_motor_speeds(){
   //front left
-  throttle[0] = rad_throttle + front + left + cw; //+ CALIBRATION_COMP;
+  throttle[0] = receiver_throttle + front + left + cw; //+ CALIBRATION_COMP;
 
   //front right
-  throttle[1] = rad_throttle + front - left - cw; //+ CALIBRATION_COMP;
+  throttle[1] = receiver_throttle + front - left - cw; //+ CALIBRATION_COMP;
 
   //back left
-  throttle[2] = rad_throttle - front + left - cw; //- CALIBRATION_COMP;
+  throttle[2] = receiver_throttle - front + left - cw; //- CALIBRATION_COMP;
 
   //back right
-  throttle[3] = rad_throttle - front - left + cw; //- CALIBRATION_COMP;
+  throttle[3] = receiver_throttle - front - left + cw; //- CALIBRATION_COMP;
 
   //check and set speeds
-  if (radio_off_counter >= LOST_CONNECTION_COUNT){
-    for (int i = 0; i < 4; i++){
+  for (int i = 0; i < 4; i++){
+    if (throttle[i] > SPEED_MAX){
+      throttle[i] = SPEED_MAX;
+    }else if (throttle[i] < SPEED_MIN){
       throttle[i] = SPEED_MIN;
-    }
-  }else{
-    for (int i = 0; i < 4; i++){
-      if (throttle[i] > SPEED_MAX){
-        throttle[i] = SPEED_MAX;
-      }else if (throttle[i] < SPEED_MIN){
-        throttle[i] = SPEED_MIN;
-      }        
-    }
-  } 
+    }        
+  }
 
   esc_time = micros();
 
-  while(end_time > esc_time){                         //Start the pulse after 1250 micro seconds.
-    if (esc_time - start_time >= throttle[0]) PORTB &= B11111110; //front left
-    if (esc_time - start_time >= throttle[1]) PORTB &= B11111101; //front left
-    if (esc_time - start_time >= throttle[2]) PORTB &= B11111011; //front left
-    if (esc_time - start_time >= throttle[3]) PORTB &= B11110111; //front left
-    esc_time = micros();
-  }
+  while(end_time > esc_time){ 
+    	esc_t = esc_time - start_time;                        
+      if (esc_t >= throttle[0]) PORTB &= B11111110; //front left
+      if (esc_t >= throttle[1]) PORTB &= B11111101; //front right
+      if (esc_t >= throttle[2]) PORTB &= B11111011; //back left
+      if (esc_t >= throttle[3]) PORTB &= B11110111; //back right
+      esc_time = micros();
+    }
   PORTB &= B11110000; //turn all pulses off for safety
 
   if (flight_mode == MODE_HORIZON){
     while(micros() - time_last < 4000);
     }else{
-      while(micros() - time_last < 2800);
+      while(micros() - time_last < 3000);
     }
 }
 
 void set_motor_speeds_min(){
   //start esc pulses
   start_time = micros(); 
-  end_time = start_time + 1750;
+  end_time = start_time + 2000;
   PORTB |= B00001111;
+
+  for (int i = 0; i < 4; i++){
+      throttle[i] = SPEED_MIN;
+    }
 
   esc_time = micros();
 
-  while(end_time > esc_time){                         //Start the pulse after 1250 micro seconds.
-    if (esc_time - start_time >= throttle[0]) PORTB &= B11111110; //front left
-    if (esc_time - start_time >= throttle[1]) PORTB &= B11111101; //front left
-    if (esc_time - start_time >= throttle[2]) PORTB &= B11111011; //front left
-    if (esc_time - start_time >= throttle[3]) PORTB &= B11110111; //front left
-    esc_time = micros();
-  }
+  while(end_time > esc_time){ 
+    	esc_t = esc_time - start_time;                        
+      if (esc_t >= throttle[0]) PORTB &= B11111110; //front left
+      if (esc_t >= throttle[1]) PORTB &= B11111101; //front right
+      if (esc_t >= throttle[2]) PORTB &= B11111011; //back left
+      if (esc_t >= throttle[3]) PORTB &= B11110111; //back right
+      esc_time = micros();
+    }
   PORTB &= B11110000; //turn all pulses off for safety
 
     
-  while(micros() - time_last < 4500);
+  while(micros() - time_last < 4000);
+}
+
+void set_motor_speeds_throttle(){
+  //start esc pulses
+  start_time = micros(); 
+  end_time = start_time + 2000;
+  PORTB |= B00001111;
+
+  for (int i = 0; i < 4; i++){
+      throttle[i] = receiver_throttle;
+    }
+
+  esc_time = micros();
+
+  while(end_time > esc_time){ 
+    	esc_t = esc_time - start_time;                        
+      if (esc_t >= throttle[0]) PORTB &= B11111110; //front left
+      if (esc_t >= throttle[1]) PORTB &= B11111101; //front right
+      if (esc_t >= throttle[2]) PORTB &= B11111011; //back left
+      if (esc_t >= throttle[3]) PORTB &= B11110111; //back right
+      esc_time = micros();
+    }
+  PORTB &= B11110000; //turn all pulses off for safety
+
+    
+  while(micros() - time_last < 4000);
 }
 
 void setup(){
@@ -189,11 +216,14 @@ void setup(){
 
   DDRB |= B00001111; //set pins as outputs
 
+  DDRD &= B10111111; //set pin D6 as input - disable I2C
+
   //initialize escs
   init_motors();
   motors_on = false;
 
-  Wire.begin();        // join i2c bus (address optional for master)
+  Wire.begin();        // join i2c bus
+  I2C_cur = 0;
 
   time_last = micros();
   Serial.println("Running...");
@@ -207,29 +237,19 @@ void update_horizon(uint32_t t){
 
   //start esc pulses
   start_time = micros(); 
-  end_time = start_time + 1750;
+  end_time = start_time + 2000;
   PORTB |= B00001111;
 
-  /* calculate pid */
-  //pid_pitch(&p, &front, im.ypr[1], 0.0);
-  //pid_roll(&p, &left, im.ypr[2], 0.0);
-  //pid_yaw_temp(&p, &cw, -im.z_gyr*RAD_TO_DEG, 0.0);
 
 
   //p.K_D_yaw = map_d((double)receiver_input_channel_5, 975.0, 2000.0, 0.0, 0.1);
   //p.K_P_yaw = map_d((double)receiver_input_channel_6, 975.0, 2000.0, 0.0, 1.5);
 
-  rad_throttle = receiver_input_channel_3;
   //map inputs to angles
-  if (!disable_sticks){
-    rad_roll = map_d((double)receiver_input_channel_1,1250.0, 1750.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
-    rad_pitch = map_d((double)receiver_input_channel_2,1250.0, 1750.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
-    rad_yaw = map_d((double)receiver_input_channel_4,1250.0, 1750.0, -REF_MAX_ACRO, REF_MAX_ACRO);
-  }else{
-    rad_roll = 0.0;
-    rad_pitch = 0.0;
-    rad_yaw = 0.0;
-  }
+  rad_roll = map_d((double)receiver_roll,1000.0, 2000.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
+  rad_pitch = map_d((double)receiver_pitch,1000.0, 2000.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
+  rad_yaw = map_d((double)receiver_yaw,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
+
   //calculate pids
   timed = (double)t/1000000.0;
   pid_pitch(&p, &front, im.y_gyr*RAD_TO_DEG, im.ypr[1], rad_pitch, timed);
@@ -244,7 +264,7 @@ void update_acro(uint32_t t){
 
   //start esc pulses
   start_time = micros(); 
-  end_time = start_time + 1750;
+  end_time = start_time + 2000;
   PORTB |= B00001111;
 
   /* calculate pid */
@@ -254,25 +274,13 @@ void update_acro(uint32_t t){
 
   //p.K_D_yaw = map_d((double)receiver_input_channel_5, 975.0, 2000.0, 0.0, 0.1);
   //p.K_P_yaw = map_d((double)receiver_input_channel_6, 975.0, 2000.0, 0.0, 1.5);
-
-  //compensate for mistimings
-  if (receiver_input_channel_1 > 1485 && receiver_input_channel_1 < 1515) receiver_input_channel_1 = 1500;
-  if (receiver_input_channel_2 > 1485 && receiver_input_channel_2 < 1515) receiver_input_channel_2 = 1500;
-  if (receiver_input_channel_4 > 1485 && receiver_input_channel_4 < 1515) receiver_input_channel_4 = 1500;
-
-  rad_throttle = receiver_input_channel_3;
   //p.K_tmp = map_d((double)receiver_input_channel_6,1000.0, 2000.0, 0.0, 4.0);
 
   //map inputs to anglerates
-  if (!disable_sticks){
-    rad_roll = map_d((double)receiver_input_channel_1,1250.0, 1750.0, -REF_MAX_ACRO, REF_MAX_ACRO);
-    rad_pitch = map_d((double)receiver_input_channel_2,1250.0, 1750.0, -REF_MAX_ACRO, REF_MAX_ACRO);
-    rad_yaw = map_d((double)receiver_input_channel_4,1250.0, 1750.0, -REF_MAX_YAW, REF_MAX_YAW);
-  }else{
-    rad_roll = 0.0;
-    rad_pitch = 0.0;
-    rad_yaw = 0.0;
-  }
+  rad_roll = map_d((double)receiver_roll,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
+  rad_pitch = map_d((double)receiver_pitch,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
+  rad_yaw = map_d((double)receiver_yaw,1000.0, 2000.0, -REF_MAX_YAW, REF_MAX_YAW);
+
   //calculate pids
   timed = (double)t/1000000.0;
   pid_pitch_rate(&p, &front, im.y_gyr*RAD_TO_DEG, rad_pitch, timed); //y_gyr may need to be reversed
@@ -286,26 +294,11 @@ void loop(){
   time_diff = micros() - time_last;
   time_last = micros();
 
-  //disable joysticks if low throttle
-  if (rad_throttle < 1270){
-    disable_sticks = true;
-  }else{
-    disable_sticks = false;
-  }
 
-  //horizon stabilization or acrobatic mode
-  if (receiver_input_channel_5 < 1300){
-    flight_mode = MODE_HORIZON;    
-  }else if(receiver_input_channel_5 > 1600){
-    flight_mode = MODE_ACRO;
-  }
-  
+  get_data();
+ 
 
-  if (motors_on){
-    //change on/off state
-    if (disable_sticks && receiver_input_channel_4 > 1710){
-      motors_on = false;
-    }
+  /*if (motors_on){
     //update according to set flight mode
     if(flight_mode == MODE_HORIZON){
       update_horizon(time_diff);
@@ -315,23 +308,93 @@ void loop(){
     //apply new speed to motors
     set_motor_speeds();
   }else{
-    //change on/off
-    if (disable_sticks && receiver_input_channel_4 < 1290){
-      motors_on = true;  
-    }
     //keep motors updated
     set_motor_speeds_min();
-  }
+  }*/
 
-  //print_data(time_diff);
+  set_motor_speeds_throttle();
+
+  /*delay(200);
+  
+  Serial.print(receiver_roll);
+  Serial.print("\t");
+  Serial.print(receiver_pitch);
+  Serial.print("\t");
+  Serial.print(receiver_throttle);
+  Serial.print("\t");
+  Serial.println(receiver_yaw);*/
 } 
 
 
 
 void get_data() {
-  Wire.requestFrom(8, 6);    // request 6 bytes from slave device #8
-
+  /*Wire.requestFrom(8, 11);    // request 11 bytes from slave device #8
+  uint8_t I2C_buffer[11];
+  int i = 0;
   while (Wire.available()) { // slave may send less than requested
-    char c = Wire.read(); // receive a byte as character
+  	I2C_buffer[i] = Wire.read(); // receive a byte as character
+  	i++;
+  }
+
+  receiver_roll = I2C_buffer[0];
+  receiver_roll = receiver_roll << 8;
+  receiver_roll += I2C_buffer[1];
+
+  receiver_pitch = I2C_buffer[2];
+  receiver_pitch = receiver_pitch << 8;
+  receiver_pitch += I2C_buffer[3];
+
+  receiver_throttle = I2C_buffer[4];
+  receiver_throttle = receiver_throttle << 8;
+  receiver_throttle += I2C_buffer[5];
+
+  receiver_yaw = I2C_buffer[6];
+  receiver_yaw = receiver_yaw << 8;
+  receiver_yaw += I2C_buffer[7];
+
+  motors_on = I2C_buffer[8];
+  flight_mode = I2C_buffer[9];*/
+
+
+  Wire.requestFrom(8, 2);    // request 11 bytes from slave device #8
+  uint8_t I2C_buffer[2];
+  int i = 0;
+  while (Wire.available()) { // slave may send less than requested
+    I2C_buffer[i] = Wire.read(); // receive a byte as character
+    i++;
+  }
+  I2C_cur++; 
+
+  switch(I2C_cur) {
+    case 1:
+      receiver_roll = I2C_buffer[0];
+      receiver_roll = receiver_roll << 8;
+      receiver_roll += I2C_buffer[1];
+    break;
+
+    case 2:
+      receiver_pitch = I2C_buffer[2];
+      receiver_pitch = receiver_pitch << 8;
+      receiver_pitch += I2C_buffer[3];
+    break;
+
+    case 3:
+      receiver_throttle = I2C_buffer[4];
+      receiver_throttle = receiver_throttle << 8;
+      receiver_throttle += I2C_buffer[5];
+    break;
+
+    case 4:
+      receiver_yaw = I2C_buffer[6];
+      receiver_yaw = receiver_yaw << 8;
+      receiver_yaw += I2C_buffer[7];
+    break;
+
+    case 5:
+      motors_on = I2C_buffer[8];
+      flight_mode = I2C_buffer[9];
+      I2C_cur = 0;
+    break;
+
   }
 }
