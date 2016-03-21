@@ -15,6 +15,10 @@
 #define MODE_HORIZON 0
 #define MODE_ACRO 1
 
+#define FLAG_OTHER 3
+#define FLAG_M 4
+#define FLAG_OVERHEAD 5
+
 
 //#define YPR_DATA
 //#define COMP_DATA
@@ -298,7 +302,7 @@ void loop(){
   get_data();
  
 
-  /*if (motors_on){
+  if (motors_on){
     //update according to set flight mode
     if(flight_mode == MODE_HORIZON){
       update_horizon(time_diff);
@@ -310,90 +314,67 @@ void loop(){
   }else{
     //keep motors updated
     set_motor_speeds_min();
-  }*/
+  }
 
-  set_motor_speeds_throttle();
-
-  /*delay(200);
   
+  /*delay(200);
+  Serial.println(motors_on ? "true" : "false");
+  /*Serial.print(I2C_cur);
+  Serial.print("\t");
   Serial.print(receiver_roll);
   Serial.print("\t");
   Serial.print(receiver_pitch);
   Serial.print("\t");
   Serial.print(receiver_throttle);
   Serial.print("\t");
-  Serial.println(receiver_yaw);*/
+  Serial.println(receiver_yaw);
+  */
 } 
 
 
 
 void get_data() {
-  /*Wire.requestFrom(8, 11);    // request 11 bytes from slave device #8
-  uint8_t I2C_buffer[11];
+  Wire.requestFrom(8, 2);    // request 2 bytes from slave device #8
+  uint8_t I2C_buffer[5] = {0,0};
   int i = 0;
   while (Wire.available()) { // slave may send less than requested
-  	I2C_buffer[i] = Wire.read(); // receive a byte as character
-  	i++;
-  }
-
-  receiver_roll = I2C_buffer[0];
-  receiver_roll = receiver_roll << 8;
-  receiver_roll += I2C_buffer[1];
-
-  receiver_pitch = I2C_buffer[2];
-  receiver_pitch = receiver_pitch << 8;
-  receiver_pitch += I2C_buffer[3];
-
-  receiver_throttle = I2C_buffer[4];
-  receiver_throttle = receiver_throttle << 8;
-  receiver_throttle += I2C_buffer[5];
-
-  receiver_yaw = I2C_buffer[6];
-  receiver_yaw = receiver_yaw << 8;
-  receiver_yaw += I2C_buffer[7];
-
-  motors_on = I2C_buffer[8];
-  flight_mode = I2C_buffer[9];*/
-
-
-  Wire.requestFrom(8, 2);    // request 11 bytes from slave device #8
-  uint8_t I2C_buffer[2];
-  int i = 0;
-  while (Wire.available()) { // slave may send less than requested
-    I2C_buffer[i] = Wire.read(); // receive a byte as character
+    I2C_buffer[i] = Wire.read(); // receive a byte
     i++;
   }
-  I2C_cur++; 
+
+  I2C_cur = (I2C_buffer[1] >> FLAG_OVERHEAD);
+
+  motors_on = (I2C_buffer[1] & B00010000) >> FLAG_M;
+
+  ///other = (I2C_buffer[1] & B00001000) >> FLAG_OTHER;
+
+  flight_mode = (I2C_buffer[1] & B00000111);
+
+  uint16_t data = I2C_buffer[0];
+  data <<= 2;
+  data += 1000; 
+
 
   switch(I2C_cur) {
     case 1:
-      receiver_roll = I2C_buffer[0];
-      receiver_roll = receiver_roll << 8;
-      receiver_roll += I2C_buffer[1];
+      receiver_roll = data;
     break;
 
     case 2:
-      receiver_pitch = I2C_buffer[2];
-      receiver_pitch = receiver_pitch << 8;
-      receiver_pitch += I2C_buffer[3];
+      receiver_pitch = data;
     break;
 
     case 3:
-      receiver_throttle = I2C_buffer[4];
-      receiver_throttle = receiver_throttle << 8;
-      receiver_throttle += I2C_buffer[5];
+      receiver_throttle = data;
     break;
 
     case 4:
-      receiver_yaw = I2C_buffer[6];
-      receiver_yaw = receiver_yaw << 8;
-      receiver_yaw += I2C_buffer[7];
+      receiver_yaw = data;
     break;
 
     case 5:
-      motors_on = I2C_buffer[8];
-      flight_mode = I2C_buffer[9];
-      I2C_cur = 0;
+      p.K_tmp = map_d((double)data, 1000.0, 2000.0, 0.0, 0.02);
+
     break;
 
   }

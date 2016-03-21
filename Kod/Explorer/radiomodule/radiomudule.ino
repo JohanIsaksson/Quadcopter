@@ -10,6 +10,11 @@
 #define MODE_ACRO 1
 
 
+#define FLAG_OTHER 3
+#define FLAG_M 4
+#define FLAG_OVERHEAD 5
+
+
 
 //safety stuff
 int radio_off_counter;
@@ -21,12 +26,14 @@ byte last_channel_1,
       last_channel_4,
       last_channel_5, 
       last_channel_6;
+
 uint16_t receiver_input_channel_1, 
     receiver_input_channel_2, 
     receiver_input_channel_3, 
     receiver_input_channel_4, 
     receiver_input_channel_5, 
     receiver_input_channel_6;
+
 uint32_t us, timer_tmp,
 					timer_1, 
           timer_2, 
@@ -34,7 +41,12 @@ uint32_t us, timer_tmp,
           timer_4,
           timer_5,
           timer_6;
-uint16_t rad_throttle;
+
+uint16_t receiver_roll,
+          receiver_pitch,
+          receiver_throttle,
+          receiver_yaw;
+;
 
 //motor control variables
 bool motors_on, disable_sticks;
@@ -44,11 +56,12 @@ uint8_t flight_mode;
 
 //I2C stuff
 uint8_t I2C_cur;
+uint8_t I2C_buffer[2];
 
 //altitude parameters
 int8_t altitude_throttle;
 
-uint8_t I2C_buffer[11];
+
 
 void setup(){
 
@@ -85,9 +98,9 @@ void setup(){
 
   Wire.begin(8);                // join i2c bus with address #8
    
-   Wire.onRequest(send_data); // register event
+  Wire.onRequest(send_data); // register event
 
-  PCICR |= (1 << PCIE2);    // set PCIE2 to ena ble PCMSK0 scan
+  PCICR |= (1 << PCIE2);    // set PCIE2 to enable PCMSK0 scan
 }
 
 
@@ -98,40 +111,45 @@ void send_data() {
 
   I2C_cur++;
 
+  uint8_t I2C_buffer[2] = {0,0};
+
+  I2C_buffer[1] = (I2C_cur << FLAG_OVERHEAD);
+  I2C_buffer[1] += (motors_on << FLAG_M) + (1 << FLAG_OTHER) + flight_mode;
+
+
+
+
+
   switch(I2C_cur) {
     case 1:
-      I2C_buffer[0] = receiver_input_channel_1 >> 8;
-      I2C_buffer[1] = receiver_input_channel_1;
+      I2C_buffer[0] = (receiver_roll - 1000) >> 2;    
     break;
 
     case 2:
-      I2C_buffer[0] = receiver_input_channel_2 >> 8;
-      I2C_buffer[1] = receiver_input_channel_2;
+      I2C_buffer[0] = (receiver_pitch - 1000) >> 2;
     break;
 
     case 3:
-      I2C_buffer[0] = rad_throttle >> 8;
-      I2C_buffer[1] = rad_throttle;
+      I2C_buffer[0] = (receiver_throttle - 1000) >> 2;
     break;
 
     case 4:
-      I2C_buffer[0] = receiver_input_channel_4 >> 8;
-      I2C_buffer[1] = receiver_input_channel_4;
+      I2C_buffer[0] = (receiver_yaw - 1000) >> 2;
     break;
 
     case 5:
-      I2C_buffer[0] = motors_on;
-      I2C_buffer[1] = flight_mode;
+      I2C_buffer[0] = (receiver_input_channel_6 - 1000) >> 2;
       I2C_cur = 0;
     break;
+
+    default:
+      I2C_cur = 0;
 
     //I2C_buffer[10] = altitude_throttle;
 
   }
 
-	for(int i=0; i<2; i++){
-	    Wire.write(I2C_buffer[i]); 
-	}  
+  Wire.write(I2C_buffer, 2);
 }
 
 
@@ -142,7 +160,28 @@ void loop(){
 	//if (receiver_input_channel_3 < 1400) rad_throttle = 1000; //calibration purposes
 	//if (receiver_input_channel_3 > 1600) rad_throttle = 2000;
 
-	rad_throttle = map(receiver_input_channel_3, 1108, 1876, 1000, 2000);
+	receiver_throttle = map(receiver_input_channel_3, 1108, 1876, 1000, 2000);
+
+  if (receiver_input_channel_3 < 1125){
+    disable_sticks = true;
+  }else{
+    disable_sticks = false;
+  }
+
+
+  if (disable_sticks){
+    receiver_roll = 1500;
+    receiver_pitch = 1500;
+    receiver_throttle = 1000;
+    receiver_yaw = 1500;
+  }else{
+    receiver_roll = receiver_input_channel_1;
+    receiver_pitch = receiver_input_channel_2;
+    receiver_throttle = receiver_input_channel_3;
+    receiver_yaw = receiver_input_channel_4;
+  }
+
+
 
   //horizon stabilization or acrobatic mode
   if (receiver_input_channel_5 < 1300){
@@ -154,24 +193,21 @@ void loop(){
 
   if (motors_on){
     //change on/off state
-    if (receiver_input_channel_3 < 1270 && receiver_input_channel_4 > 1710){
+    if (disable_sticks && receiver_input_channel_4 > 1710){
       motors_on = false;
     }  
     
   }else{
     //change on/off
-    if (receiver_input_channel_3 < 1270 && receiver_input_channel_4 < 1290){
+    if (disable_sticks && receiver_input_channel_4 < 1290){
       motors_on = true;  
     }
 
   }
 
-  Serial.print(receiver_input_channel_3);
-  Serial.print("\t");
-  Serial.println(rad_throttle);
-
-	
-
+  //Serial.print(receiver_input_channel_3);
+  //Serial.print("\t");
+  //Serial.println(I2C_cur);
 } 
 
 

@@ -6,19 +6,19 @@
 #define PID_MAX 254.0
 
 //Horizon mode pid values
-#define KP 0.65//0.75
-#define KI 0.012
-#define KD 0.07
+#define KP 0.0//0.65//0.75
+#define KI 0.0//0.012
+#define KD 0.0//0.07
 
 //Acrobatic mode pid values
-#define KP_A 0.4 //0.5//1.06
-#define KI_A 0.1
-#define KD_A 0.001
+#define KP_A 0.0//0.4 //0.5//1.06
+#define KI_A 0.0//0.1
+#define KD_A 0.0//0.001
 
 //yaw pid values
-#define KP_Y 1.80
-#define KI_Y 0.0001
-#define KD_Y 0.02
+#define KP_Y 0.0//1.80
+#define KI_Y 0.0//0.0001
+#define KD_Y 0.0//0.02
 
 //Rate pid impact constant for horizon mode
 #define RI 4.0

@@ -20,7 +20,7 @@ void pid_pitch(pid* p, int* front, double gyro_rate, double gyro_pitch, double r
 
 	p->p = KP * p->error;
 	p->i = KI * p->pitch_integral;
-	p->d = KD * (p->error - p->pitch_error_prev) / t;
+	p->d = p->K_tmp * (p->error - p->pitch_error_prev) / t;
 
 	p->output =  (int)(p->p + p->i + p->d);
 
@@ -89,7 +89,7 @@ void pid_roll(pid* p, int* left, double gyro_rate, double gyro_roll, double ref_
 
 	p->p = KP * p->error;
 	p->i = KI * p->roll_integral;
-	p->d = KD * (p->error - p->roll_error_prev) / t;
+	p->d = p->K_tmp * (p->error - p->roll_error_prev) / t;
 
 	p->output =  (int)(p->p + p->i + p->d);
 
