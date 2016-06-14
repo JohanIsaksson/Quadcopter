@@ -11,13 +11,13 @@
 #define KD 0.07
 
 //Acrobatic mode pid values
-#define KP_A 0.4 //0.5//1.06
-#define KI_A 0.1
-#define KD_A 0.001
+#define KP_A 0.435 //0.6
+#define KI_A 0.3 //0.6
+#define KD_A 0.09 //1.2
 
 //yaw pid values
 #define KP_Y 1.80
-#define KI_Y 0.0001
+#define KI_Y 0.002
 #define KD_Y 0.02
 
 //Rate pid impact constant for horizon mode

@@ -317,18 +317,24 @@ void loop(){
   }
 
   
-  /*delay(200);
-  Serial.println(motors_on ? "true" : "false");
-  /*Serial.print(I2C_cur);
+  //delay(200);
+  
+
+  //Serial.println(p.K_tmp, 8);
+
+  /*Serial.print(motors_on ? "ON" : "OFF");
   Serial.print("\t");
+  Serial.print(flight_mode);// ? "ON" : "OFF");
+  Serial.print("\t");*/
+  /*
   Serial.print(receiver_roll);
   Serial.print("\t");
   Serial.print(receiver_pitch);
   Serial.print("\t");
   Serial.print(receiver_throttle);
   Serial.print("\t");
-  Serial.println(receiver_yaw);
-  */
+  Serial.println(receiver_yaw);*/
+  
 } 
 
 
@@ -373,7 +379,7 @@ void get_data() {
     break;
 
     case 5:
-      p.K_tmp = map_d((double)data, 1000.0, 2000.0, 0.0, 0.02);
+      p.K_tmp = map_d((double)data, 1000.0, 2000.0, 0.0, 5.0);
 
     break;
 

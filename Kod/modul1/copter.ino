@@ -3,8 +3,8 @@
 #include "imu.h"
 #include "pid.h"
 
-#define SPEED_MIN 1250
-#define SPEED_MAX 1750
+#define SPEED_MIN 1000
+#define SPEED_MAX 2000
 
 #define REF_MAX_HORIZON 25.0
 #define REF_MAX_ACRO 90.0
@@ -21,7 +21,7 @@
 
 //#define YPR_DATA
 //#define COMP_DATA
-//#define PID_DATA
+#define PID_DATA
 //#define MAG_DATA
 //#define JAVA_DATA
 //#define RADIO_DATA
@@ -98,7 +98,7 @@ void init_motors(){
   while (micros() < init_esc_time){ //run for 3s approx
 
     start_time = micros();
-    end_time = start_time + 1750;
+    end_time = start_time + 2000;
     PORTB |= B00001111; // set all inputs to 1
 
     esc_time = micros();
@@ -166,18 +166,24 @@ void set_motor_speeds(){
 void set_motor_speeds_min(){
   //start esc pulses
   start_time = micros(); 
-  end_time = start_time + 1750;
+  end_time = start_time + 1000;
   PORTB |= B00001111;
 
-  esc_time = micros();
 
-  while(end_time > esc_time){                         //Start the pulse after 1250 micro seconds.
-    if (esc_time - start_time >= throttle[0]) PORTB &= B11111110; //front left
-    if (esc_time - start_time >= throttle[1]) PORTB &= B11111101; //front left
-    if (esc_time - start_time >= throttle[2]) PORTB &= B11111011; //front left
-    if (esc_time - start_time >= throttle[3]) PORTB &= B11110111; //front left
-    esc_time = micros();
-  }
+  while(end_time > micros());
+  PORTB &= B11110000; //turn all pulses off for safety
+
+    
+  while(micros() - time_last < 4500);
+}
+
+void set_motor_speeds_max(){
+  //start esc pulses
+  start_time = micros(); 
+  end_time = start_time + 2000;
+  PORTB |= B00001111;
+
+  while(end_time > micros());
   PORTB &= B11110000; //turn all pulses off for safety
 
     
@@ -204,7 +210,7 @@ void setup(){
   radio_off_counter = 0;
   receiver_input_channel_1 = 1500;
   receiver_input_channel_2 = 1500;
-  receiver_input_channel_3 = 1250;
+  receiver_input_channel_3 = 1108;
   receiver_input_channel_4 = 1500;
   receiver_input_channel_5 = 1000;
   receiver_input_channel_6 = 1000;
@@ -229,6 +235,7 @@ void setup(){
   //initialize escs
   init_motors();
   motors_on = false;
+  //motors_on = true;
 
 
   time_last = micros();
@@ -244,7 +251,7 @@ void update_horizon(uint32_t t){
 
   //start esc pulses
   start_time = micros(); 
-  end_time = start_time + 1750;
+  end_time = start_time + 2000;
   PORTB |= B00001111;
 
   /* calculate pid */
@@ -256,12 +263,12 @@ void update_horizon(uint32_t t){
   //p.K_D_yaw = map_d((double)receiver_input_channel_5, 975.0, 2000.0, 0.0, 0.1);
   //p.K_P_yaw = map_d((double)receiver_input_channel_6, 975.0, 2000.0, 0.0, 1.5);
 
-  rad_throttle = receiver_input_channel_3;
+  rad_throttle = map(receiver_input_channel_3, 1108, 1876, 1000, 2000);
   //map inputs to angles
   if (!disable_sticks){
-    rad_roll = map_d((double)receiver_input_channel_1,1250.0, 1750.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
-    rad_pitch = map_d((double)receiver_input_channel_2,1250.0, 1750.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
-    rad_yaw = map_d((double)receiver_input_channel_4,1250.0, 1750.0, -REF_MAX_ACRO, REF_MAX_ACRO);
+    rad_roll = map_d((double)receiver_input_channel_1,1000.0, 2000.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
+    rad_pitch = map_d((double)receiver_input_channel_2,1000.0, 2000.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
+    rad_yaw = map_d((double)receiver_input_channel_4,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
   }else{
     rad_roll = 0.0;
     rad_pitch = 0.0;
@@ -281,7 +288,7 @@ void update_acro(uint32_t t){
 
   //start esc pulses
   start_time = micros(); 
-  end_time = start_time + 1750;
+  end_time = start_time + 2000;
   PORTB |= B00001111;
 
   /* calculate pid */
@@ -297,14 +304,14 @@ void update_acro(uint32_t t){
   if (receiver_input_channel_2 > 1485 && receiver_input_channel_2 < 1515) receiver_input_channel_2 = 1500;
   if (receiver_input_channel_4 > 1485 && receiver_input_channel_4 < 1515) receiver_input_channel_4 = 1500;
 
-  rad_throttle = receiver_input_channel_3;
-  //p.K_tmp = map_d((double)receiver_input_channel_6,1000.0, 2000.0, 0.0, 4.0);
+  rad_throttle = map(receiver_input_channel_3, 1108, 1876, 1000, 2000);
+  //p.K_tmp = map_d((double)receiver_input_channel_6,1000.0, 2000.0, 0.0, 0.8);
 
   //map inputs to anglerates
   if (!disable_sticks){
-    rad_roll = map_d((double)receiver_input_channel_1,1250.0, 1750.0, -REF_MAX_ACRO, REF_MAX_ACRO);
-    rad_pitch = map_d((double)receiver_input_channel_2,1250.0, 1750.0, -REF_MAX_ACRO, REF_MAX_ACRO);
-    rad_yaw = map_d((double)receiver_input_channel_4,1250.0, 1750.0, -REF_MAX_YAW, REF_MAX_YAW);
+    rad_roll = map_d((double)receiver_input_channel_1,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
+    rad_pitch = map_d((double)receiver_input_channel_2,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
+    rad_yaw = map_d((double)receiver_input_channel_4,1000.0, 2000.0, -REF_MAX_YAW, REF_MAX_YAW);
   }else{
     rad_roll = 0.0;
     rad_pitch = 0.0;
@@ -319,16 +326,31 @@ void update_acro(uint32_t t){
 
 void loop(){
 
+  
+
 
   time_diff = micros() - time_last;
   time_last = micros();
 
+/*if (receiver_input_channel_3 < 1500){
+    set_motor_speeds_min();
+    //Serial.println(time_diff);
+  }else{
+    set_motor_speeds_max();
+    //Serial.println("max");
+  }
+  return;
+
+  Serial.println("max");*/
+
+
   //disable joysticks if low throttle
-  if (rad_throttle < 1270){
+  if (rad_throttle < 1125){
     disable_sticks = true;
   }else{
     disable_sticks = false;
   }
+
 
   //horizon stabilization or acrobatic mode
   if (receiver_input_channel_5 < 1300){
@@ -411,8 +433,8 @@ void print_data(uint32_t time){
 
 
     #ifdef PID_DATA
-      Serial.print(p.K_tmp,5);
-      Serial.print(",");
+      Serial.print(p.K_tmp,20);
+      Serial.println(",");
 
     #endif
 
@@ -503,7 +525,7 @@ void print_data(uint32_t time){
 
 
     #endif
-
+/*
     Serial.print(",");
     Serial.println(time);
 
@@ -511,7 +533,7 @@ void print_data(uint32_t time){
       Serial.print("horizon");
     }else{
       Serial.println("acro");
-    }
+    }*/
 
 
 

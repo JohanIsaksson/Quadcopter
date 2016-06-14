@@ -3,7 +3,7 @@
 #include "Wire.h"
 #include "I2Cdev.h"
 
-#define LOST_CONNECTION_COUNT 100
+#define LOST_CONNECTION_COUNT 200
 #define EMERGENCY_THROTTLE 0
 
 #define MODE_HORIZON 0
@@ -17,7 +17,8 @@
 
 
 //safety stuff
-int radio_off_counter;
+uint8_t radio_off_counter;
+bool radio_lost;
 
 //radio variables
 byte last_channel_1, 
@@ -61,6 +62,10 @@ uint8_t I2C_buffer[2];
 //altitude parameters
 int8_t altitude_throttle;
 
+//time keeping
+uint32_t time_diff;
+uint32_t time_last;
+
 
 
 void setup(){
@@ -93,6 +98,10 @@ void setup(){
 
   //initialize escs
   motors_on = false;
+
+  //init safety parameters
+  radio_off_counter = 0;
+  radio_lost = false;
 
   Serial.println("Running...");
 
@@ -157,17 +166,22 @@ void send_data() {
 
 void loop(){
 
+  time_diff = micros() - time_last;
+  time_last = micros();
+
 	//if (receiver_input_channel_3 < 1400) rad_throttle = 1000; //calibration purposes
 	//if (receiver_input_channel_3 > 1600) rad_throttle = 2000;
 
-	receiver_throttle = map(receiver_input_channel_3, 1108, 1876, 1000, 2000);
+  //check if we lost contact with radio
+  radio_off_counter++;
+  radio_lost = (radio_off_counter > LOST_CONNECTION_COUNT);
 
+  //disable controls if throttle is low
   if (receiver_input_channel_3 < 1125){
     disable_sticks = true;
   }else{
     disable_sticks = false;
   }
-
 
   if (disable_sticks){
     receiver_roll = 1500;
@@ -177,10 +191,9 @@ void loop(){
   }else{
     receiver_roll = receiver_input_channel_1;
     receiver_pitch = receiver_input_channel_2;
-    receiver_throttle = receiver_input_channel_3;
+    receiver_throttle = map(receiver_input_channel_3, 1108, 1876, 1000, 2000);
     receiver_yaw = receiver_input_channel_4;
   }
-
 
 
   //horizon stabilization or acrobatic mode
@@ -191,7 +204,7 @@ void loop(){
   }
   
 
-  if (motors_on){
+  if (motors_on && !radio_lost){
     //change on/off state
     if (disable_sticks && receiver_input_channel_4 > 1710){
       motors_on = false;
@@ -199,21 +212,29 @@ void loop(){
     
   }else{
     //change on/off
-    if (disable_sticks && receiver_input_channel_4 < 1290){
+    if (disable_sticks && receiver_input_channel_4 < 1290 && !radio_lost){
       motors_on = true;  
+    }else{
+      motors_on = false;
     }
 
   }
 
-  //Serial.print(receiver_input_channel_3);
+  //Serial.println(receiver_input_channel_3);
   //Serial.print("\t");
-  //Serial.println(I2C_cur);
+  //Serial.println(radio_off_counter);
+  
+  while(micros() - time_last < 2000);
+
 } 
 
 
 
 //This routine is called every time input 8, 9, 10 or 11 changed state
 ISR(PCINT2_vect){
+
+  //reset safety counter
+  radio_off_counter = 0;
 
   //read micros
   us = micros();

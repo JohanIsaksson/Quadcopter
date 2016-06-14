@@ -20,7 +20,7 @@ void pid_pitch(pid* p, int* front, double gyro_rate, double gyro_pitch, double r
 
 	p->p = KP * p->error;
 	p->i = KI * p->pitch_integral;
-	p->d = p->K_tmp * (p->error - p->pitch_error_prev) / t;
+	p->d = KD * (p->error - p->pitch_error_prev) / t;
 
 	p->output =  (int)(p->p + p->i + p->d);
 
@@ -55,11 +55,11 @@ void pid_pitch_rate(pid* p, int* front, double gyro_rate, double ref_rate, doubl
 
 	p->error = ref_rate - gyro_rate; // anlge rate error
 
-	p->pitch_integral += p->error * t;
+	p->pitch_rate_integral += p->error * t;
 
 	p->p = KP_A * p->error;
 	p->i = KI_A * p->pitch_rate_integral;
-	p->d = KD_A * (p->error - p->pitch_error_prev) / t;
+	p->d = KD_A * (p->error - p->pitch_rate_error_prev) / t;
 
 	p->output =  (int)(p->p + p->i + p->d);
 
@@ -74,7 +74,7 @@ void pid_pitch_rate(pid* p, int* front, double gyro_rate, double ref_rate, doubl
 		}
 	}
 
-	p->pitch_error_prev = p->error;
+	p->pitch_rate_error_prev = p->error;
 
 	//set values
 	*front = -p->output;
@@ -89,7 +89,7 @@ void pid_roll(pid* p, int* left, double gyro_rate, double gyro_roll, double ref_
 
 	p->p = KP * p->error;
 	p->i = KI * p->roll_integral;
-	p->d = p->K_tmp * (p->error - p->roll_error_prev) / t;
+	p->d = KD * (p->error - p->roll_error_prev) / t;
 
 	p->output =  (int)(p->p + p->i + p->d);
 
@@ -122,11 +122,11 @@ void pid_roll_rate(pid* p, int* left, double gyro_rate, double ref_rate, double 
 
 	p->error = ref_rate - gyro_rate; // anlge error
 
-	p->roll_integral += p->error * t;
+	p->roll_rate_integral += p->error * t;
 
 	p->p = KP_A * p->error;
-	p->i = KI_A * p->roll_integral;
-	p->d = KD_A * (p->error - p->roll_error_prev) / t;
+	p->i = KI_A * p->roll_rate_integral;
+	p->d = KD_A * (p->error - p->roll_rate_error_prev) / t;
 
 	p->output =  (int)(p->p + p->i + p->d);
 
@@ -141,7 +141,7 @@ void pid_roll_rate(pid* p, int* left, double gyro_rate, double ref_rate, double 
 		}
 	}
 
-	p->roll_error_prev = p->error;
+	p->roll_rate_error_prev = p->error;
 
 	//set values
 	*left = p->output;
