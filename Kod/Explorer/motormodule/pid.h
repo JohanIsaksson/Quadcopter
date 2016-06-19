@@ -17,7 +17,7 @@
 #define KD_A 0.005
 
 //yaw pid values
-#define KP_Y 3.0
+#define KP_Y 2.0
 #define KI_Y 0.01
 #define KD_Y 0.0//0.02
 
