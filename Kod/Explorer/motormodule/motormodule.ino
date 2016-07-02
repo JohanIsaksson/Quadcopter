@@ -10,7 +10,7 @@
 
 #define REF_MAX_HORIZON 25.0
 #define REF_MAX_ACRO 90.0
-#define REF_MAX_YAW 90.0
+#define REF_MAX_YAW 120.0
 
 #define MODE_HORIZON 0
 #define MODE_ACRO 1
@@ -58,6 +58,9 @@ double timed;
 
 //I2C stuff
 uint8_t I2C_cur;
+
+//baro stuff
+bool baro_start;
 
 
 double rad_roll, rad_pitch, rad_yaw;
@@ -177,9 +180,10 @@ void set_motor_speeds_throttle(){
   end_time = start_time + 2000;
   PORTB |= B00001111;
 
-  for (int i = 0; i < 4; i++){
-      throttle[i] = receiver_throttle;
-    }
+  throttle[0] = 1000;
+  throttle[1] = receiver_throttle;
+  throttle[2] = 1000;
+  throttle[3] = 1000;
 
   esc_time = micros();
 
@@ -223,7 +227,7 @@ void setup(){
   DDRD &= B10111111; //set pin D6 as input - disable I2C
 
   //initialize escs
-  init_motors();
+  //init_motors();
   motors_on = false;
 
   Wire.begin();        // join i2c bus
@@ -271,15 +275,6 @@ void update_acro(uint32_t t){
   end_time = start_time + 2000;
   PORTB |= B00001111;
 
-  /* calculate pid */
-  //pid_pitch(&p, &front, im.ypr[1], 0.0);
-  //pid_roll(&p, &left, im.ypr[2], 0.0);
-  //pid_yaw_temp(&p, &cw, -im.z_gyr*RAD_TO_DEG, 0.0);
-
-  //p.K_D_yaw = map_d((double)receiver_input_channel_5, 975.0, 2000.0, 0.0, 0.1);
-  //p.K_P_yaw = map_d((double)receiver_input_channel_6, 975.0, 2000.0, 0.0, 1.5);
-  //p.K_tmp = map_d((double)receiver_input_channel_6,1000.0, 2000.0, 0.0, 4.0);
-
   //map inputs to anglerates
   rad_roll = map_d((double)receiver_roll,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
   rad_pitch = map_d((double)receiver_pitch,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
@@ -294,10 +289,8 @@ void update_acro(uint32_t t){
 
 void loop(){
 
-
   time_diff = micros() - time_last;
   time_last = micros();
-
 
   get_data();
  
@@ -385,3 +378,25 @@ void get_data() {
 
   }
 }
+
+void send_data(){
+
+}
+
+
+
+
+// Motor calibration code
+// Add the following code to the beginning of loop()
+
+/*
+  time_diff = micros() - time_last;
+  time_last = micros();
+
+  get_data();
+
+  if (receiver_throttle > 1600) receiver_throttle = 2000;
+  if (receiver_throttle < 1400) receiver_throttle = 1000;
+  //Serial.println(receiver_throttle);
+  set_motor_speeds_throttle();
+  return;*/

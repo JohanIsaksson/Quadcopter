@@ -6,8 +6,17 @@
 void init_pid(pid* p){
 	//set integral
 	p->roll_integral = 0.0;
+	p->roll_rate_integral = 0.0;
+	p->roll_error_prev = 0.0;
+	p->roll_rate_error_prev = 0.0;
+
 	p->pitch_integral = 0.0;
+	p->pitch_rate_integral = 0.0;
+	p->pitch_error_prev = 0.0;
+	p->pitch_rate_error_prev = 0.0;
+	
 	p->yaw_integral = 0.0;
+
 	p->K_tmp = 0.0;
 }
 
@@ -22,16 +31,18 @@ void pid_pitch(pid* p, int* front, double gyro_rate, double gyro_pitch, double r
 	p->i = KI * p->pitch_integral;
 	p->d = KD * (p->error - p->pitch_error_prev) / t;
 
-	p->output =  (int)(p->p + p->i + p->d);
+	p->output =  p->p + p->i + p->d;
 
 	//add extra rate stabilization
 	p->error_rate = -gyro_rate; //always 0 as referens
 	p->p = KP_A * p->error_rate;
 	p->d = KD_A * (p->error_rate - p->pitch_rate_error_prev) / t;
 	//p->output += (1.0/(1.0 + RI*abs(p->error))) * (p->p + p->d);
-
-	p->output += ((0.25*sin(3.3*p->error)/p->error)+0.18) * (p->p + p->d);
-
+	if (abs(p->error) > 0.1){
+		p->output += ((0.25*sin(3.3*p->error)/p->error)+0.18) * (p->p + p->d);
+	}else{
+		p->output += p->p + p->d;
+	}
 
 	//limit pitch
 	if (p->output > 0.0){
@@ -47,7 +58,7 @@ void pid_pitch(pid* p, int* front, double gyro_rate, double gyro_pitch, double r
 	p->pitch_error_prev = p->error;
 
 	//set values
-	*front = -p->output;
+	*front = -(int)p->output;
 }
 
 /* Performs PID calculation for pitch rate*/
@@ -61,7 +72,7 @@ void pid_pitch_rate(pid* p, int* front, double gyro_rate, double ref_rate, doubl
 	p->i = KI_A * p->pitch_rate_integral;
 	p->d = KD_A * (p->error - p->pitch_rate_error_prev) / t;
 
-	p->output =  (int)(p->p + p->i + p->d);
+	p->output =  p->p + p->i + p->d;
 
 	//limit pitch
 	if (p->output > 0.0){
@@ -77,7 +88,7 @@ void pid_pitch_rate(pid* p, int* front, double gyro_rate, double ref_rate, doubl
 	p->pitch_rate_error_prev = p->error;
 
 	//set values
-	*front = -p->output;
+	*front = -(int)p->output;
 }
 
 /* Performs PID calculation for roll */
@@ -91,13 +102,18 @@ void pid_roll(pid* p, int* left, double gyro_rate, double gyro_roll, double ref_
 	p->i = KI * p->roll_integral;
 	p->d = KD * (p->error - p->roll_error_prev) / t;
 
-	p->output =  (int)(p->p + p->i + p->d);
+	p->output =  p->p + p->i + p->d;
 
 	//add extra rate stabilization
 	p->error_rate = -gyro_rate; //always 0 as referens
 	p->p = KP_A * p->error_rate;
 	p->d = KD_A * (p->error_rate - p->roll_rate_error_prev) / t;
-	p->output += (1.0/(1.0 + RI*abs(p->error))) * (p->p + p->d);
+
+	if (abs(p->error) > 0.1){
+		p->output += ((0.25*sin(3.3*p->error)/p->error)+0.18) * (p->p + p->d);
+	}else{
+		p->output += p->p + p->d;
+	}
 
 	//limit roll
 	if (p->output > 0.0){
@@ -114,7 +130,7 @@ void pid_roll(pid* p, int* left, double gyro_rate, double gyro_roll, double ref_
 	p->roll_error_prev = p->error;
 
 	//set values
-	*left = p->output;
+	*left = (int)p->output;
 }
 
 /* Performs PID calculation for roll rate */
@@ -128,7 +144,7 @@ void pid_roll_rate(pid* p, int* left, double gyro_rate, double ref_rate, double 
 	p->i = KI_A * p->roll_rate_integral;
 	p->d = KD_A * (p->error - p->roll_rate_error_prev) / t;
 
-	p->output =  (int)(p->p + p->i + p->d);
+	p->output =  p->p + p->i + p->d;
 
 	//limit roll
 	if (p->output > 0.0){
@@ -144,7 +160,7 @@ void pid_roll_rate(pid* p, int* left, double gyro_rate, double ref_rate, double 
 	p->roll_rate_error_prev = p->error;
 
 	//set values
-	*left = p->output;
+	*left = (int)p->output;
 }
 
 /* special error calculation for yaw */

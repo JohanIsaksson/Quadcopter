@@ -7,13 +7,13 @@
 #define INTEGRAL_MAX 150.0
 
 //Horizon mode pid values
-#define KP 0.0//
-#define KI 0.0//
-#define KD 0.0//
+#define KP 3.0//
+#define KI 0.02//
+#define KD 0.1//
 
 //Acrobatic mode pid values
 #define KP_A 2.5 //2.86
-#define KI_A 0.4 //0.5
+#define KI_A 0.2 //0.5
 #define KD_A 0.005
 
 //yaw pid values

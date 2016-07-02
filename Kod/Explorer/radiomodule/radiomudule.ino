@@ -2,6 +2,7 @@
 
 #include "Wire.h"
 #include "I2Cdev.h"
+#include "kalman.h"
 
 #define LOST_CONNECTION_COUNT 200
 #define EMERGENCY_THROTTLE 0
@@ -60,7 +61,10 @@ uint8_t I2C_cur;
 uint8_t I2C_buffer[2];
 
 //altitude parameters
+double baro_height, acc_vertical;
 int8_t altitude_throttle;
+bool measurement_ready;
+kalman k;
 
 //time keeping
 uint32_t time_diff;
@@ -103,11 +107,14 @@ void setup(){
   radio_off_counter = 0;
   radio_lost = false;
 
+  kalman_init(&k);
+
   Serial.println("Running...");
 
   Wire.begin(8);                // join i2c bus with address #8
    
-  Wire.onRequest(send_data); // register event
+  Wire.onRequest(send_data); // register i2c events
+  Wire.onReceive(get_data);
 
   PCICR |= (1 << PCIE2);    // set PCIE2 to enable PCMSK0 scan
 }
@@ -162,6 +169,28 @@ void send_data() {
 }
 
 
+void get_data(int n){
+  
+  uint8_t I2C_buffer[3] = {0,0,0};
+  int i = 0;
+  while (Wire.available()) { // slave may send less than requested
+    I2C_buffer[i] = Wire.read(); // receive a byte
+    i++;
+  }
+
+  uint16_t data = I2C_buffer[0];
+  data = data << 8;
+  data += I2C_buffer[1];
+
+
+  baro_height = ((double)((int16_t)data))/100.0; //convert to metres
+
+  
+  acc_vertical = ((double)((int8_t)I2C_buffer[2]))/32.0; // +-4g max
+  measurement_ready = true;
+
+}
+
 
 
 void loop(){
@@ -171,6 +200,11 @@ void loop(){
 
 	//if (receiver_input_channel_3 < 1400) rad_throttle = 1000; //calibration purposes
 	//if (receiver_input_channel_3 > 1600) rad_throttle = 2000;
+
+  if (measurement_ready){
+    kalman_update(&k, baro_height, acc_vertical, (double)time_diff/1000000.0);
+    measurement_ready = false;
+  }
 
   //check if we lost contact with radio
   radio_off_counter++;
