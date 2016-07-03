@@ -1,63 +1,78 @@
 #include "matrix_lib.h"
 
+matrix matrix_create(int r, int c, double* arr){
+	matrix m;
+	m.rows = r;
+	m.columns = c;  
+}
 
-template <int r1, int c1, int r2, int c2>
-matrix<r1, c2> matrix_multiply(matrix<r1, c1> A, matrix<r2, c2> B){
 
- 	matrix<A.rows, B.columns> m;
+matrix matrix_multiply(matrix A, matrix B){
+
+	double data[A.rows*B.columns];
+ 	matrix m = matrix_create(A.rows, B.columns, data);    
+
  	for (int i = 0; i < A.rows; ++i){
  		for (int j = 0; i < B.columns; ++j){
  			double s = 0;
  			for (int k = 0; i < B.rows; ++k){
- 				s += A.data[i][k]*B.data[k][j];
+ 				s += (*A.data[i*A.columns + k]) * (*B.data[k*B.rows + j]);
  			}
- 			m.data[i][j] = s;
+ 			*m.data[i*m.columns + j] = s;
  		}
  	}
  	return m;
  }
 
+ matrix matrix_create_identity(int r, int c){
+ 	double data[r*c];
+ 	for (int i = 0; i < r; ++i){
+ 			data[i*c + i] = 1.0; 		
+ 	}
+ 	return matrix_create(r, c, data);
+}
 
-
- template <int r, int c>
-matrix<r, c> matrix_add(matrix<r, c> A, matrix<r, c> B){
- 	matrix<A.rows, A.columns> m;
+ matrix matrix_scale(matrix A, double b){
+ 	double data[A.rows*A.columns];
+ 	matrix m = matrix_create(A.rows, A.columns, data);
  	for (int i = 0; i < A.rows; ++i){
  		for (int j = 0; i < A.columns; ++j){
- 			m.data[i][j] = A.data[i][j] + B.data[i][j];
+ 			*m.data[i*A.columns + j] = *A.data[i*A.columns + j] * b;
  		}
  	}
  	return m;
  }
 
- template <int r, int c>
-matrix<r, c> matrix_scale(matrix<r, c> A, double b){
- 	matrix<A.rows, A.columns> m;
+matrix matrix_add(matrix A, matrix B){
+	double data[A.rows*A.columns];
+ 	matrix m = matrix_create(A.rows, A.columns, data);
  	for (int i = 0; i < A.rows; ++i){
  		for (int j = 0; i < A.columns; ++j){
- 			m.data[i][j] = A.data[i][j] * b;
+ 			*m.data[i*A.columns + j] = *A.data[i*A.columns + j] + *B.data[i*A.columns + j];
  		}
  	}
  	return m;
- }
+}
 
-template <int r, int c>
-matrix<r, c> matrix_subtract(matrix<r, c> A, matrix<r, c> B){
- 	matrix<A.rows, A.columns> m;
+
+matrix matrix_subtract(matrix A, matrix B){
+	double data[A.rows*A.columns];
+ 	matrix m = matrix_create(A.rows, A.columns, data);
  	for (int i = 0; i < A.rows; ++i){
  		for (int j = 0; i < A.columns; ++j){
- 			m.data[i][j] = A.data[i][j] - B.data[i][j];
+ 			*m.data[i*A.columns + j] = *A.data[i*A.columns + j] - *B.data[i*A.columns + j];
  		}
  	}
  	return m;
  } 
 
-template <int r, int c>
-matrix<c, r> matrix_transpose(matrix<r, c> A){
- 	matrix<A.columns, A.rows> m;
+
+matrix matrix_transpose(matrix A){
+	double data[A.columns*A.rows];
+ 	matrix m = matrix_create(A.columns, A.rows, data);
  	for (int i = 0; i < A.rows; ++i){
  		for (int j = 0; i < A.columns; ++j){
- 			m.data[i][j] = A.data[j][i];
+ 			*m.data[i*A.columns + j] = *A.data[i*A.columns + i];
  		}
  	}
  	return m;
@@ -65,34 +80,40 @@ matrix<c, r> matrix_transpose(matrix<r, c> A){
 
 
 // only works for 2x2 matrices
-template <int r, int c>
-matrix<r, c> matrix_inverse(matrix<r, c> A){
-	matrix<r, c> m;
-	m.data[1][1] = A.data[1][1];
-	m.data[2][2] = A.data[2][2];
-	m.data[1][2] = -A.data[2][1];
-	m.data[2][1] = -A.data[1][2];
-	double s = m.data[1][1] * A.data[2][2] - m.data[2][1] * A.data[1][2];
-	return matrix_scale<r,c>(m, s);
-}
-
-template<int r, int c>
-matrix<r, c> identity_matrix(){
-	matrix<r, c> m;
-	for (int i = 0; i < r; ++i){
-		m.data[i][i] = 1.0;
-	}
-	return m;
+matrix matrix_inverse(matrix A){
+	double data[A.rows*A.columns];
+	data[0] = *A.data[0];
+	data[3] = *A.data[3];
+	data[1] = -*A.data[2];
+	data[2] = -*A.data[1];
+	double s = data[0] * *A.data[3] - data[2] * *A.data[1];
+	matrix m = matrix_create(A.rows, A.columns, data);
+	return matrix_scale(m, 1.0/s);
 }
 
 
-template<int r, int c>
-matrix<r, c> matrix_create(double arr[r*c]){
-	matrix<r, c> m;
-  for (int i = 0; i < r; ++i){
-  	for (int j = 0; j < c; ++j){
-  		m.data[i][j] = arr[i*c+j];
-  	}
-  }
-  return m;
+
+matrix operator*(matrix A, matrix B){
+	return matrix_multiply(A,B);
+}
+
+matrix operator*(matrix A, double b){
+	return matrix_scale(A, b);
+}
+
+matrix operator*(double b, matrix A){
+	return matrix_scale(A, b);
+}
+
+matrix operator+(matrix A, matrix B){
+	return matrix_add(A, B);
+}
+
+matrix operator-(matrix A, matrix B){
+	return matrix_subtract(A, B);
+}
+
+//only works for 2x2 matrices
+matrix operator/(matrix A, matrix B){
+	return matrix_multiply(A, matrix_inverse(B));
 }

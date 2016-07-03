@@ -64,7 +64,7 @@ uint8_t I2C_buffer[2];
 double baro_height, acc_vertical;
 int8_t altitude_throttle;
 bool measurement_ready;
-kalman k;
+Kalman k;
 
 //time keeping
 uint32_t time_diff;
@@ -107,7 +107,7 @@ void setup(){
   radio_off_counter = 0;
   radio_lost = false;
 
-  kalman_init(&k);
+  k.init();
 
   Serial.println("Running...");
 
@@ -202,7 +202,7 @@ void loop(){
 	//if (receiver_input_channel_3 > 1600) rad_throttle = 2000;
 
   if (measurement_ready){
-    kalman_update(&k, baro_height, acc_vertical, (double)time_diff/1000000.0);
+    k.update(baro_height, acc_vertical, (double)time_diff/1000000.0);
     measurement_ready = false;
   }
 
