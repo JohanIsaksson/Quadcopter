@@ -53,8 +53,6 @@ void MPU6050_read(imu* g){
 
 void BMP180_temp_start(imu* g){
   I2Cdev::writeByte(BMP180_ADDR, BMP180_REG_CONTROL, BMP180_COMMAND_TEMPERATURE);
-  g->temp_started = true;
-  g->bmp180_count = 0;
 }
 
 void BMP180_temp_read(imu* g){
@@ -74,8 +72,6 @@ void BMP180_temp_read(imu* g){
 
 void BMP180_pressure_start(imu* g){
   I2Cdev::writeByte(BMP180_ADDR, BMP180_REG_CONTROL, BMP180_COMMAND_PRESSURE0);
-  g->pressure_started = true;
-  g->bmp180_count = 0;
 }
 
 void BMP180_pressure_read(imu* g){
@@ -145,9 +141,7 @@ void BMP180_init(imu* g){
   BMP180_pressure_read(g);
   g->base_pressure = g->pressure;
   g->altitude = 0.0;
-
-  g->pressure_done = true;
-  g->temp_done = false;
+  g->baro_state = 0;
 }
 
 void read_magnetometer(imu* g){
@@ -254,12 +248,18 @@ void tilt_compensation(imu* g){
 }
 
 void height_estimation(imu* g, double tim){
-  double x = g->axs * g->sinr;
-  double y = g->ays * g->sinp;
+  //double x = g->axs * g->sinr;
+  //double y = g->ays * g->sinp;
 
-  g->vertical_acc = g->azs - sqrt(1.0 - (x*x + y*y)) + 0.002;
-  g->vertical_speed = g->vertical_acc * 9.82 * tim;
-  g->altitude += g->vertical_speed * tim;
+
+  g->vertical_acc = g->axs*g->sinp + g->ays*g->cosp*g->sinr + g->azs*g->cosp*g->cosr;
+
+  //g->vertical_acc = g->azs - sqrt(1.0 - (x*x + y*y)) + 0.002;
+
+
+
+  //g->vertical_speed = g->vertical_acc * 9.82 * tim;
+  //g->altitude += g->vertical_speed * tim;
 }
 
 /* Initializes the imu and sets parameters */
@@ -305,10 +305,35 @@ void imu_init(imu* g){
 void imu_update_horizon(imu* g, uint32_t tim){
 
   // Alternates between reading temp and pressure
-  if (g->pressure_done){
-    BMP180_temp_start(g);
-  }else if (g->temp_done){
-    BMP180_pressure_start(g);
+  switch(g->baro_state){
+    case 0:
+      BMP180_temp_start(g);
+      g->baro_state++;
+      break;
+
+    case 1:
+      g->baro_state++;
+      break;
+
+    case 2:
+      BMP180_temp_read(g);
+      BMP180_pressure_start(g);
+      g->baro_state++;
+      break;
+
+    case 3:
+      g->baro_state++;
+      break;
+
+    case 4:
+      BMP180_pressure_read(g);
+      BMP180_temp_start(g);
+      g->baro_state = 1;
+      break;
+
+    default:
+      g->baro_state = 0;
+      break;
   }
 
 	// read raw accel/gyro measurements from device
@@ -327,18 +352,9 @@ void imu_update_horizon(imu* g, uint32_t tim){
   //get yaw
   tilt_compensation(g);
 
-  //get height
-  if (g->bmp180_count == 1 && g->temp_started){
-    BMP180_temp_read(g);
-    g->temp_started = false;
-    g->temp_done = true;
+  height_estimation(g, t);
 
-  } else if (g->bmp180_count == 1 && g->pressure_started){
-    BMP180_pressure_read(g);
-    g->pressure_started = false;
-    g->pressure_done = true;
-  }
-  g->bmp180_count++;
+  
 }
 
 //only reads mpu6050 for gyro

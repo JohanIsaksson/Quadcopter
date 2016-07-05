@@ -21,60 +21,32 @@
 #define KI_Y 0.01
 #define KD_Y 0.0//0.02
 
-//Rate pid impact constant for horizon mode
-#define RI 4.0
 
-/* PID structure containing necessary info */
-struct pid{
 
-	double K_tmp;
+class Pid{
+	
 
 	//help variables
 	double p;
 	double i;
 	double d;
 	double error;
-	double error_rate;
+	double error_prev;
+	double integral;
 	double output;
 
-	//roll
-	double roll_error_prev, roll_rate_error_prev;
-	double roll_integral, roll_rate_integral; 
+	//double KP, KI, KD;
+	bool enable_integral;
+public:
+	void init();
+	void set_integration(bool b);
+	void set_constants(double KP_, double KI_, double KD_);
+	void update(int* out, double ref, double mea, double dt, double scale);
 
-	//pitch
-	double pitch_error_prev, pitch_rate_error_prev;
-	double pitch_integral, pitch_rate_integral;
 
-	/* yaw */
-	int yaw_u;
-	double yaw_error, yaw_error_prev;
-	double yaw_integral;
-
+	//testing variable
+	double K_tmp;
 };
-typedef struct pid pid;
-
-/* Initializes gyro and sets parameters */
-void init_pid(pid* p);
-
-/* Performs PID calculation for pitch */
-void pid_pitch(pid* p, int* front, double gyro_rate, double gyro_pitch, double ref_pitch, double t);
-
-/* Performs PID calculation for pitch  rate*/
-void pid_pitch_rate(pid* p, int* front, double gyro_rate, double ref_rate, double t);
-
-/* Performs PID calculation for roll */
-void pid_roll(pid* p, int* left, double gyro_rate, double gyro_roll, double ref_roll, double t);
-
-/* Performs PID calculation for roll rate */
-void pid_roll_rate(pid* p, int* left, double gyro_rate, double ref_rate, double t);
-
-/* Performs PID calculation for yaw */
-void pid_yaw(pid* p, int* cw, int* ccw, double gyro_yaw, int ref_yaw);
-
-/* Performs PID calculation for yaw rate */
-void pid_yaw_rate(pid* p, int* cw, double gyro_yaw, double ref_yaw);
-
-
 
 
 #endif

@@ -29,7 +29,9 @@
 //#define ESC_DATA
 
 imu im;
-pid p;
+Pid pid_roll, pid_pitch, pid_yaw,
+    pid_roll_rate, pid_pitch_rate, pid_yaw_rate;
+
 
 //motors 
 
@@ -72,6 +74,7 @@ uint32_t us, esc_time, start_time, end_time, esc_t;
 
 //flight mode control
 uint8_t flight_mode;
+uint8_t c = 0;
 
 
 double map_d(double x, double in_min, double in_max, double out_min, double out_max){
@@ -209,7 +212,20 @@ void setup(){
 
 	imu_init(&im);
 
-  init_pid(&p);
+  pid_roll_rate.init();
+  pid_roll_rate.set_constants(2.5, 0.2, 0.005);
+
+  pid_roll.init();
+
+  pid_pitch_rate.init();
+  pid_roll_rate.set_constants(2.5,0.2,0.005);
+
+  pid_pitch.init();
+
+  pid_yaw_rate.init();
+  pid_yaw_rate.set_constants(2.0,0.01,0.0);
+
+  pid_yaw.init();
 
   front = 0;
   left = 0;
@@ -260,9 +276,9 @@ void update_horizon(uint32_t t){
 
   //calculate pids
   timed = (double)t/1000000.0;
-  pid_pitch(&p, &front, im.y_gyr*RAD_TO_DEG, im.ypr[1], rad_pitch, timed);
-  pid_roll(&p, &left, im.x_gyr*RAD_TO_DEG, im.ypr[2], rad_roll, timed);
-  pid_yaw_rate(&p, &cw, -im.z_gyr*RAD_TO_DEG, rad_yaw);
+  pid_pitch.update(&front, im.ypr[1], rad_pitch, timed, 1.0);
+  pid_roll.update(&left, im.ypr[2], rad_roll, timed, 1.0);
+  pid_yaw_rate.update(&cw, -im.z_gyr*RAD_TO_DEG, rad_yaw, 1.0, 1.0); //fix time
 }
 
 void update_acro(uint32_t t){
@@ -282,9 +298,9 @@ void update_acro(uint32_t t){
 
   //calculate pids
   timed = (double)t/1000000.0;
-  pid_pitch_rate(&p, &front, im.y_gyr*RAD_TO_DEG, rad_pitch, timed); //y_gyr may need to be reversed
-  pid_roll_rate(&p, &left, im.x_gyr*RAD_TO_DEG, rad_roll, timed);    //x_gyr may need to be reversed
-  pid_yaw_rate(&p, &cw, -im.z_gyr*RAD_TO_DEG, rad_yaw);
+  pid_pitch_rate.update(&front, im.y_gyr*RAD_TO_DEG, rad_pitch, timed, 1.0); 
+  pid_roll_rate.update(&left, im.x_gyr*RAD_TO_DEG, rad_roll, timed, 1.0);
+  pid_yaw_rate.update(&cw, -im.z_gyr*RAD_TO_DEG, rad_yaw, 1.0, 1.0); //fix time
 }
 
 void loop(){
@@ -299,6 +315,7 @@ void loop(){
     //update according to set flight mode
     if(flight_mode == MODE_HORIZON){
       update_horizon(time_diff);
+      //send_data();
     }else if (flight_mode == MODE_ACRO){
       update_acro(time_diff);
     }    
@@ -312,7 +329,13 @@ void loop(){
   
   //delay(200);
   
-
+  c++;
+  if (c == 8){
+    c = 0;
+    Serial.print("$");
+    Serial.print((int)(im.ypr[1]*9.82)); //pitch
+    Serial.println(";");
+  }
   //Serial.println(p.K_tmp, 8);
 
   /*Serial.print(motors_on ? "ON" : "OFF");
@@ -334,7 +357,7 @@ void loop(){
 
 void get_data() {
   Wire.requestFrom(8, 2);    // request 2 bytes from slave device #8
-  uint8_t I2C_buffer[5] = {0,0};
+  uint8_t I2C_buffer[2] = {0,0};
   int i = 0;
   while (Wire.available()) { // slave may send less than requested
     I2C_buffer[i] = Wire.read(); // receive a byte
@@ -372,7 +395,7 @@ void get_data() {
     break;
 
     case 5:
-      p.K_tmp = map_d((double)data, 1000.0, 2000.0, 0.0, 5.0);
+      //pid_roll_rate.K_tmp = map_d((double)data, 1000.0, 2000.0, 0.0, 5.0);
 
     break;
 
@@ -380,7 +403,15 @@ void get_data() {
 }
 
 void send_data(){
+  int8_t a = (int8_t)(im.vertical_acc*32.0);
+  int16_t h = (int16_t)(im.altitude*100.0);
+  uint8_t hl = h;
+  uint8_t hh = h >> 8;
 
+  uint8_t I2C_buffer[3] = {hh, hl, a};
+  Wire.beginTransmission(8); // transmit to device #8
+  Wire.write(I2C_buffer, 3);        // sends five bytes
+  Wire.endTransmission();    // stop transmitting
 }
 
 

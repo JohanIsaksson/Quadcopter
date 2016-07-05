@@ -69,7 +69,7 @@
 
 
 // complementary parameters
-#define GYRO_GAIN_PITCH 1.2
+#define GYRO_GAIN_PITCH 1.0//1.2
 #define GYRO_GAIN_ROLL 1.3
 #define P1 0.99
 #define P2 0.99
@@ -136,8 +136,7 @@ struct imu{
 	int16_t AC1,AC2,AC3,VB1,VB2,MB,MC,MD;
 	uint16_t AC4,AC5,AC6; 
 	double c5,c6,mc,md,x0,x1,x2,y0,y1,y2,p0,p1,p2;
-	bool temp_started, pressure_started, temp_done, pressure_done;
-	uint8_t bmp180_count;
+	uint8_t baro_state;
 	
 
 

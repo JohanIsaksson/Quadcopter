@@ -184,6 +184,7 @@ void get_data(int n){
 
 
   baro_height = ((double)((int16_t)data))/100.0; //convert to metres
+  Serial.println(baro_height);
 
   
   acc_vertical = ((double)((int8_t)I2C_buffer[2]))/32.0; // +-4g max
