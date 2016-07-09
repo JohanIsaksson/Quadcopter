@@ -332,9 +332,9 @@ void loop(){
   c++;
   if (c == 8){
     c = 0;
-    Serial.print("$");
-    Serial.print((int)(im.ypr[1]*9.82)); //pitch
-    Serial.println(";");
+    //Serial.print("$");
+    //Serial.print(flight_mode ? "ACROBATIC" : "HORIZON"); //pitch
+    Serial.println(im.altitude);
   }
   //Serial.println(p.K_tmp, 8);
 

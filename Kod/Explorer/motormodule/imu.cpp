@@ -51,7 +51,7 @@ void MPU6050_read(imu* g){
 }
 
 
-void BMP180_temp_start(imu* g){
+void BMP180_temp_start(){
   I2Cdev::writeByte(BMP180_ADDR, BMP180_REG_CONTROL, BMP180_COMMAND_TEMPERATURE);
 }
 
@@ -70,7 +70,7 @@ void BMP180_temp_read(imu* g){
     g->temp = a + (g->mc / (a + g->md));
 }
 
-void BMP180_pressure_start(imu* g){
+void BMP180_pressure_start(){
   I2Cdev::writeByte(BMP180_ADDR, BMP180_REG_CONTROL, BMP180_COMMAND_PRESSURE0);
 }
 
@@ -133,11 +133,11 @@ void BMP180_init(imu* g){
   g->p2 = 3038.0 * 100.0 * pow(2,-36);
 
   //get initial values
-  BMP180_temp_start(g);
-  delay(5);
+  BMP180_temp_start();
+  delay(10);
   BMP180_temp_read(g);
-  BMP180_pressure_start(g);
-  delay(5);
+  BMP180_pressure_start();
+  delay(30);
   BMP180_pressure_read(g);
   g->base_pressure = g->pressure;
   g->altitude = 0.0;
@@ -307,8 +307,8 @@ void imu_update_horizon(imu* g, uint32_t tim){
   // Alternates between reading temp and pressure
   switch(g->baro_state){
     case 0:
-      BMP180_temp_start(g);
-      g->baro_state++;
+      BMP180_temp_start();
+      ++g->baro_state;
       break;
 
     case 1:
@@ -317,7 +317,8 @@ void imu_update_horizon(imu* g, uint32_t tim){
 
     case 2:
       BMP180_temp_read(g);
-      BMP180_pressure_start(g);
+      BMP180_pressure_start();
+      
       g->baro_state++;
       break;
 
@@ -327,7 +328,7 @@ void imu_update_horizon(imu* g, uint32_t tim){
 
     case 4:
       BMP180_pressure_read(g);
-      BMP180_temp_start(g);
+      BMP180_temp_start();
       g->baro_state = 1;
       break;
 

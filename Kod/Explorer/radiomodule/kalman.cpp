@@ -13,7 +13,7 @@
 
     P = matrix_create(3,3,dataP);
     
-    double dataQ[9] = {0.00016,		0.0000000016,		0.0016777216,
+    double dataQ[9] = {0.00016,		    0.0000000016,		0.0016777216,
 						0.0000000016,	0.00001,			0.0001048576,
 						0.0016777216,	0.00010485760011,	10.48576};
 	Q = matrix_create(3,3,dataQ);
@@ -44,7 +44,7 @@
  	// set A and B matrices 	
  	*A.data[1] = dt;
  	*A.data[5] = dt;
- 	*A.data[2] = dt*dt/2;
+ 	*A.data[2] = dt*dt/2.0;
 
  	*B.data[0] = dt*dt/2.0;
  	*B.data[1] = dt;
