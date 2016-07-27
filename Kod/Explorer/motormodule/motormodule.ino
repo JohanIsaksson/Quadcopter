@@ -243,8 +243,13 @@ void setup(){
   DDRD &= B10111111; //set pin D6 as input - disable I2C
 
   //initialize escs
-  //init_motors();
-  motors_on = false;
+  init_motors();
+  motors_on = true;
+  flight_mode = MODE_ACRO; //--------------------------------------------------------
+  receiver_throttle = 1000;
+  receiver_roll = 1500;
+  receiver_pitch = 1500;
+  receiver_yaw = 1500;
 
   Wire.begin();        // join i2c bus
   I2C_cur = 0;
@@ -299,7 +304,7 @@ void update_acro(uint32_t t){
   //calculate pids
   timed = (double)t/1000000.0;
   pid_pitch_rate.update(&front, im.y_gyr*RAD_TO_DEG, rad_pitch, timed, 1.0); 
-  pid_roll_rate.update(&left, im.x_gyr*RAD_TO_DEG, rad_roll, timed, 1.0);
+  pid_roll_rate.update(&left, im.x_gyr*RAD_TO_DEG, rad_roll, timed, -1.0);
   pid_yaw_rate.update(&cw, -im.z_gyr*RAD_TO_DEG, rad_yaw, 1.0, 1.0); //fix time
 }
 
@@ -328,14 +333,14 @@ void loop(){
 
   
   //delay(200);
-  
+  /*
   c++;
   if (c == 8){
     c = 0;
     //Serial.print("$");
-    //Serial.print(flight_mode ? "ACROBATIC" : "HORIZON"); //pitch
-    Serial.println(im.altitude);
-  }
+    //Serial.println(flight_mode ? "ACROBATIC" : "HORIZON"); //pitch
+    //Serial.println(im.altitude);
+  }*/
   //Serial.println(p.K_tmp, 8);
 
   /*Serial.print(motors_on ? "ON" : "OFF");
@@ -410,8 +415,10 @@ void send_data(){
 
   uint8_t I2C_buffer[3] = {hh, hl, a};
   Wire.beginTransmission(8); // transmit to device #8
-  Wire.write(I2C_buffer, 3);        // sends five bytes
+  Wire.write(I2C_buffer, 3);        // send three bytes
   Wire.endTransmission();    // stop transmitting
+
+  //Serial.println(h);
 }
 
 

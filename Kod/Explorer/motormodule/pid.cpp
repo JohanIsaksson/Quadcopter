@@ -36,5 +36,5 @@ void Pid::update(int* out, double ref, double mea, double dt, double scale){
 	error_prev = error;
 
 	//set values
-	*out = -(int)output;
+	*out = (int)(scale*output);
 }

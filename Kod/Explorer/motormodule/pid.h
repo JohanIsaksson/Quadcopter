@@ -13,8 +13,8 @@
 
 //Acrobatic mode pid values
 #define KP_A 2.5 //2.86
-#define KI_A 0.2 //0.5
-#define KD_A 0.005
+#define KI_A 0.45 //0.5
+#define KD_A 0.01
 
 //yaw pid values
 #define KP_Y 2.0

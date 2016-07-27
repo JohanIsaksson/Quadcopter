@@ -24,4 +24,6 @@ public:
 
 	void update(double baro, double acc, double dt);
 
+	double get_altitude();
+
 };

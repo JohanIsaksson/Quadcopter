@@ -68,4 +68,8 @@
  	// Calculate uncertanty 
   	P = (I - K*H)*P_p;
  	
- }
+}
+
+double Kalman::get_altitude(){
+    return *x.data[0];
+}

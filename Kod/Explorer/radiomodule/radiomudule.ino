@@ -178,18 +178,18 @@ void get_data(int n){
     i++;
   }
 
-  uint16_t data = I2C_buffer[0];
+  uint16_t data = I2C_buffer[0];// something wrong here
+  
   data = data << 8;
   data += I2C_buffer[1];
 
 
   baro_height = ((double)((int16_t)data))/100.0; //convert to metres
-  Serial.println(baro_height);
+  Serial.println(data);
 
   
   acc_vertical = ((double)((int8_t)I2C_buffer[2]))/32.0; // +-4g max
   measurement_ready = true;
-
 }
 
 
@@ -203,8 +203,11 @@ void loop(){
 	//if (receiver_input_channel_3 > 1600) rad_throttle = 2000;
 
   if (measurement_ready){
+    //uint32_t a = micros();
     k.update(baro_height, acc_vertical, (double)time_diff/1000000.0);
+    //Serial.println(micros() - a);
     measurement_ready = false;
+    Serial.println(k.get_altitude(),10);
   }
 
   //check if we lost contact with radio

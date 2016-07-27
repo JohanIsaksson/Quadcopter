@@ -8,7 +8,7 @@
 
 #define REF_MAX_HORIZON 25.0
 #define REF_MAX_ACRO 90.0
-#define REF_MAX_YAW 90.0
+#define REF_MAX_YAW 180.0
 
 #define RADIO_THROTTLE 5 //6 in future
 
@@ -263,7 +263,6 @@ void update_horizon(uint32_t t){
   //p.K_D_yaw = map_d((double)receiver_input_channel_5, 975.0, 2000.0, 0.0, 0.1);
   //p.K_P_yaw = map_d((double)receiver_input_channel_6, 975.0, 2000.0, 0.0, 1.5);
 
-  rad_throttle = map(receiver_input_channel_3, 1108, 1876, 1000, 2000);
   //map inputs to angles
   if (!disable_sticks){
     rad_roll = map_d((double)receiver_input_channel_1,1000.0, 2000.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
@@ -304,7 +303,6 @@ void update_acro(uint32_t t){
   if (receiver_input_channel_2 > 1485 && receiver_input_channel_2 < 1515) receiver_input_channel_2 = 1500;
   if (receiver_input_channel_4 > 1485 && receiver_input_channel_4 < 1515) receiver_input_channel_4 = 1500;
 
-  rad_throttle = map(receiver_input_channel_3, 1108, 1876, 1000, 2000);
   //p.K_tmp = map_d((double)receiver_input_channel_6,1000.0, 2000.0, 0.0, 0.8);
 
   //map inputs to anglerates
@@ -342,10 +340,10 @@ void loop(){
   return;
 
   Serial.println("max");*/
-
+  rad_throttle = map(receiver_input_channel_3, 1108, 1876, 1000, 2000);
 
   //disable joysticks if low throttle
-  if (rad_throttle < 1125){
+  if (rad_throttle < 1050){
     disable_sticks = true;
   }else{
     disable_sticks = false;
@@ -375,7 +373,7 @@ void loop(){
     set_motor_speeds();
   }else{
     //change on/off
-    if (disable_sticks && receiver_input_channel_4 < 1290){
+    if (disable_sticks && receiver_input_channel_4 < 1150){
       motors_on = true;  
     }
     //keep motors updated
