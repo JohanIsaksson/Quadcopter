@@ -1,5 +1,4 @@
 
-
 #include "imu.h"
 
 
@@ -222,8 +221,8 @@ void imu_update_acro(imu* g, uint32_t tim){
   MPU6050_read(g);
 
   ///* scale angular velocity */
-  g->y_gyr = g->y_gyr*0.8 + (((double)(g->gy)) * GYRO_SCALE_Y)*0.2;
-  g->x_gyr = g->x_gyr*0.8 + (((double)(g->gx)) * GYRO_SCALE_X)*0.2;
-  g->z_gyr = g->z_gyr*0.8 + (((double)(g->gz)) * GYRO_SCALE_Z)*0.2;
+  g->y_gyr = ((double)(g->gy)) * GYRO_SCALE_Y;
+  g->x_gyr = ((double)(g->gx)) * GYRO_SCALE_X;
+  g->z_gyr = (double)g->gz * GYRO_SCALE_Z;
 
 }

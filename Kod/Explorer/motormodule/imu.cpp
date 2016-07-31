@@ -1,5 +1,4 @@
 
-
 #include "imu.h"
 
 
@@ -22,14 +21,23 @@ void MPU6050_init(){
   I2Cdev::writeWord(MPU6050_ADDR, 0x15, -13);// 32); //y gyro
   I2Cdev::writeWord(MPU6050_ADDR, 0x17, 75);// 18); //z gyro*/
 
-  //set offsets (on chip 1)
-  I2Cdev::writeWord(MPU6050_ADDR, 0x06, 308); //x acc
+  //set offsets (on racer chip)
+  /*I2Cdev::writeWord(MPU6050_ADDR, 0x06, 308); //x acc
   I2Cdev::writeWord(MPU6050_ADDR, 0x08, 2564); //y acc
   I2Cdev::writeWord(MPU6050_ADDR, 0x0A, 1469); //z acc
 
   I2Cdev::writeWord(MPU6050_ADDR, 0x13, 29);// 98); //x gyro
   I2Cdev::writeWord(MPU6050_ADDR, 0x15, -13);// 32); //y gyro
-  I2Cdev::writeWord(MPU6050_ADDR, 0x17, -19);// 18); //z gyro
+  I2Cdev::writeWord(MPU6050_ADDR, 0x17, -19);// 18); //z gyro*/
+
+  //set offsets (on explorer chip)
+  I2Cdev::writeWord(MPU6050_ADDR, 0x06, -1753); //x acc
+  I2Cdev::writeWord(MPU6050_ADDR, 0x08, 989); //y acc
+  I2Cdev::writeWord(MPU6050_ADDR, 0x0A, 1617); //z acc
+
+  I2Cdev::writeWord(MPU6050_ADDR, 0x13, 159); //x gyro
+  I2Cdev::writeWord(MPU6050_ADDR, 0x15, -9); //y gyro
+  I2Cdev::writeWord(MPU6050_ADDR, 0x17, 104); //z gyro
 }
 
 void MPU6050_read(imu* g){
@@ -42,6 +50,100 @@ void MPU6050_read(imu* g){
   g->gz = (((int16_t)g->I2C_buffer[12]) << 8) | g->I2C_buffer[13];
 }
 
+
+void BMP180_temp_start(){
+  I2Cdev::writeByte(BMP180_ADDR, BMP180_REG_CONTROL, BMP180_COMMAND_TEMPERATURE);
+}
+
+void BMP180_temp_read(imu* g){
+  double tu, a;
+  I2Cdev::readBytes(BMP180_ADDR, BMP180_REG_RESULT, 2, g->I2C_buffer);
+  tu = (g->I2C_buffer[0] * 256.0) + g->I2C_buffer[1];
+
+    //example from Bosch datasheet
+    //tu = 27898;
+
+    //example from http://wmrx00.sourceforge.net/Arduino/BMP085-Calcs.pdf
+    //tu = 0x69EC;
+    
+    a = g->c5 * (tu - g->c6);
+    g->temp = a + (g->mc / (a + g->md));
+}
+
+void BMP180_pressure_start(){
+  I2Cdev::writeByte(BMP180_ADDR, BMP180_REG_CONTROL, BMP180_COMMAND_PRESSURE0);
+}
+
+void BMP180_pressure_read(imu* g){
+  double pu,s,x,y,z;
+
+  I2Cdev::readBytes(BMP180_ADDR, BMP180_REG_RESULT, 3, g->I2C_buffer);
+  pu = (g->I2C_buffer[0] * 256.0) + g->I2C_buffer[1] + (g->I2C_buffer[2]/256.0);
+
+    //example from Bosch datasheet
+    //pu = 23843;
+
+    //example from http://wmrx00.sourceforge.net/Arduino/BMP085-Calcs.pdf, pu = 0x982FC0; 
+    //pu = (0x98 * 256.0) + 0x2F + (0xC0/256.0);
+    
+    s = g->temp - 25.0;
+    x = (g->x2 * pow(s,2)) + (g->x1 * s) + g->x0;
+    y = (g->y2 * pow(s,2)) + (g->y1 * s) + g->y0;
+    z = (pu - x) / y;
+    g->pressure = (g->p2 * pow(z,2)) + (g->p1 * z) + g->p0;  
+
+
+    g->altitude = 44330.0*(1-pow(g->pressure/g->base_pressure,1/5.255));
+}
+
+void BMP180_init(imu* g){
+
+  // Retrieve calibration data from device:
+  I2Cdev::readBytes(BMP180_ADDR, 0xAA, 22, g->I2C_buffer);
+  g->AC1 = (((int16_t)g->I2C_buffer[0]) << 8) | g->I2C_buffer[1];
+  g->AC2 = (((int16_t)g->I2C_buffer[2]) << 8) | g->I2C_buffer[3];
+  g->AC3 = (((int16_t)g->I2C_buffer[4]) << 8) | g->I2C_buffer[5];
+  g->AC4 = (((uint16_t)g->I2C_buffer[6]) << 8) | g->I2C_buffer[7];
+  g->AC5 = (((uint16_t)g->I2C_buffer[8]) << 8) | g->I2C_buffer[9];
+  g->AC6 = (((uint16_t)g->I2C_buffer[10]) << 8) | g->I2C_buffer[11];
+  g->VB1 = (((int16_t)g->I2C_buffer[12]) << 8) | g->I2C_buffer[13];
+  g->VB2 = (((int16_t)g->I2C_buffer[14]) << 8) | g->I2C_buffer[15];
+  g->MB = (((int16_t)g->I2C_buffer[16]) << 8) | g->I2C_buffer[17];
+  g->MC = (((int16_t)g->I2C_buffer[18]) << 8) | g->I2C_buffer[19];
+  g->MD = (((int16_t)g->I2C_buffer[20]) << 8) | g->I2C_buffer[21];
+
+
+  double c3,c4,b1;
+
+  c3 = 160.0 * pow(2,-15) * g->AC3;
+  c4 = pow(10,-3) * pow(2,-15) * g->AC4;
+  b1 = pow(160,2) * pow(2,-30) * g->VB1;
+  g->c5 = (pow(2,-15) / 160) * g->AC5;
+  g->c6 = g->AC6;
+  g->mc = (pow(2,11) / pow(160,2)) * g->MC;
+  g->md = g->MD / 160.0;
+  g->x0 = g->AC1;
+  g->x1 = 160.0 * pow(2,-13) * g->AC2;
+  g->x2 = pow(160,2) * pow(2,-25) * g->VB2;
+  g->y0 = c4 * pow(2,15);
+  g->y1 = c4 * c3;
+  g->y2 = c4 * b1;
+  g->p0 = (3791.0 - 8.0) / 1600.0;
+  g->p1 = 1.0 - 7357.0 * pow(2,-20);
+  g->p2 = 3038.0 * 100.0 * pow(2,-36);
+
+  //get initial values
+  BMP180_temp_start();
+  delay(10);
+  BMP180_temp_read(g);
+  BMP180_pressure_start();
+  delay(30);
+  BMP180_pressure_read(g);
+  g->base_pressure = g->pressure;
+  g->altitude = 0.0;
+  g->baro_state = 0;
+}
+
 void read_magnetometer(imu* g){
   uint8_t buffer[6];
 
@@ -51,6 +153,7 @@ void read_magnetometer(imu* g){
   g->mz = (((int16_t)buffer[2]) << 8) | buffer[3];
   g->my = (((int16_t)buffer[4]) << 8) | buffer[5];
 }
+
 /* special offset removal for magnetometer */  
 void remove_offsets(imu* g) {
   /* remove bias */
@@ -145,12 +248,18 @@ void tilt_compensation(imu* g){
 }
 
 void height_estimation(imu* g, double tim){
-  double x = g->axs * g->sinr;
-  double y = g->ays * g->sinp;
+  //double x = g->axs * g->sinr;
+  //double y = g->ays * g->sinp;
 
-  g->vertical_acc = g->azs - sqrt(1.0 - (x*x + y*y)) + 0.002;
-  g->vertical_speed = g->vertical_acc * 9.82 * tim;
-  g->height += g->vertical_speed * tim;
+
+  g->vertical_acc = g->axs*g->sinp + g->ays*g->cosp*g->sinr + g->azs*g->cosp*g->cosr;
+
+  //g->vertical_acc = g->azs - sqrt(1.0 - (x*x + y*y)) + 0.002;
+
+
+
+  //g->vertical_speed = g->vertical_acc * 9.82 * tim;
+  //g->altitude += g->vertical_speed * tim;
 }
 
 /* Initializes the imu and sets parameters */
@@ -187,13 +296,46 @@ void imu_init(imu* g){
     g->ypr[i] =  0.0;
   }
 
-  g->height = 0.0;
+  BMP180_init(g);
   g->vertical_speed = 0.0;
   g->vertical_acc = 0.0;
 }
 
 /* Reads raw data from sensors and calculates yaw, pitch and roll */
 void imu_update_horizon(imu* g, uint32_t tim){
+
+  // Alternates between reading temp and pressure
+  switch(g->baro_state){
+    case 0:
+      BMP180_temp_start();
+      ++g->baro_state;
+      break;
+
+    case 1:
+      g->baro_state++;
+      break;
+
+    case 2:
+      BMP180_temp_read(g);
+      BMP180_pressure_start();
+      
+      g->baro_state++;
+      break;
+
+    case 3:
+      g->baro_state++;
+      break;
+
+    case 4:
+      BMP180_pressure_read(g);
+      BMP180_temp_start();
+      g->baro_state = 1;
+      break;
+
+    default:
+      g->baro_state = 0;
+      break;
+  }
 
 	// read raw accel/gyro measurements from device
   MPU6050_read(g);
@@ -211,8 +353,9 @@ void imu_update_horizon(imu* g, uint32_t tim){
   //get yaw
   tilt_compensation(g);
 
-  //get height
-  //height_estimation(g, t);
+  height_estimation(g, t);
+
+  
 }
 
 //only reads mpu6050 for gyro
@@ -221,9 +364,9 @@ void imu_update_acro(imu* g, uint32_t tim){
   // read raw accel/gyro measurements from device
   MPU6050_read(g);
 
-  ///* scale angular velocity */
+  ///* scale angular velocity and low-pass filter*/
   g->y_gyr = g->y_gyr*0.8 + (((double)(g->gy)) * GYRO_SCALE_Y)*0.2;
   g->x_gyr = g->x_gyr*0.8 + (((double)(g->gx)) * GYRO_SCALE_X)*0.2;
-  g->z_gyr = g->z_gyr*0.8 + (((double)(g->gz)) * GYRO_SCALE_Z)*0.2;
+  g->z_gyr = g->z_gyr*0.8 + ((double)g->gz * GYRO_SCALE_Z)*0.2;
 
 }

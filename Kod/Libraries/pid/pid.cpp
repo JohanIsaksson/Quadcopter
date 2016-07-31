@@ -55,7 +55,7 @@ void pid_pitch_rate(pid* p, int* front, double gyro_rate, double ref_rate, doubl
 
 	p->error = ref_rate - gyro_rate; // anlge rate error
 
-	p->pitch_rate_integral += p->error * t;
+	p->pitch_integral += p->error * t;
 
 	p->p = KP_A * p->error;
 	p->i = KI_A * p->pitch_rate_integral;
