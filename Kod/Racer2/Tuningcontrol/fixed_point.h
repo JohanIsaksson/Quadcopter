@@ -4,6 +4,6 @@
 #define TOTAL_BITS 32
 #define INTEGER_BITS 4
 
-uint32_t encode(double d);
-double decode(uint32_t b);
+uint32_t encode_d(double d);
+double decode_d(uint32_t b);
 
