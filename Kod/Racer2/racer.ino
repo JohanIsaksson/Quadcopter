@@ -2,6 +2,7 @@
 
 #include "imu.h"
 #include "pid.h"
+#include <EEPROM.h>
 
 #define SPEED_MIN 1000
 #define SPEED_MAX 2000
@@ -11,6 +12,8 @@
 #define REF_MAX_YAW 180.0
 
 #define INTEGRAL_MAX 150.0
+
+#define PARAM_ADDR 0
 
 #define LOST_CONNECTION_COUNT 100
 #define EMERGENCY_THROTTLE 0
@@ -41,7 +44,7 @@ int front;
 int left;
 int cw;
 
-int stab_pitch, stab_roll;
+int pitch_stab, roll_stab;
 
 Pid pid_pitch_rate, pid_roll_rate, pid_yaw_rate;
 Pid pid_pitch_stab, pid_roll_stab;
@@ -233,6 +236,42 @@ void setup(){
   receiver_input_channel_5 = 1000;
   receiver_input_channel_6 = 1000;
 
+  //retrieve pid parameters from eeprom
+  size_t addr = PARAM_ADDR;
+  EEPROM.get(addr, P_pitch_a);
+  addr += sizeof(double);
+  EEPROM.get(addr, I_pitch_a);
+  addr += sizeof(double);
+  EEPROM.get(addr, D_pitch_a);
+  addr += sizeof(double);
+
+  EEPROM.get(addr, P_roll_a);
+  addr += sizeof(double);
+  EEPROM.get(addr, I_roll_a);
+  addr += sizeof(double);
+  EEPROM.get(addr, D_roll_a);
+  addr += sizeof(double);
+
+  EEPROM.get(addr, P_pitch_h);
+  addr += sizeof(double);
+  EEPROM.get(addr, I_pitch_h);
+  addr += sizeof(double);
+  EEPROM.get(addr, D_pitch_h);
+  addr += sizeof(double);
+
+  EEPROM.get(addr, P_roll_h);
+  addr += sizeof(double);
+  EEPROM.get(addr, I_roll_h);
+  addr += sizeof(double);
+  EEPROM.get(addr, D_roll_h);
+  addr += sizeof(double);
+
+  EEPROM.get(addr, P_yaw);
+  addr += sizeof(double);
+  EEPROM.get(addr, I_yaw);
+  addr += sizeof(double);
+  EEPROM.get(addr, D_yaw);
+  addr += sizeof(double);
 	
 
   pid_pitch_rate.init();
