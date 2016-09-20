@@ -126,27 +126,22 @@ ISR(PCINT2_vect){
 
 //Subroutine for displaying the receiver signals
 void print_signals(){
-  Serial.print("Roll:");
-  if(receiver_input_channel_1 - 1480 < 0)Serial.print("<<<");
-  else if(receiver_input_channel_1 - 1520 > 0)Serial.print(">>>");
-  else Serial.print("-+-");
   Serial.print(receiver_input_channel_1);
-  
-  Serial.print("  Nick:");
-  if(receiver_input_channel_2 - 1480 < 0)Serial.print("^^^");
-  else if(receiver_input_channel_2 - 1520 > 0)Serial.print("vvv");
-  else Serial.print("-+-");
+  Serial.print("\t\t");
+
   Serial.print(receiver_input_channel_2);
-  
-  Serial.print("  Gas:");
-  if(receiver_input_channel_3 - 1480 < 0)Serial.print("vvv");
-  else if(receiver_input_channel_3 - 1520 > 0)Serial.print("^^^");
-  else Serial.print("-+-");
+  Serial.print("\t\t");
+
   Serial.print(receiver_input_channel_3);
-  
-  Serial.print("  Yaw:");
-  if(receiver_input_channel_4 - 1480 < 0)Serial.print("<<<");
-  else if(receiver_input_channel_4 - 1520 > 0)Serial.print(">>>");
-  else Serial.print("-+-");
-  Serial.println(receiver_input_channel_4);
+  Serial.print("\t\t");
+
+  Serial.print(receiver_input_channel_4);
+  Serial.print("\t\t");
+
+  Serial.print(receiver_input_channel_5);
+  Serial.print("\t\t");
+
+  Serial.print(receiver_input_channel_6);
+  Serial.println("\t\t");
+
 }

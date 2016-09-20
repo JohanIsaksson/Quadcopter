@@ -3,6 +3,7 @@
 #include "imu.h"
 #include "pid.h"
 #include <EEPROM.h>
+#include "fixed_point.h"
 
 #define SPEED_MIN 1000
 #define SPEED_MAX 2000
@@ -30,7 +31,31 @@
 //#define RADIO_DATA
 //#define ESC_DATA
 
-IMU imu();
+
+// Tunig control
+#define TUNING_MAX 1.5
+#define TUNING_MIN 0.0
+#define TUNING_MODE 0
+double tun;
+/*
+0   -   P pitch/roll acro
+1   -   I pitch/roll acro
+2   -   D pitch/roll acro
+3   -   P yaw
+4   -   I yaw
+5   -   D yaw
+6   -   P pitch/roll horizon
+7   -   I pitch/roll horizon
+8   -   D pitch/roll horizon
+9   -   
+
+
+*/
+
+
+
+
+IMU imu;
 
 //motors
 int throttle[4]; /* 0 = front left
@@ -54,6 +79,12 @@ double P_pitch_a, I_pitch_a, D_pitch_a,
         P_roll_a, I_roll_a, D_roll_a,
         P_roll_h, I_roll_h, D_roll_h,
         P_yaw, I_yaw, D_yaw;
+
+uint16_t max_pitch, max_roll, max_yaw;
+uint16_t max_p, max_r, max_y;
+uint8_t exp_lin;
+
+uint8_t buf[26];
 
 //output
 int count;
@@ -201,40 +232,7 @@ void set_motor_speeds_max(){
   while(micros() - time_last < 4000);
 }
 
-
-/*
-  ####  ###### ###### ##  ## #####
- ##  ## ##       ##   ##  ## ##  ##
- ##     ##       ##   ##  ## ##  ##
-  ####  ####     ##   ##  ## #####
-     ## ##       ##   ##  ## ##
- ##  ## ##       ##   ##  ## ##
-  ####  ######   ##    ####  ##
-*/
-void setup(){
-
-
-  Serial.begin(38400);
-  Serial.println("Starting up");
-
-	//Arduino (Atmega) pins default to inputs, so they don't need to be explicitly declared as inputs
-  //Mask:                       Channel:    Signal:
-  PCMSK2 |= (1 << PCINT18); //  1           roll
-  PCMSK2 |= (1 << PCINT19); //  2           pitch
-  PCMSK2 |= (1 << PCINT20); //  3           throttle
-  PCMSK2 |= (1 << PCINT21); //  4           yaw
-  PCMSK2 |= (1 << PCINT22); //  5           ACRO/HORIZON
-  PCMSK2 |= (1 << PCINT23); //  6           -
-
-  radio_off_counter = 0;
-  receiver_input_channel_1 = 1500;
-  receiver_input_channel_2 = 1500;
-  receiver_input_channel_3 = 1108;
-  receiver_input_channel_4 = 1500;
-  receiver_input_channel_5 = 1000;
-  receiver_input_channel_6 = 1000;
-
-  //retrieve pid parameters from eeprom
+void EEPROM_get(){
   size_t addr = PARAM_ADDR;
   EEPROM.get(addr, P_pitch_a);
   addr += sizeof(double);
@@ -270,6 +268,376 @@ void setup(){
   addr += sizeof(double);
   EEPROM.get(addr, D_yaw);
   addr += sizeof(double);
+}
+
+void EEPROM_put(){
+  size_t addr = PARAM_ADDR;
+  EEPROM.put(addr, P_pitch_a);
+  addr += sizeof(double);
+  EEPROM.put(addr, I_pitch_a);
+  addr += sizeof(double);
+  EEPROM.put(addr, D_pitch_a);
+  addr += sizeof(double);
+
+  EEPROM.put(addr, P_roll_a);
+  addr += sizeof(double);
+  EEPROM.put(addr, I_roll_a);
+  addr += sizeof(double);
+  EEPROM.put(addr, D_roll_a);
+  addr += sizeof(double);
+
+  EEPROM.put(addr, P_pitch_h);
+  addr += sizeof(double);
+  EEPROM.put(addr, I_pitch_h);
+  addr += sizeof(double);
+  EEPROM.put(addr, D_pitch_h);
+  addr += sizeof(double);
+
+  EEPROM.put(addr, P_roll_h);
+  addr += sizeof(double);
+  EEPROM.put(addr, I_roll_h);
+  addr += sizeof(double);
+  EEPROM.put(addr, D_roll_h);
+  addr += sizeof(double);
+
+  EEPROM.put(addr, P_yaw);
+  addr += sizeof(double);
+  EEPROM.put(addr, I_yaw);
+  addr += sizeof(double);
+  EEPROM.put(addr, D_yaw);
+  addr += sizeof(double);
+
+  
+}
+
+
+void insert_32(uint32_t data, int pos){
+  buf[pos] = (data >> 24) & 0x000000FF;
+  buf[pos+1] = (data >> 16) & 0x000000FF;
+  buf[pos+2] = (data >> 8) & 0x000000FF;
+  buf[pos+3] = data & 0x000000FF;
+}
+
+void insert_16(uint16_t data, int pos){
+  buf[pos] = (data >> 8) & 0x000000FF;
+  buf[pos+1] = data & 0x000000FF;
+}
+
+void send_data(){
+
+  // Transfering order:
+  //  [P_pitch_a, I_pitch_a, D_pitch_a, P_pitch_h, I_pitch_h, D_pitch_h, P_roll_a, I_roll_a, D_roll_a, P_roll_h, I_roll_h, D_roll_h, P_yaw, I_yaw, D_yaw, max_pitch, max_roll, max_yaw, exp_lin];
+
+
+  //send first part
+  buf[0] = 1;
+
+  int pos = 1;
+
+  insert_32(encode_d(P_pitch_a), pos);
+  pos+=4;
+  insert_32(encode_d(I_pitch_a), pos); 
+  pos+=4;
+  insert_32(encode_d(D_pitch_a), pos);
+  pos+=4;
+  insert_32(encode_d(P_pitch_h), pos); 
+  pos+=4;
+  insert_32(encode_d(I_pitch_h), pos); 
+  pos+=4;
+  insert_32(encode_d(D_pitch_h), pos); 
+
+  Wire.beginTransmission(15);
+  Wire.write(buf, 25);
+  Wire.endTransmission(); 
+
+
+  //send second part
+
+  buf[0] = 2;
+
+  pos = 1;
+
+  insert_32(encode_d(P_roll_a), pos); 
+  pos+=4;
+  insert_32(encode_d(I_roll_a), pos); 
+  pos+=4;
+  insert_32(encode_d(D_roll_a), pos); 
+  pos+=4;
+  insert_32(encode_d(P_roll_h), pos); 
+  pos+=4;
+  insert_32(encode_d(I_roll_h), pos); 
+  pos+=4;
+  insert_32(encode_d(D_roll_h), pos); 
+
+  Wire.beginTransmission(15);
+  Wire.write(buf, 25);
+  Wire.endTransmission(); 
+
+
+  // send third part
+
+  buf[0] = 3;
+
+  pos = 1;
+
+  insert_32(encode_d(P_yaw), pos); 
+  pos+=4;
+  insert_32(encode_d(I_yaw), pos); 
+  pos+=4;
+  insert_32(encode_d(D_yaw), pos);
+  pos+=4;
+
+  insert_16(max_pitch, pos);
+  pos+=2;
+  insert_16(max_roll, pos);
+  pos+=2;
+  insert_16(max_yaw, pos);
+  pos+=2;
+
+  buf[19] = exp_lin;
+
+  Wire.beginTransmission(15);
+  Wire.write(buf, 20);
+  Wire.endTransmission(); 
+}
+
+
+void get_data(){
+  // Transfering order:
+  //  [P_pitch_a, I_pitch_a, D_pitch_a, P_pitch_h, I_pitch_h, D_pitch_h, P_roll_a, I_roll_a, D_roll_a, P_roll_h, I_roll_h, D_roll_h, P_yaw, I_yaw, D_yaw, max_pitch, max_roll, max_yaw, exp_lin];
+  
+  uint32_t buf_tmp[6];
+
+
+  Wire.requestFrom(15, 25);
+
+  int i = 0;
+  while (Wire.available()) { // slave may send less than requested
+    buf[i] = Wire.read(); // receive a byte
+    Serial.println(buf[i]);
+    i++;
+  }
+  Serial.println("--------");
+
+  switch(buf[0]){
+    case 1:
+      for (int i = 0; i < 6; i++){
+        buf_tmp[i] = ((uint32_t)buf[i*4 + 1] << 24) + ((uint32_t)buf[i*4 + 2] << 16) + ((uint32_t)buf[i*4 + 3] << 8) + buf[i*4 + 4];    
+      }
+
+      P_pitch_a = decode_d(buf_tmp[0]);
+      I_pitch_a = decode_d(buf_tmp[1]);
+      D_pitch_a = decode_d(buf_tmp[2]);
+     
+      P_pitch_h = decode_d(buf_tmp[3]);
+      I_pitch_h = decode_d(buf_tmp[4]);
+      D_pitch_h = decode_d(buf_tmp[5]);
+
+    break;
+
+
+    case 2:
+      for (int i = 0; i < 6; i++){
+        buf_tmp[i] = ((uint32_t)buf[i*4 + 1] << 24) + ((uint32_t)buf[i*4 + 2] << 16) + ((uint32_t)buf[i*4 + 3] << 8) + buf[i*4 + 4];    
+      }
+
+      P_roll_a = decode_d(buf_tmp[0]);
+      I_roll_a = decode_d(buf_tmp[1]);
+      D_roll_a = decode_d(buf_tmp[2]);
+     
+      P_roll_h = decode_d(buf_tmp[3]);
+      I_roll_h = decode_d(buf_tmp[4]);
+      D_roll_h = decode_d(buf_tmp[5]);
+
+    break;
+
+
+    case 3:
+      for (int i = 0; i < 3; i++){
+        buf_tmp[i] = ((uint32_t)buf[i*4 + 1] << 24) + ((uint32_t)buf[i*4 + 2] << 16) + ((uint32_t)buf[i*4 + 3] << 8) + buf[i*4 + 4];    
+      }
+
+      P_yaw = decode_d(buf_tmp[0]);
+      I_yaw = decode_d(buf_tmp[1]);
+      D_yaw = decode_d(buf_tmp[2]);
+
+      max_pitch = ((uint16_t)buf[13] << 8) + (uint16_t)buf[14];
+      max_roll = ((uint16_t)buf[15] << 8) + (uint16_t)buf[16];
+      max_yaw = ((uint16_t)buf[17] << 8) + (uint16_t)buf[18];
+
+      exp_lin = buf[19];
+
+    break;
+  }
+
+
+
+  Wire.requestFrom(15, 25);
+
+  i = 0;
+  while (Wire.available()) { // slave may send less than requested
+    buf[i] = Wire.read(); // receive a byte
+    Serial.println(buf[i]);
+    i++;
+  }
+  Serial.println("--------");
+
+  switch(buf[0]){
+    case 1:
+      for (int i = 0; i < 6; i++){
+        buf_tmp[i] = ((uint32_t)buf[i*4 + 1] << 24) + ((uint32_t)buf[i*4 + 2] << 16) + ((uint32_t)buf[i*4 + 3] << 8) + buf[i*4 + 4];    
+      }
+
+      P_pitch_a = decode_d(buf_tmp[0]);
+      I_pitch_a = decode_d(buf_tmp[1]);
+      D_pitch_a = decode_d(buf_tmp[2]);
+     
+      P_pitch_h = decode_d(buf_tmp[3]);
+      I_pitch_h = decode_d(buf_tmp[4]);
+      D_pitch_h = decode_d(buf_tmp[5]);
+
+    break;
+
+
+    case 2:
+      for (int i = 0; i < 6; i++){
+        buf_tmp[i] = ((uint32_t)buf[i*4 + 1] << 24) + ((uint32_t)buf[i*4 + 2] << 16) + ((uint32_t)buf[i*4 + 3] << 8) + buf[i*4 + 4];    
+      }
+
+      P_roll_a = decode_d(buf_tmp[0]);
+      I_roll_a = decode_d(buf_tmp[1]);
+      D_roll_a = decode_d(buf_tmp[2]);
+     
+      P_roll_h = decode_d(buf_tmp[3]);
+      I_roll_h = decode_d(buf_tmp[4]);
+      D_roll_h = decode_d(buf_tmp[5]);
+
+    break;
+
+
+    case 3:
+      for (int i = 0; i < 3; i++){
+        buf_tmp[i] = ((uint32_t)buf[i*4 + 1] << 24) + ((uint32_t)buf[i*4 + 2] << 16) + ((uint32_t)buf[i*4 + 3] << 8) + buf[i*4 + 4];    
+      }
+
+      P_yaw = decode_d(buf_tmp[0]);
+      I_yaw = decode_d(buf_tmp[1]);
+      D_yaw = decode_d(buf_tmp[2]);
+
+      max_pitch = ((uint16_t)buf[13] << 8) + (uint16_t)buf[14];
+      max_roll = ((uint16_t)buf[15] << 8) + (uint16_t)buf[16];
+      max_yaw = ((uint16_t)buf[17] << 8) + (uint16_t)buf[18];
+
+      exp_lin = buf[19];
+
+    break;
+  }
+
+
+  Wire.requestFrom(15, 25);
+
+  i = 0;
+  while (Wire.available()) { // slave may send less than requested
+    buf[i] = Wire.read(); // receive a byte
+    Serial.println(buf[i]);
+    i++;
+  }
+  Serial.println("--------");
+
+  switch(buf[0]){
+    case 1:
+      for (int i = 0; i < 6; i++){
+        buf_tmp[i] = ((uint32_t)buf[i*4 + 1] << 24) + ((uint32_t)buf[i*4 + 2] << 16) + ((uint32_t)buf[i*4 + 3] << 8) + buf[i*4 + 4];    
+      }
+
+      P_pitch_a = decode_d(buf_tmp[0]);
+      I_pitch_a = decode_d(buf_tmp[1]);
+      D_pitch_a = decode_d(buf_tmp[2]);
+     
+      P_pitch_h = decode_d(buf_tmp[3]);
+      I_pitch_h = decode_d(buf_tmp[4]);
+      D_pitch_h = decode_d(buf_tmp[5]);
+
+    break;
+
+
+    case 2:
+      for (int i = 0; i < 6; i++){
+        buf_tmp[i] = ((uint32_t)buf[i*4 + 1] << 24) + ((uint32_t)buf[i*4 + 2] << 16) + ((uint32_t)buf[i*4 + 3] << 8) + buf[i*4 + 4];    
+      }
+
+      P_roll_a = decode_d(buf_tmp[0]);
+      I_roll_a = decode_d(buf_tmp[1]);
+      D_roll_a = decode_d(buf_tmp[2]);
+     
+      P_roll_h = decode_d(buf_tmp[3]);
+      I_roll_h = decode_d(buf_tmp[4]);
+      D_roll_h = decode_d(buf_tmp[5]);
+
+    break;
+
+
+    case 3:
+      for (int i = 0; i < 3; i++){
+        buf_tmp[i] = ((uint32_t)buf[i*4 + 1] << 24) + ((uint32_t)buf[i*4 + 2] << 16) + ((uint32_t)buf[i*4 + 3] << 8) + buf[i*4 + 4];    
+      }
+
+      P_yaw = decode_d(buf_tmp[0]);
+      I_yaw = decode_d(buf_tmp[1]);
+      D_yaw = decode_d(buf_tmp[2]);
+
+      max_pitch = ((uint16_t)buf[13] << 8) + (uint16_t)buf[14];
+      max_roll = ((uint16_t)buf[15] << 8) + (uint16_t)buf[16];
+      max_yaw = ((uint16_t)buf[17] << 8) + (uint16_t)buf[18];
+
+      exp_lin = buf[19];
+
+    break;
+  }
+}
+
+
+
+
+
+
+/*
+  ####  ###### ###### ##  ## #####
+ ##  ## ##       ##   ##  ## ##  ##
+ ##     ##       ##   ##  ## ##  ##
+  ####  ####     ##   ##  ## #####
+     ## ##       ##   ##  ## ##
+ ##  ## ##       ##   ##  ## ##
+  ####  ######   ##    ####  ##
+*/
+void setup(){
+
+
+  Serial.begin(38400);
+  Serial.println("Starting up");
+
+	//Arduino (Atmega) pins default to inputs, so they don't need to be explicitly declared as inputs
+  //Mask:                       Channel:    Signal:
+  PCMSK2 |= (1 << PCINT18); //  1           roll
+  PCMSK2 |= (1 << PCINT19); //  2           pitch
+  PCMSK2 |= (1 << PCINT20); //  3           throttle
+  PCMSK2 |= (1 << PCINT21); //  4           yaw
+  PCMSK2 |= (1 << PCINT22); //  5           ACRO/HORIZON
+  PCMSK2 |= (1 << PCINT23); //  6           -
+
+  radio_off_counter = 0;
+  receiver_input_channel_1 = 1500;
+  receiver_input_channel_2 = 1500;
+  receiver_input_channel_3 = 1000;
+  receiver_input_channel_4 = 1500;
+  receiver_input_channel_5 = 1000;
+  receiver_input_channel_6 = 1000;
+
+  //retrieve pid parameters from eeprom
+  EEPROM_get();
+
+
+  imu.init();
 	
 
   pid_pitch_rate.init();
@@ -320,9 +688,10 @@ void setup(){
  ##  ##  ####  ##  ## #### ######  ####  ##  ##
 */
 void update_horizon(uint32_t t){
+  timed = (double)t/1000000.0;
 
   //update all sensor on the imu
-  imu_update_horizon(&im, t); 
+  imu.update_horizon(timed); 
 
   //start esc pulses
   start_time = micros(); 
@@ -331,6 +700,11 @@ void update_horizon(uint32_t t){
 
   //p.K_D_yaw = map_d((double)receiver_input_channel_5, 975.0, 2000.0, 0.0, 0.1);
   //p.K_P_yaw = map_d((double)receiver_input_channel_6, 975.0, 2000.0, 0.0, 1.5);
+
+  //compensate for mistimings with deadband
+  if (receiver_input_channel_1 > 1485 && receiver_input_channel_1 < 1515) receiver_input_channel_1 = 1500;
+  if (receiver_input_channel_2 > 1485 && receiver_input_channel_2 < 1515) receiver_input_channel_2 = 1500;
+  if (receiver_input_channel_4 > 1485 && receiver_input_channel_4 < 1515) receiver_input_channel_4 = 1500;
 
   //map inputs to angles
   if (!disable_sticks){
@@ -343,14 +717,13 @@ void update_horizon(uint32_t t){
     rad_yaw = 0.0;
   }
   //calculate pids
-  timed = (double)t/1000000.0;
 
-  pid_pitch_stab.update(&pitch_stab, rad_pitch, im.ypr[1], timed, 1.0);
-  pid_roll_stab.update(&roll_stab, rad_roll, im.ypr[1], timed, 1.0);
+  pid_pitch_stab.update(&pitch_stab, rad_pitch, imu.ypr[1], timed, 1.0);
+  pid_roll_stab.update(&roll_stab, rad_roll, imu.ypr[1], timed, 1.0);
 
-  pid_pitch_rate.update(&front, (double)pitch_stab, im.y_gyr*RAD_TO_DEG, timed, -1.0);
-  pid_roll_rate.update(&left, (double)roll_stab, im.x_gyr*RAD_TO_DEG, timed, 1.0);
-  pid_yaw_rate.update(&cw, rad_yaw, -im.z_gyr*RAD_TO_DEG, timed, -1.0);
+  pid_pitch_rate.update(&front, (double)pitch_stab, imu.y_gyr*RAD_TO_DEG, timed, -1.0);
+  pid_roll_rate.update(&left, (double)roll_stab, imu.x_gyr*RAD_TO_DEG, timed, 1.0);
+  pid_yaw_rate.update(&cw, rad_yaw, -imu.z_gyr*RAD_TO_DEG, timed, -1.0);
 
 }
 
@@ -364,9 +737,10 @@ void update_horizon(uint32_t t){
  ##  ##  ####  ##  ##  ####  #####  ##  ## ##   #### ####
 */
 void update_acro(uint32_t t){
+  timed = (double)t/1000000.0;
 
   //update only the gyroscope on the imu
-  imu_update_acro(&im, t); 
+  imu.update_acro(timed); 
 
   //start esc pulses
   start_time = micros(); 
@@ -376,7 +750,7 @@ void update_acro(uint32_t t){
   //p.K_D_yaw = map_d((double)receiver_input_channel_5, 975.0, 2000.0, 0.0, 0.1);
   //p.K_P_yaw = map_d((double)receiver_input_channel_6, 975.0, 2000.0, 0.0, 1.5);
 
-  //compensate for mistimings
+  //compensate for mistimings with deadband
   if (receiver_input_channel_1 > 1485 && receiver_input_channel_1 < 1515) receiver_input_channel_1 = 1500;
   if (receiver_input_channel_2 > 1485 && receiver_input_channel_2 < 1515) receiver_input_channel_2 = 1500;
   if (receiver_input_channel_4 > 1485 && receiver_input_channel_4 < 1515) receiver_input_channel_4 = 1500;
@@ -394,10 +768,10 @@ void update_acro(uint32_t t){
     rad_yaw = 0.0;
   }
   //calculate pids
-  timed = (double)t/1000000.0;
-  pid_pitch_rate.update(&front, rad_pitch, im.y_gyr*RAD_TO_DEG, timed, -1.0);
-  pid_roll_rate.update(&left, rad_roll, im.x_gyr*RAD_TO_DEG, timed, 1.0);
-  pid_yaw_rate.update(&cw, rad_yaw, -im.z_gyr*RAD_TO_DEG, timed, -1.0);
+  
+  pid_pitch_rate.update(&front, rad_pitch, imu.y_gyr*RAD_TO_DEG, timed, -1.0);
+  pid_roll_rate.update(&left, rad_roll, imu.x_gyr*RAD_TO_DEG, timed, 1.0);
+  pid_yaw_rate.update(&cw, rad_yaw, -imu.z_gyr*RAD_TO_DEG, timed, -1.0);
 }
 
 
@@ -412,50 +786,142 @@ void update_acro(uint32_t t){
 */
 void loop(){
 
-  time_diff = micros() - time_last;
-  time_last = micros();
-
-  rad_throttle = map(receiver_input_channel_3, 1108, 1876, 1000, 2000);
-
-  //disable joysticks if low throttle
-  if (rad_throttle < 1050){
-    disable_sticks = true;
-  }else{
-    disable_sticks = false;
-  }
-
-
-  //horizon stabilization or acrobatic mode
-  if (receiver_input_channel_5 < 1300){
-    flight_mode = MODE_HORIZON;    
-  }else if(receiver_input_channel_5 > 1600){
-    flight_mode = MODE_ACRO;
-  }
-  
-
-  if (motors_on){
-    //change on/off state
-    if (disable_sticks && receiver_input_channel_4 > 1710){
-      motors_on = false;
-    }
-    //update according to set flight mode
-    if(flight_mode == MODE_HORIZON){
-      update_horizon(time_diff);
-    }else if (flight_mode == MODE_ACRO){
-      update_acro(time_diff);
-    }    
-    //apply new speed to motors
-    set_motor_speeds();
-  }else{
-    //change on/off
-    if (disable_sticks && receiver_input_channel_4 < 1150){
-      motors_on = true;  
-    }
-    //keep motors updated
+  if (digitalRead(12) == LOW){
+    delay(2000);
+    send_data();
     set_motor_speeds_min();
-  }
+    delay(2000);
 
-  //print_data(time_diff);
+    while(digitalRead(12) == LOW){
+      get_data();
+      set_motor_speeds_min();
+      delay(2000);
+    }
+    EEPROM_put();
+    pid_pitch_rate.set_constants(P_pitch_a, I_pitch_a, D_pitch_a, INTEGRAL_MAX);
+    pid_roll_rate.set_constants(P_roll_a, I_roll_a, D_roll_a, INTEGRAL_MAX);
+    pid_yaw_rate.set_constants(P_yaw, I_yaw, D_yaw, INTEGRAL_MAX);
+
+    pid_pitch_stab.set_constants(P_pitch_h, I_pitch_h, D_pitch_h, INTEGRAL_MAX);
+    pid_roll_stab.set_constants(P_roll_h, I_roll_h, D_roll_h, INTEGRAL_MAX);
+
+  }else{
+
+    time_diff = micros() - time_last;
+    time_last = micros();
+
+    rad_throttle = map(receiver_input_channel_3, 1000, 2000, 1000, 1800);
+
+    //disable joysticks if low throttle
+    if (rad_throttle < 1050){
+      disable_sticks = true;
+    }else{
+      disable_sticks = false;
+    }
+
+
+    //horizon stabilization or acrobatic mode
+    if (receiver_input_channel_5 < 1300){
+      flight_mode = MODE_HORIZON;    
+    }else if(receiver_input_channel_5 > 1600){
+      flight_mode = MODE_ACRO;
+    }
+
+    #ifdef TUNING_MODE
+
+      tun = map_d((double)receiver_input_channel_6, 1000.0, 2000.0, TUNING_MIN, TUNING_MAX);
+
+      switch (TUNING_MODE) {
+          case 0:            
+            pid_pitch_rate.set_constants(tun, I_pitch_a, D_pitch_a, INTEGRAL_MAX);
+            pid_roll_rate.set_constants(tun, I_pitch_a, D_pitch_a, INTEGRAL_MAX);
+            break;
+          case 1:
+            pid_pitch_rate.set_constants(P_pitch_a, tun, D_pitch_a, INTEGRAL_MAX);
+            pid_roll_rate.set_constants(P_pitch_a, tun, D_pitch_a, INTEGRAL_MAX);
+            break;
+          case 2:
+            pid_pitch_rate.set_constants(P_pitch_a, I_pitch_a, tun, INTEGRAL_MAX);
+            pid_roll_rate.set_constants(P_pitch_a, I_pitch_a, tun, INTEGRAL_MAX);
+            break;
+          case 3:
+            pid_yaw_rate.set_constants(tun, I_yaw, D_yaw, INTEGRAL_MAX);
+            break;
+          case 4:
+            pid_yaw_rate.set_constants(P_yaw, tun, D_yaw, INTEGRAL_MAX);
+            break;
+          case 5:
+            pid_yaw_rate.set_constants(P_yaw, I_yaw, tun, INTEGRAL_MAX);
+            break;
+          case 6:
+            pid_pitch_stab.set_constants(tun, I_pitch_h, D_pitch_h, INTEGRAL_MAX);
+            pid_roll_stab.set_constants(tun, I_roll_h, D_roll_h, INTEGRAL_MAX);
+            break;
+          case 7:
+            pid_pitch_stab.set_constants(P_pitch_h, tun, D_pitch_h, INTEGRAL_MAX);
+            pid_roll_stab.set_constants(P_roll_h, tun, D_roll_h, INTEGRAL_MAX);
+            break;
+          case 8:
+            pid_pitch_stab.set_constants(P_pitch_h, I_pitch_h, tun, INTEGRAL_MAX);
+            pid_roll_stab.set_constants(P_roll_h, I_roll_h, tun, INTEGRAL_MAX);
+            break;
+
+      }
+
+    #endif
+    //joystick sensitivity/mode
+   /* if (receiver_input_channel_6 < 1300){
+      exp_lin = 1; //linear
+      joy_sens = 1.0;    
+    }else if(receiver_input_channel_6 > 1600){
+      exp_lin = 0; //exponential
+      joy_sens = 4.0;
+    }*/
+    
+
+    if (motors_on){
+      //change on/off state
+      if (disable_sticks && receiver_input_channel_4 > 1710){
+        motors_on = false;
+      }
+      //update according to set flight mode
+      if(flight_mode == MODE_HORIZON){
+        update_horizon(time_diff);
+      }else if (flight_mode == MODE_ACRO){
+        update_acro(time_diff);
+      }    
+      //apply new speed to motors
+      set_motor_speeds();
+    }else{
+      //change on/off
+      if (disable_sticks && receiver_input_channel_4 < 1150){
+        motors_on = true;  
+      }
+      //keep motors updated
+      set_motor_speeds_min();
+    }
+  }
+  //delay(10);
+  //Serial.println(imu.ypr[1]);
+
+  /*delay(25);
+  Serial.print(receiver_input_channel_1);
+  Serial.print("\t\t");
+
+  Serial.print(receiver_input_channel_2);
+  Serial.print("\t\t");
+
+  Serial.print(receiver_input_channel_3);
+  Serial.print("\t\t");
+
+  Serial.print(receiver_input_channel_4);
+  Serial.print("\t\t");
+
+  Serial.print(receiver_input_channel_5);
+  Serial.print("\t\t");
+
+  Serial.print(receiver_input_channel_6);
+  Serial.println("\t\t");*/
 } 
 
 
