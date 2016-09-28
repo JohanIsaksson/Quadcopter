@@ -87,12 +87,21 @@ void IMU::complementary_filter(double tim){
   ays = (double)ay * ACC_SCALE_Y;
   azs = (double)az * ACC_SCALE_Z;
 
-
   x_acc = atan(axs/sqrt(ays*ays + azs*azs));
-  y_gyr = ((double)(gy)) * GYRO_SCALE_Y;
+  //y_gyr = ((double)(gy)) * GYRO_SCALE_Y;
 
   y_acc = atan(ays/sqrt(axs*axs + azs*azs));
-  x_gyr = ((double)(gx)) * GYRO_SCALE_X;
+  //x_gyr = ((double)(gx)) * GYRO_SCALE_X;
+  
+
+  ///* scale angular velocity */
+  y_gyr = y_gyr*0.8 + (((double)(gy)) * GYRO_SCALE_Y)*0.2;
+  x_gyr = x_gyr*0.8 + (((double)(gx)) * GYRO_SCALE_X)*0.2;
+  z_gyr = z_gyr*0.8 + (((double)(gz)) * GYRO_SCALE_Z)*0.2;
+
+
+  
+
 
 
   ypr_rad[PITCH] = -(P1*(-ypr_rad[PITCH] - y_gyr*tim*GYRO_GAIN_PITCH) + (1.0-P1)*x_acc);

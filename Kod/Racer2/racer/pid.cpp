@@ -22,10 +22,10 @@ void Pid::update(int* out, double ref, double mea, double dt, double scale){
 	//	windup handling - done
 	//	D filtering
 
-	if (error < 20.0) integral += error;
+	if (error < 20.0) integral += error*dt;
 
 	p = KP * error;
-	i = KI * integral * dt;
+	i = KI * integral;
 	d = KD * (error - error_prev) / dt;
 
 	output =  p + i + d;

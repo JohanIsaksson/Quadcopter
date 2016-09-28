@@ -33,9 +33,9 @@
 
 
 // Tunig control
-#define TUNING_MAX 1.5
+#define TUNING_MAX 10.0
 #define TUNING_MIN 0.0
-#define TUNING_MODE 0
+//#define TUNING_MODE 6
 double tun;
 /*
 0   -   P pitch/roll acro
@@ -129,6 +129,11 @@ uint8_t flight_mode;
 
 double map_d(double x, double in_min, double in_max, double out_min, double out_max){
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+/* Third order polynomial */
+double map_x3(double x){
+  return x*(0.00000096*x*x + 0.12);
 }
 
 void init_motors(){
@@ -634,7 +639,46 @@ void setup(){
   receiver_input_channel_6 = 1000;
 
   //retrieve pid parameters from eeprom
-  EEPROM_get();
+  #ifndef TUNING_MODE
+    EEPROM_get();
+    /*Serial.print(P_pitch_a); Serial.print("\t"); Serial.print(I_pitch_a); Serial.print("\t"); Serial.println(D_pitch_a);
+    Serial.print(P_yaw); Serial.print("\t"); Serial.print(I_yaw); Serial.print("\t"); Serial.println(D_yaw);
+    Serial.print(P_pitch_h); Serial.print("\t"); Serial.print(I_pitch_h); Serial.print("\t"); Serial.println(D_pitch_h);*/
+    Serial.println("Retrieved PID parameters.");
+  #else
+    /*EEPROM_get();
+    Serial.print(P_pitch_a); Serial.print("\t"); Serial.print(I_pitch_a); Serial.print("\t"); Serial.println(D_pitch_a);
+    Serial.print(1.2); Serial.print("\t"); Serial.print(0.8); Serial.print("\t"); Serial.println(0.06);
+
+
+    Serial.println();
+    Serial.print(P_pitch_h); Serial.print("\t"); Serial.print(I_pitch_h); Serial.print("\t"); Serial.println(D_pitch_h);
+    Serial.print(4.0); Serial.print("\t"); Serial.print(0.0); Serial.print("\t"); Serial.println(0.0);
+
+    Serial.println();
+    Serial.print(P_yaw); Serial.print("\t"); Serial.print(I_yaw); Serial.print("\t"); Serial.println(D_yaw);
+    Serial.print(2.0); Serial.print("\t"); Serial.print(0.0); Serial.print("\t"); Serial.println(0.0);
+
+*/
+
+
+    P_pitch_a = 1.2;
+    P_roll_a = 1.2;
+
+    I_pitch_a = 0.8;
+    I_roll_a = 0.8;
+
+    D_pitch_a = 0.06;
+    D_roll_a = 0.06;
+
+    P_pitch_h = 4.0;
+    P_roll_h = 4.0;
+
+    P_yaw = 2.0;
+    I_yaw = 0.01;
+
+    //EEPROM_put();
+  #endif
 
 
   imu.init();
@@ -698,8 +742,6 @@ void update_horizon(uint32_t t){
   end_time = start_time + 2000;
   PORTB |= B00001111;
 
-  //p.K_D_yaw = map_d((double)receiver_input_channel_5, 975.0, 2000.0, 0.0, 0.1);
-  //p.K_P_yaw = map_d((double)receiver_input_channel_6, 975.0, 2000.0, 0.0, 1.5);
 
   //compensate for mistimings with deadband
   if (receiver_input_channel_1 > 1485 && receiver_input_channel_1 < 1515) receiver_input_channel_1 = 1500;
@@ -707,19 +749,14 @@ void update_horizon(uint32_t t){
   if (receiver_input_channel_4 > 1485 && receiver_input_channel_4 < 1515) receiver_input_channel_4 = 1500;
 
   //map inputs to angles
-  if (!disable_sticks){
-    rad_roll = map_d((double)receiver_input_channel_1,1000.0, 2000.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
-    rad_pitch = map_d((double)receiver_input_channel_2,1000.0, 2000.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
-    rad_yaw = map_d((double)receiver_input_channel_4,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
-  }else{
-    rad_roll = 0.0;
-    rad_pitch = 0.0;
-    rad_yaw = 0.0;
-  }
-  //calculate pids
+  rad_roll = map_d((double)receiver_input_channel_1,1000.0, 2000.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
+  rad_pitch = map_d((double)receiver_input_channel_2,1000.0, 2000.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
+  rad_yaw = map_d((double)receiver_input_channel_4,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
 
-  pid_pitch_stab.update(&pitch_stab, rad_pitch, imu.ypr[1], timed, 1.0);
-  pid_roll_stab.update(&roll_stab, rad_roll, imu.ypr[1], timed, 1.0);
+  //calculate pids
+                                                                          //may need to calibrate for offsets
+  pid_pitch_stab.update(&pitch_stab, rad_pitch, (imu.ypr[1]-2.5), timed, 1.0);  //(imu.ypr[1]-2.7)
+  pid_roll_stab.update(&roll_stab, rad_roll, (imu.ypr[2]-0.2), timed, 1.0);     //(imu.ypr[2]-0.3)
 
   pid_pitch_rate.update(&front, (double)pitch_stab, imu.y_gyr*RAD_TO_DEG, timed, -1.0);
   pid_roll_rate.update(&left, (double)roll_stab, imu.x_gyr*RAD_TO_DEG, timed, 1.0);
@@ -747,28 +784,23 @@ void update_acro(uint32_t t){
   end_time = start_time + 2000;
   PORTB |= B00001111;
 
-  //p.K_D_yaw = map_d((double)receiver_input_channel_5, 975.0, 2000.0, 0.0, 0.1);
-  //p.K_P_yaw = map_d((double)receiver_input_channel_6, 975.0, 2000.0, 0.0, 1.5);
-
   //compensate for mistimings with deadband
-  if (receiver_input_channel_1 > 1485 && receiver_input_channel_1 < 1515) receiver_input_channel_1 = 1500;
-  if (receiver_input_channel_2 > 1485 && receiver_input_channel_2 < 1515) receiver_input_channel_2 = 1500;
-  if (receiver_input_channel_4 > 1485 && receiver_input_channel_4 < 1515) receiver_input_channel_4 = 1500;
+  if (receiver_input_channel_1 > 1475 && receiver_input_channel_1 < 1525) receiver_input_channel_1 = 1500;
+  if (receiver_input_channel_2 > 1475 && receiver_input_channel_2 < 1525) receiver_input_channel_2 = 1500;
+  if (receiver_input_channel_4 > 1475 && receiver_input_channel_4 < 1525) receiver_input_channel_4 = 1500;
 
   //p.K_tmp = map_d((double)receiver_input_channel_6,1000.0, 2000.0, 0.0, 0.8);
 
   //map inputs to anglerates
-  if (!disable_sticks){
-    rad_roll = map_d((double)receiver_input_channel_1,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
-    rad_pitch = map_d((double)receiver_input_channel_2,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
-    rad_yaw = map_d((double)receiver_input_channel_4,1000.0, 2000.0, -REF_MAX_YAW, REF_MAX_YAW);
-  }else{
-    rad_roll = 0.0;
-    rad_pitch = 0.0;
-    rad_yaw = 0.0;
-  }
-  //calculate pids
+  rad_roll = map_x3((double)(receiver_input_channel_1-1500));
+  rad_pitch = map_x3((double)(receiver_input_channel_2-1500));
+  rad_yaw = map_d((double)receiver_input_channel_4,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
+  //rad_yaw = map_x3((double)(receiver_input_channel_4-1500));
   
+  //Serial.println(rad_roll); delay(50);
+
+
+  //calculate pids
   pid_pitch_rate.update(&front, rad_pitch, imu.y_gyr*RAD_TO_DEG, timed, -1.0);
   pid_roll_rate.update(&left, rad_roll, imu.x_gyr*RAD_TO_DEG, timed, 1.0);
   pid_yaw_rate.update(&cw, rad_yaw, -imu.z_gyr*RAD_TO_DEG, timed, -1.0);
@@ -810,26 +842,27 @@ void loop(){
     time_diff = micros() - time_last;
     time_last = micros();
 
-    rad_throttle = map(receiver_input_channel_3, 1000, 2000, 1000, 1800);
+    rad_throttle = map(receiver_input_channel_3, 1000, 2000, 1060, 1800);
 
-    //disable joysticks if low throttle
-    if (rad_throttle < 1050){
-      disable_sticks = true;
-    }else{
-      disable_sticks = false;
+    //motor arming control
+    if (receiver_input_channel_6 < 1300){
+      motors_on = false;
+    }else if (receiver_input_channel_6 > 1700){
+      motors_on = true;
     }
 
 
     //horizon stabilization or acrobatic mode
     if (receiver_input_channel_5 < 1300){
       flight_mode = MODE_HORIZON;    
-    }else if(receiver_input_channel_5 > 1600){
+    }else if(receiver_input_channel_5 > 1700){
       flight_mode = MODE_ACRO;
     }
 
     #ifdef TUNING_MODE
 
       tun = map_d((double)receiver_input_channel_6, 1000.0, 2000.0, TUNING_MIN, TUNING_MAX);
+
 
       switch (TUNING_MODE) {
           case 0:            
@@ -868,22 +901,12 @@ void loop(){
 
       }
 
+      Serial.println(tun); delay(500);
+
     #endif
-    //joystick sensitivity/mode
-   /* if (receiver_input_channel_6 < 1300){
-      exp_lin = 1; //linear
-      joy_sens = 1.0;    
-    }else if(receiver_input_channel_6 > 1600){
-      exp_lin = 0; //exponential
-      joy_sens = 4.0;
-    }*/
     
 
     if (motors_on){
-      //change on/off state
-      if (disable_sticks && receiver_input_channel_4 > 1710){
-        motors_on = false;
-      }
       //update according to set flight mode
       if(flight_mode == MODE_HORIZON){
         update_horizon(time_diff);
@@ -893,10 +916,6 @@ void loop(){
       //apply new speed to motors
       set_motor_speeds();
     }else{
-      //change on/off
-      if (disable_sticks && receiver_input_channel_4 < 1150){
-        motors_on = true;  
-      }
       //keep motors updated
       set_motor_speeds_min();
     }
