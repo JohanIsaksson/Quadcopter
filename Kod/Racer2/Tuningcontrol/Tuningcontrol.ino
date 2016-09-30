@@ -30,8 +30,9 @@ bool exp_lin;
 bool data_catch;
 uint32_t start_time;
 
+int send_pos;
 
-uint8_t buf[67];
+uint8_t buf[26];
 
 
 void setup() {
@@ -44,12 +45,13 @@ void setup() {
     
   Serial.begin(38400);
 
+
   //init as slave 15
   Wire.onReceive(get_data);
   Wire.onRequest(send_data);
   Wire.begin(15);
 
-  
+  //delay(2000);
   
   
 }
@@ -68,7 +70,7 @@ void load_data(){
   lcd.print("                ");
   lcd.setCursor(0, 1);
   lcd.print("LOADING COMPLETE");
-  delay(2000);
+  delay(1000);
   lcd.setCursor(0, 1);
   lcd.print("                ");
 }
@@ -79,78 +81,158 @@ void get_data(int n){
   int i = 0;
   while (Wire.available()) { // slave may send less than requested
     buf[i] = Wire.read(); // receive a byte
+    Serial.println(buf[i]);
     i++;
   }
+  Serial.println("------------");
+
+  uint32_t buf_tmp[6];
   
-  uint32_t data32;
-  uint16_t data16;
-  uint32_t buf_tmp[19];
+  switch(buf[0]){
+    case 1:
+      for (int i = 0; i < 6; i++){
+        buf_tmp[i] = ((uint32_t)buf[i*4 + 1] << 24) + ((uint32_t)buf[i*4 + 2] << 16) + ((uint32_t)buf[i*4 + 3] << 8) + buf[i*4 + 4];    
+      }
 
-  for (int i = 0; i < 15; i++){
-    buf_tmp[i] = (buf[i*4] << 24) + (buf[i*4 + 1] << 16) + (buf[i*4 + 2] << 8) + buf[i*4 + 3];    
+      P_pitch_a = decode_d(buf_tmp[0]);
+      I_pitch_a = decode_d(buf_tmp[1]);
+      D_pitch_a = decode_d(buf_tmp[2]);
+     
+      P_pitch_h = decode_d(buf_tmp[3]);
+      I_pitch_h = decode_d(buf_tmp[4]);
+      D_pitch_h = decode_d(buf_tmp[5]);
+
+    break;
+
+
+    case 2:
+      for (int i = 0; i < 6; i++){
+        buf_tmp[i] = ((uint32_t)buf[i*4 + 1] << 24) + ((uint32_t)buf[i*4 + 2] << 16) + ((uint32_t)buf[i*4 + 3] << 8) + buf[i*4 + 4];    
+      }
+
+      P_roll_a = decode_d(buf_tmp[0]);
+      I_roll_a = decode_d(buf_tmp[1]);
+      D_roll_a = decode_d(buf_tmp[2]);
+     
+      P_roll_h = decode_d(buf_tmp[3]);
+      I_roll_h = decode_d(buf_tmp[4]);
+      D_roll_h = decode_d(buf_tmp[5]);
+
+    break;
+
+
+    case 3:
+      for (int i = 0; i < 3; i++){
+        buf_tmp[i] = ((uint32_t)buf[i*4 + 1] << 24) + ((uint32_t)buf[i*4 + 2] << 16) + ((uint32_t)buf[i*4 + 3] << 8) + buf[i*4 + 4];    
+      }
+
+      P_yaw = decode_d(buf_tmp[0]);
+      I_yaw = decode_d(buf_tmp[1]);
+      D_yaw = decode_d(buf_tmp[2]);
+
+      max_pitch = ((uint16_t)buf[13] << 8) + (uint16_t)buf[14];
+      max_roll = ((uint16_t)buf[15] << 8) + (uint16_t)buf[16];
+      max_yaw = ((uint16_t)buf[17] << 8) + (uint16_t)buf[18];
+
+      exp_lin = buf[19];
+
+    break;
   }
-
-  for (int i = 0; i < 4; i++){
-    buf_tmp[15+i] = (buf[60 + i*2] << 8) + buf[60 + i*2 + 1];
-  }
-
-   exp_lin = buf[66];
-
-   P_pitch_a = decode_d(buf_tmp[0]);
-   I_pitch_a = decode_d(buf_tmp[1]);
-   D_pitch_a = decode_d(buf_tmp[2]);
-   
-   P_pitch_h = decode_d(buf_tmp[3]);
-   I_pitch_h = decode_d(buf_tmp[4]);
-   D_pitch_h = decode_d(buf_tmp[5]);
-   
-   P_roll_a = decode_d(buf_tmp[6]);
-   I_roll_a = decode_d(buf_tmp[7]);
-   D_roll_a = decode_d(buf_tmp[8]);
-   
-   P_roll_h = decode_d(buf_tmp[9]);
-   I_roll_h = decode_d(buf_tmp[10]);
-   D_roll_h = decode_d(buf_tmp[11]);
-   
-   P_yaw = decode_d(buf_tmp[12]);
-   I_yaw = decode_d(buf_tmp[13]);
-   D_yaw = decode_d(buf_tmp[14]);
-   
-   max_pitch = buf_tmp[15];
-   max_roll = buf_tmp[16];
-   max_yaw = buf_tmp[17];
 
    start_time = millis();
   
+}
+
+void insert_32(uint32_t data, int pos){
+  buf[pos] = (data >> 24) & 0x000000FF;
+  buf[pos+1] = (data >> 16) & 0x000000FF;
+  buf[pos+2] = (data >> 8) & 0x000000FF;
+  buf[pos+3] = data & 0x000000FF;
+}
+
+void insert_16(uint16_t data, int pos){
+  buf[pos] = (data >> 8) & 0x000000FF;
+  buf[pos+1] = data & 0x000000FF;
 }
 
 void send_data(){
 
   // Transfering order:
   //  [P_pitch_a, I_pitch_a, D_pitch_a, P_pitch_h, I_pitch_h, D_pitch_h, P_roll_a, I_roll_a, D_roll_a, P_roll_h, I_roll_h, D_roll_h, P_yaw, I_yaw, D_yaw, max_pitch, max_roll, max_yaw, exp_lin];
+  int pos = 0; 
+  //send first part
+  if (send_pos == 0){
+    buf[0] = 1;
 
-  
-  uint32_t data32;
-  uint16_t data16;
-  double buf_tmp[19] = {P_pitch_a, I_pitch_a, D_pitch_a, P_pitch_h, I_pitch_h, D_pitch_h, P_roll_a, I_roll_a, D_roll_a, P_roll_h, I_roll_h, D_roll_h, P_yaw, I_yaw, D_yaw};
-  uint16_t buf_tmp2[4] = {max_pitch, max_roll, max_yaw, exp_lin};
+    int pos = 1;
 
-  for (int i = 0; i < 15; i++){
-    data32 = encode_d(buf_tmp[i]);
-    for (int j = 3; j >=0; j--){
-      buf[i*4+(3-j)] = (data32 >> (8*j)) & 0x000000FF;
-    }
+    insert_32(encode_d(P_pitch_a), pos);
+    pos+=4;
+    insert_32(encode_d(I_pitch_a), pos); 
+    pos+=4;
+    insert_32(encode_d(D_pitch_a), pos);
+    pos+=4;
+    insert_32(encode_d(P_pitch_h), pos); 
+    pos+=4;
+    insert_32(encode_d(I_pitch_h), pos); 
+    pos+=4;
+    insert_32(encode_d(D_pitch_h), pos); 
+
+    Wire.write(buf, 25);
+
+  }
+  else if (send_pos == 1){
+
+    //send second part
+
+    buf[0] = 2;
+
+    pos = 1;
+
+    insert_32(encode_d(P_roll_a), pos); 
+    pos+=4;
+    insert_32(encode_d(I_roll_a), pos); 
+    pos+=4;
+    insert_32(encode_d(D_roll_a), pos); 
+    pos+=4;
+    insert_32(encode_d(P_roll_h), pos); 
+    pos+=4;
+    insert_32(encode_d(I_roll_h), pos); 
+    pos+=4;
+    insert_32(encode_d(D_roll_h), pos); 
+
+    Wire.write(buf, 25);
+
+  }
+  else if (send_pos == 2){
+    // send third part
+
+    buf[0] = 3;
+
+    pos = 1;
+
+    insert_32(encode_d(P_yaw), pos); 
+    pos+=4;
+    insert_32(encode_d(I_yaw), pos); 
+    pos+=4;
+    insert_32(encode_d(D_yaw), pos);
+    pos+=4;
+
+    insert_16(max_pitch, pos);
+    pos+=2;
+    insert_16(max_roll, pos);
+    pos+=2;
+    insert_16(max_yaw, pos);
+    pos+=2;
+
+    buf[19] = exp_lin;
+
+    Wire.write(buf, 20);
+
   }
 
-  for (int i = 0; i < 4; i++){
-    buf[60 + i*2] = buf_tmp2[i] >> 8;
-    buf[60 + i*2 + 1] = buf_tmp[i];
-  }
 
-  buf[66] = exp_lin;
-
-  
-  Wire.write(buf, 67);
+  send_pos = (send_pos + 1) % 3;
 }
 
 

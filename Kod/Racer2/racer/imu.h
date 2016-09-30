@@ -145,13 +145,13 @@ public:
 	double x_gyr, y_gyr, z_gyr;
 
 	/* Initializes the gyro and sets parameters */
-	void imu_init();
+	void init();
 
 	/* Reads raw data from sensors and perform complementary filtering */
-	void imu_update_horizon(double tim);
+	void update_horizon(double tim);
 
 	/* only reads mpu6050 for gyroscope */
-	void imu_update_acro(double tim);
+	void update_acro(double tim);
 
 };
 

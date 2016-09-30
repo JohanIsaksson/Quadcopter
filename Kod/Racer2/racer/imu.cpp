@@ -15,13 +15,13 @@ void IMU::MPU6050_init(){
 
 
   //set offsets (on chip 1)
-  I2Cdev::writeWord(MPU6050_ADDR, 0x06, 308); //x acc
-  I2Cdev::writeWord(MPU6050_ADDR, 0x08, 2564); //y acc
-  I2Cdev::writeWord(MPU6050_ADDR, 0x0A, 1469); //z acc
+  I2Cdev::writeWord(MPU6050_ADDR, 0x06, 951); //x acc
+  I2Cdev::writeWord(MPU6050_ADDR, 0x08, -938); //y acc
+  I2Cdev::writeWord(MPU6050_ADDR, 0x0A, 1639); //z acc
 
-  I2Cdev::writeWord(MPU6050_ADDR, 0x13, 29);// 98); //x gyro
-  I2Cdev::writeWord(MPU6050_ADDR, 0x15, -13);// 32); //y gyro
-  I2Cdev::writeWord(MPU6050_ADDR, 0x17, -19);// 18); //z gyro
+  I2Cdev::writeWord(MPU6050_ADDR, 0x13, 83);// 98); //x gyro
+  I2Cdev::writeWord(MPU6050_ADDR, 0x15, 36);// 32); //y gyro
+  I2Cdev::writeWord(MPU6050_ADDR, 0x17, -32);// 18); //z gyro
 }
 
 void IMU::MPU6050_read(){
@@ -87,12 +87,21 @@ void IMU::complementary_filter(double tim){
   ays = (double)ay * ACC_SCALE_Y;
   azs = (double)az * ACC_SCALE_Z;
 
-
   x_acc = atan(axs/sqrt(ays*ays + azs*azs));
-  y_gyr = ((double)(gy)) * GYRO_SCALE_Y;
+  //y_gyr = ((double)(gy)) * GYRO_SCALE_Y;
 
   y_acc = atan(ays/sqrt(axs*axs + azs*azs));
-  x_gyr = ((double)(gx)) * GYRO_SCALE_X;
+  //x_gyr = ((double)(gx)) * GYRO_SCALE_X;
+  
+
+  ///* scale angular velocity */
+  y_gyr = y_gyr*0.8 + (((double)(gy)) * GYRO_SCALE_Y)*0.2;
+  x_gyr = x_gyr*0.8 + (((double)(gx)) * GYRO_SCALE_X)*0.2;
+  z_gyr = z_gyr*0.8 + (((double)(gz)) * GYRO_SCALE_Z)*0.2;
+
+
+  
+
 
 
   ypr_rad[PITCH] = -(P1*(-ypr_rad[PITCH] - y_gyr*tim*GYRO_GAIN_PITCH) + (1.0-P1)*x_acc);
@@ -127,7 +136,7 @@ void IMU::tilt_compensation(){
 
 
 /* Initializes the imu and sets parameters */
-void IMU::imu_init(){
+void IMU::init(){
   // join I2C bus (I2Cdev library doesn't do this automatically)
   #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
       Wire.begin();
@@ -160,13 +169,10 @@ void IMU::imu_init(){
     ypr[i] =  0.0;
   }
 
-  height = 0.0;
-  vertical_speed = 0.0;
-  vertical_acc = 0.0;
 }
 
 /* Reads raw data from sensors and calculates yaw, pitch and roll */
-void IMU::imu_update_horizon(double tim){
+void IMU::update_horizon(double tim){
 
 	// read raw accel/gyro measurements from device
   MPU6050_read();
@@ -188,7 +194,7 @@ void IMU::imu_update_horizon(double tim){
 }
 
 //only reads mpu6050 for gyro
-void IMU::imu_update_acro(double tim){
+void IMU::update_acro(double tim){
 
   // read raw accel/gyro measurements from device
   MPU6050_read();

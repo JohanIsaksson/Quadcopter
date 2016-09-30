@@ -18,7 +18,11 @@ void Pid::set_constants(double KP_, double KI_, double KD_, double INT_MAX_){
 void Pid::update(int* out, double ref, double mea, double dt, double scale){
 	error = ref - mea;
 
-	integral += error*dt;
+	//TODO:
+	//	windup handling - done
+	//	D filtering
+
+	if (error < 20.0) integral += error*dt;
 
 	p = KP * error;
 	i = KI * integral;
