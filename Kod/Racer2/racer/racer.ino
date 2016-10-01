@@ -643,8 +643,8 @@ void setup(){
     EEPROM_get();
     /*Serial.print(P_pitch_a); Serial.print("\t"); Serial.print(I_pitch_a); Serial.print("\t"); Serial.println(D_pitch_a);
     Serial.print(P_yaw); Serial.print("\t"); Serial.print(I_yaw); Serial.print("\t"); Serial.println(D_yaw);
-    Serial.print(P_pitch_h); Serial.print("\t"); Serial.print(I_pitch_h); Serial.print("\t"); Serial.println(D_pitch_h);*/
-    Serial.println("Retrieved PID parameters.");
+    Serial.print(P_pitch_h); Serial.print("\t"); Serial.print(I_pitch_h); Serial.print("\t"); Serial.println(D_pitch_h);
+    Serial.println("Retrieved PID parameters.");*/
   #else
     /*EEPROM_get();
     Serial.print(P_pitch_a); Serial.print("\t"); Serial.print(I_pitch_a); Serial.print("\t"); Serial.println(D_pitch_a);
@@ -751,7 +751,7 @@ void update_horizon(uint32_t t){
   //map inputs to angles
   rad_roll = map_d((double)receiver_input_channel_1,1000.0, 2000.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
   rad_pitch = map_d((double)receiver_input_channel_2,1000.0, 2000.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
-  rad_yaw = map_d((double)receiver_input_channel_4,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
+  rad_yaw = map_d((double)receiver_input_channel_4,1000.0, 2000.0, -REF_MAX_YAW, REF_MAX_YAW);
 
   //calculate pids
                                                                           //may need to calibrate for offsets
@@ -792,10 +792,13 @@ void update_acro(uint32_t t){
   //p.K_tmp = map_d((double)receiver_input_channel_6,1000.0, 2000.0, 0.0, 0.8);
 
   //map inputs to anglerates
-  rad_roll = map_x3((double)(receiver_input_channel_1-1500));
-  rad_pitch = map_x3((double)(receiver_input_channel_2-1500));
-  rad_yaw = map_d((double)receiver_input_channel_4,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
+  //rad_roll = map_x3((double)(receiver_input_channel_1-1500));
+  //rad_pitch = map_x3((double)(receiver_input_channel_2-1500));
   //rad_yaw = map_x3((double)(receiver_input_channel_4-1500));
+
+  rad_roll = map_d((double)receiver_input_channel_1,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
+  rad_pitch = map_d((double)receiver_input_channel_2,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
+  rad_yaw = map_d((double)receiver_input_channel_4,1000.0, 2000.0, -REF_MAX_YAW, REF_MAX_YAW);
   
   //Serial.println(rad_roll); delay(50);
 
