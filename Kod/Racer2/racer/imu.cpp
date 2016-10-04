@@ -15,12 +15,12 @@ void IMU::MPU6050_init(){
 
 
   //set offsets (on chip 1)
-  I2Cdev::writeWord(MPU6050_ADDR, 0x06, 951); //x acc
-  I2Cdev::writeWord(MPU6050_ADDR, 0x08, -938); //y acc
-  I2Cdev::writeWord(MPU6050_ADDR, 0x0A, 1639); //z acc
+  I2Cdev::writeWord(MPU6050_ADDR, 0x06, 1085); //x acc
+  I2Cdev::writeWord(MPU6050_ADDR, 0x08, -1008); //y acc
+  I2Cdev::writeWord(MPU6050_ADDR, 0x0A, 1659); //z acc
 
-  I2Cdev::writeWord(MPU6050_ADDR, 0x13, 83);// 98); //x gyro
-  I2Cdev::writeWord(MPU6050_ADDR, 0x15, 36);// 32); //y gyro
+  I2Cdev::writeWord(MPU6050_ADDR, 0x13, 86);// 98); //x gyro
+  I2Cdev::writeWord(MPU6050_ADDR, 0x15, 39);// 32); //y gyro
   I2Cdev::writeWord(MPU6050_ADDR, 0x17, -32);// 18); //z gyro
 }
 
@@ -63,17 +63,17 @@ void IMU::complementary_filter(double tim){
   ax_sum -= ax_buf[lp_pos];
   ax_buf[lp_pos] = ax;
   ax_sum += ax;
-  ax = ax_sum/LP_BUFFER_SIZE;
+  ax = ax_sum >> LP_SHIFT;
 
   ay_sum -= ay_buf[lp_pos];
   ay_buf[lp_pos] = ay;
   ay_sum += ay;
-  ay = ay_sum/LP_BUFFER_SIZE;
+  ay = ay_sum >> LP_SHIFT;
 
   az_sum -= az_buf[lp_pos];
   az_buf[lp_pos] = az;
   az_sum += az;
-  az = az_sum/LP_BUFFER_SIZE;
+  az = az_sum >> LP_SHIFT;
 
   if (lp_pos < LP_BUFFER_SIZE-1){
     lp_pos++;
