@@ -1514,6 +1514,7 @@ Source: http://download.siliconexpert.com/pdfs/2005/02/24/Semi_Ap/2/VSH/Resistor
 <segment>
 <pinref part="U$9" gate="G$1" pin="A"/>
 <wire x1="-12.7" y1="73.66" x2="-12.7" y2="81.28" width="0.1524" layer="91"/>
+<pinref part="U$3" gate="G$1" pin="VCC"/>
 </segment>
 </net>
 </nets>

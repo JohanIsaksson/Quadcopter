@@ -6,7 +6,7 @@
 <setting alwaysvectorfont="no"/>
 <setting verticaltext="up"/>
 </settings>
-<grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.01" altunitdist="inch" altunit="inch"/>
+<grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="yes" altdistance="0.01" altunitdist="inch" altunit="inch"/>
 <layers>
 <layer number="1" name="Top" color="4" fill="1" visible="no" active="no"/>
 <layer number="16" name="Bottom" color="1" fill="1" visible="no" active="no"/>
@@ -961,6 +961,40 @@ Source: http://download.siliconexpert.com/pdfs/2005/02/24/Semi_Ap/2/VSH/Resistor
 <pad name="A" x="0" y="6.35" drill="0.8" diameter="1.778"/>
 <wire x1="0" y1="6.35" x2="0" y2="-6.35" width="0.127" layer="21"/>
 </package>
+<package name="ATMEGA328P">
+<wire x1="-5.08" y1="17.78" x2="-5.08" y2="-17.78" width="0.127" layer="21"/>
+<pad name="PD7" x="-3.81" y="-13.97" drill="0.8" diameter="1.9304"/>
+<pad name="PD6" x="-3.81" y="-11.43" drill="0.8" diameter="1.9304"/>
+<pad name="PD5" x="-3.81" y="-8.89" drill="0.8" diameter="1.9304"/>
+<pad name="PB7" x="-3.81" y="-6.35" drill="0.8" diameter="1.9304"/>
+<pad name="PB6" x="-3.81" y="-3.81" drill="0.8" diameter="1.9304"/>
+<pad name="GND" x="-3.81" y="-1.27" drill="0.8" diameter="1.9304"/>
+<pad name="VCC" x="-3.81" y="1.27" drill="0.8" diameter="1.9304"/>
+<pad name="PD4" x="-3.81" y="3.81" drill="0.8" diameter="1.9304"/>
+<pad name="PD3" x="-3.81" y="6.35" drill="0.8" diameter="1.9304"/>
+<pad name="PD2" x="-3.81" y="8.89" drill="0.8" diameter="1.9304"/>
+<pad name="PD1" x="-3.81" y="11.43" drill="0.8" diameter="1.9304"/>
+<pad name="PB0" x="-3.81" y="-16.51" drill="0.8" diameter="1.9304"/>
+<pad name="PD0" x="-3.81" y="13.97" drill="0.8" diameter="1.9304"/>
+<pad name="PC6" x="-3.81" y="16.51" drill="0.8" diameter="1.9304"/>
+<wire x1="5.08" y1="-17.78" x2="5.08" y2="17.78" width="0.127" layer="21"/>
+<pad name="PB1" x="3.81" y="-16.51" drill="0.8" diameter="1.9304"/>
+<pad name="PB2" x="3.81" y="-13.97" drill="0.8" diameter="1.9304"/>
+<pad name="PB3" x="3.81" y="-11.43" drill="0.8" diameter="1.9304"/>
+<pad name="PB4" x="3.81" y="-8.89" drill="0.8" diameter="1.9304"/>
+<pad name="PB5" x="3.81" y="-6.35" drill="0.8" diameter="1.9304"/>
+<pad name="AVCC" x="3.81" y="-3.81" drill="0.8" diameter="1.9304"/>
+<pad name="AREF" x="3.81" y="-1.27" drill="0.8" diameter="1.9304"/>
+<pad name="GND2" x="3.81" y="1.27" drill="0.8" diameter="1.9304"/>
+<pad name="PC0" x="3.81" y="3.81" drill="0.8" diameter="1.9304"/>
+<pad name="PC1" x="3.81" y="6.35" drill="0.8" diameter="1.9304"/>
+<pad name="PC2" x="3.81" y="8.89" drill="0.8" diameter="1.9304"/>
+<pad name="PC3" x="3.81" y="11.43" drill="0.8" diameter="1.9304"/>
+<pad name="PC5" x="3.81" y="16.51" drill="0.8" diameter="1.9304"/>
+<pad name="PC4" x="3.81" y="13.97" drill="0.8" diameter="1.9304"/>
+<wire x1="-5.08" y1="17.78" x2="5.08" y2="17.78" width="0.127" layer="21"/>
+<wire x1="-5.08" y1="-17.78" x2="5.08" y2="-17.78" width="0.127" layer="21"/>
+</package>
 </packages>
 <symbols>
 <symbol name="FS_RADIO">
@@ -1072,6 +1106,43 @@ Source: http://download.siliconexpert.com/pdfs/2005/02/24/Semi_Ap/2/VSH/Resistor
 <wire x1="2.54" y1="-2.54" x2="5.08" y2="-2.54" width="0.254" layer="94"/>
 <wire x1="-2.54" y1="2.54" x2="0" y2="2.54" width="0.254" layer="94"/>
 <wire x1="0" y1="2.54" x2="2.54" y2="2.54" width="0.254" layer="94"/>
+</symbol>
+<symbol name="ATMEGA328P">
+<wire x1="-7.62" y1="27.94" x2="-7.62" y2="-15.24" width="0.254" layer="94"/>
+<wire x1="7.62" y1="-15.24" x2="7.62" y2="27.94" width="0.254" layer="94"/>
+<wire x1="-2.54" y1="27.94" x2="2.54" y2="27.94" width="0.254" layer="94" curve="180"/>
+<pin name="PC6" x="-12.7" y="22.86" length="middle"/>
+<pin name="PD0" x="-12.7" y="20.32" length="middle"/>
+<pin name="PD1" x="-12.7" y="17.78" length="middle"/>
+<pin name="PD2" x="-12.7" y="15.24" length="middle"/>
+<pin name="PD3" x="-12.7" y="12.7" length="middle"/>
+<pin name="PD4" x="-12.7" y="10.16" length="middle"/>
+<pin name="VCC" x="-12.7" y="7.62" length="middle"/>
+<pin name="GND" x="-12.7" y="5.08" length="middle"/>
+<pin name="PB6" x="-12.7" y="2.54" length="middle"/>
+<pin name="PB7" x="-12.7" y="0" length="middle"/>
+<pin name="PD5" x="-12.7" y="-2.54" length="middle"/>
+<pin name="PD6" x="-12.7" y="-5.08" length="middle"/>
+<pin name="PD7" x="-12.7" y="-7.62" length="middle"/>
+<pin name="PB0" x="-12.7" y="-10.16" length="middle"/>
+<pin name="PB1" x="12.7" y="-10.16" length="middle" rot="R180"/>
+<pin name="PB2" x="12.7" y="-7.62" length="middle" rot="R180"/>
+<pin name="PB3" x="12.7" y="-5.08" length="middle" rot="R180"/>
+<pin name="PB4" x="12.7" y="-2.54" length="middle" rot="R180"/>
+<pin name="PB5" x="12.7" y="0" length="middle" rot="R180"/>
+<pin name="AVCC" x="12.7" y="2.54" length="middle" rot="R180"/>
+<pin name="AREF" x="12.7" y="5.08" length="middle" rot="R180"/>
+<pin name="GND2" x="12.7" y="7.62" length="middle" rot="R180"/>
+<pin name="PC0" x="12.7" y="10.16" length="middle" rot="R180"/>
+<pin name="PC1" x="12.7" y="12.7" length="middle" rot="R180"/>
+<pin name="PC2" x="12.7" y="15.24" length="middle" rot="R180"/>
+<pin name="PC3" x="12.7" y="17.78" length="middle" rot="R180"/>
+<pin name="PC4" x="12.7" y="20.32" length="middle" rot="R180"/>
+<pin name="PC5" x="12.7" y="22.86" length="middle" rot="R180"/>
+<wire x1="-7.62" y1="-15.24" x2="7.62" y2="-15.24" width="0.254" layer="94"/>
+<wire x1="7.62" y1="27.94" x2="2.54" y2="27.94" width="0.254" layer="94"/>
+<wire x1="2.54" y1="27.94" x2="-2.54" y2="27.94" width="0.254" layer="94"/>
+<wire x1="-2.54" y1="27.94" x2="-7.62" y2="27.94" width="0.254" layer="94"/>
 </symbol>
 </symbols>
 <devicesets>
@@ -1220,6 +1291,48 @@ Source: http://download.siliconexpert.com/pdfs/2005/02/24/Semi_Ap/2/VSH/Resistor
 </device>
 </devices>
 </deviceset>
+<deviceset name="ATMEGA328P">
+<gates>
+<gate name="G$1" symbol="ATMEGA328P" x="0" y="-7.62"/>
+</gates>
+<devices>
+<device name="" package="ATMEGA328P">
+<connects>
+<connect gate="G$1" pin="AREF" pad="AREF"/>
+<connect gate="G$1" pin="AVCC" pad="AVCC"/>
+<connect gate="G$1" pin="GND" pad="GND"/>
+<connect gate="G$1" pin="GND2" pad="GND2"/>
+<connect gate="G$1" pin="PB0" pad="PB0"/>
+<connect gate="G$1" pin="PB1" pad="PB1"/>
+<connect gate="G$1" pin="PB2" pad="PB2"/>
+<connect gate="G$1" pin="PB3" pad="PB3"/>
+<connect gate="G$1" pin="PB4" pad="PB4"/>
+<connect gate="G$1" pin="PB5" pad="PB5"/>
+<connect gate="G$1" pin="PB6" pad="PB6"/>
+<connect gate="G$1" pin="PB7" pad="PB7"/>
+<connect gate="G$1" pin="PC0" pad="PC0"/>
+<connect gate="G$1" pin="PC1" pad="PC1"/>
+<connect gate="G$1" pin="PC2" pad="PC2"/>
+<connect gate="G$1" pin="PC3" pad="PC3"/>
+<connect gate="G$1" pin="PC4" pad="PC4"/>
+<connect gate="G$1" pin="PC5" pad="PC5"/>
+<connect gate="G$1" pin="PC6" pad="PC6"/>
+<connect gate="G$1" pin="PD0" pad="PD0"/>
+<connect gate="G$1" pin="PD1" pad="PD1"/>
+<connect gate="G$1" pin="PD2" pad="PD2"/>
+<connect gate="G$1" pin="PD3" pad="PD3"/>
+<connect gate="G$1" pin="PD4" pad="PD4"/>
+<connect gate="G$1" pin="PD5" pad="PD5"/>
+<connect gate="G$1" pin="PD6" pad="PD6"/>
+<connect gate="G$1" pin="PD7" pad="PD7"/>
+<connect gate="G$1" pin="VCC" pad="VCC"/>
+</connects>
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
 </devicesets>
 </library>
 </libraries>
@@ -1245,10 +1358,13 @@ Source: http://download.siliconexpert.com/pdfs/2005/02/24/Semi_Ap/2/VSH/Resistor
 <part name="U$8" library="quadcopter_comp" deviceset="BRIDGE" device=""/>
 <part name="U$9" library="quadcopter_comp" deviceset="BRIDGE" device=""/>
 <part name="U$10" library="quadcopter_comp" deviceset="BRIDGE" device=""/>
+<part name="U$11" library="quadcopter_comp" deviceset="ATMEGA328P" device=""/>
+<part name="PULLUP1" library="eagle-ltspice" deviceset="R" device="0204/7"/>
 </parts>
 <sheets>
 <sheet>
 <plain>
+<text x="-119.38" y="15.24" size="1.778" layer="91">vdd</text>
 </plain>
 <instances>
 <instance part="TUNING_CONNECTOR" gate="G$1" x="-68.58" y="55.88"/>
@@ -1264,6 +1380,8 @@ Source: http://download.siliconexpert.com/pdfs/2005/02/24/Semi_Ap/2/VSH/Resistor
 <instance part="U$8" gate="G$1" x="-2.54" y="30.48" rot="MR0"/>
 <instance part="U$9" gate="G$1" x="-2.54" y="81.28"/>
 <instance part="U$10" gate="G$1" x="109.22" y="63.5" rot="R90"/>
+<instance part="U$11" gate="G$1" x="-83.82" y="-7.62"/>
+<instance part="PULLUP1" gate="G$1" x="-109.22" y="15.24"/>
 </instances>
 <busses>
 </busses>
@@ -1526,6 +1644,13 @@ Source: http://download.siliconexpert.com/pdfs/2005/02/24/Semi_Ap/2/VSH/Resistor
 <wire x1="116.84" y1="50.8" x2="109.22" y2="50.8" width="0.1524" layer="91"/>
 <wire x1="109.22" y1="50.8" x2="109.22" y2="53.34" width="0.1524" layer="91"/>
 <wire x1="109.22" y1="53.34" x2="109.22" y2="55.88" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$20" class="0">
+<segment>
+<pinref part="PULLUP1" gate="G$1" pin="2"/>
+<pinref part="U$11" gate="G$1" pin="PC6"/>
+<wire x1="-104.14" y1="15.24" x2="-96.52" y2="15.24" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>

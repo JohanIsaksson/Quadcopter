@@ -1261,7 +1261,7 @@ Source: http://download.siliconexpert.com/pdfs/2005/02/24/Semi_Ap/2/VSH/Resistor
 <instance part="U$6" gate="G$1" x="45.72" y="7.62" rot="R270"/>
 <instance part="U$7" gate="G$1" x="76.2" y="30.48" rot="R270"/>
 <instance part="U$8" gate="G$1" x="-2.54" y="30.48" rot="MR0"/>
-<instance part="U$9" gate="G$1" x="-43.18" y="71.12" rot="R90"/>
+<instance part="U$9" gate="G$1" x="-2.54" y="81.28"/>
 </instances>
 <busses>
 </busses>
@@ -1272,10 +1272,10 @@ Source: http://download.siliconexpert.com/pdfs/2005/02/24/Semi_Ap/2/VSH/Resistor
 <wire x1="111.76" y1="58.42" x2="111.76" y2="50.8" width="0.1524" layer="91"/>
 <wire x1="111.76" y1="50.8" x2="116.84" y2="50.8" width="0.1524" layer="91"/>
 <wire x1="-22.86" y1="50.8" x2="-22.86" y2="60.96" width="0.1524" layer="91"/>
-<wire x1="-22.86" y1="60.96" x2="-22.86" y2="73.66" width="0.1524" layer="91"/>
-<wire x1="-22.86" y1="73.66" x2="-22.86" y2="93.98" width="0.1524" layer="91"/>
-<wire x1="-22.86" y1="93.98" x2="111.76" y2="93.98" width="0.1524" layer="91"/>
+<wire x1="-22.86" y1="60.96" x2="-22.86" y2="93.98" width="0.1524" layer="91"/>
+<wire x1="-22.86" y1="93.98" x2="7.62" y2="93.98" width="0.1524" layer="91"/>
 <pinref part="PULLUP" gate="G$1" pin="2"/>
+<wire x1="7.62" y1="93.98" x2="111.76" y2="93.98" width="0.1524" layer="91"/>
 <wire x1="-27.94" y1="50.8" x2="-22.86" y2="50.8" width="0.1524" layer="91"/>
 <pinref part="TUNING_CONNECTOR" gate="G$1" pin="5"/>
 <wire x1="-60.96" y1="60.96" x2="-22.86" y2="60.96" width="0.1524" layer="91"/>
@@ -1289,10 +1289,10 @@ Source: http://download.siliconexpert.com/pdfs/2005/02/24/Semi_Ap/2/VSH/Resistor
 <wire x1="-111.76" y1="35.56" x2="-88.9" y2="35.56" width="0.1524" layer="91"/>
 <pinref part="U$1" gate="G$1" pin="5V"/>
 <wire x1="63.5" y1="58.42" x2="111.76" y2="58.42" width="0.1524" layer="91"/>
-<pinref part="U$3" gate="G$1" pin="VCC"/>
-<wire x1="-12.7" y1="73.66" x2="-22.86" y2="73.66" width="0.1524" layer="91"/>
-<junction x="-22.86" y="73.66"/>
 <junction x="111.76" y="58.42"/>
+<pinref part="U$9" gate="G$1" pin="B"/>
+<wire x1="7.62" y1="81.28" x2="7.62" y2="93.98" width="0.1524" layer="91"/>
+<junction x="7.62" y="93.98"/>
 </segment>
 </net>
 <net name="GND2" class="0">
@@ -1508,6 +1508,12 @@ Source: http://download.siliconexpert.com/pdfs/2005/02/24/Semi_Ap/2/VSH/Resistor
 <pinref part="U$8" gate="G$1" pin="A"/>
 <pinref part="U$1" gate="G$1" pin="D12"/>
 <wire x1="7.62" y1="30.48" x2="33.02" y2="30.48" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$15" class="0">
+<segment>
+<pinref part="U$9" gate="G$1" pin="A"/>
+<wire x1="-12.7" y1="73.66" x2="-12.7" y2="81.28" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>

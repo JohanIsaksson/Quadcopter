@@ -1297,7 +1297,7 @@ Source: http://download.siliconexpert.com/pdfs/2005/02/24/Semi_Ap/2/VSH/Resistor
 <junction x="99.06" y="73.66"/>
 </segment>
 </net>
-<net name="GND2" class="0">
+<net name="GND" class="0">
 <segment>
 <pinref part="TUNING_CONNECTOR" gate="G$1" pin="4"/>
 <wire x1="-60.96" y1="58.42" x2="-58.42" y2="58.42" width="0.1524" layer="91"/>
