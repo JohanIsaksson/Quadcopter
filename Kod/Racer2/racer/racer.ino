@@ -17,6 +17,7 @@
 #define PARAM_ADDR 0
 
 #define LOST_CONNECTION_COUNT 100
+#define LOST_CONNECTION_COUNT2 12000
 #define EMERGENCY_THROTTLE 0
 
 #define MODE_HORIZON 0
@@ -164,6 +165,14 @@ void init_motors(){
   }
 }
 
+//limit x to [a,b]
+uint16_t limit(uint16_t x, uint16_t a, uint16_t b){
+  uint16_t r;
+  if (x < a) r = a;
+  else if (x > b) r = b;
+  return r;
+}
+
 void set_motor_speeds(){
   //front left
   throttle[0] = rad_throttle + front + left + cw; //+ CALIBRATION_COMP;
@@ -178,27 +187,21 @@ void set_motor_speeds(){
   throttle[3] = rad_throttle - front - left + cw; //- CALIBRATION_COMP;
 
   //check and set speeds
-  if (radio_off_counter >= LOST_CONNECTION_COUNT){
-    for (int i = 0; i < 4; i++){
-      throttle[i] = SPEED_MIN;
-    }
-  }else{
-    for (int i = 0; i < 4; i++){
-      if (throttle[i] > SPEED_MAX){
-        throttle[i] = SPEED_MAX;
-      }else if (throttle[i] < SPEED_MIN){
-        throttle[i] = SPEED_MIN;
-      }        
-    }
-  } 
+  throttle[0] = limit(throttle[0], SPEED_MIN, SPEED_MAX);
+  throttle[1] = limit(throttle[1], SPEED_MIN, SPEED_MAX);
+  throttle[2] = limit(throttle[2], SPEED_MIN, SPEED_MAX);
+  throttle[3] = limit(throttle[3], SPEED_MIN, SPEED_MAX);
+    
+ 
 
+  //Serial.println(micros() - time_last);
   esc_time = micros();
 
-  while(end_time > esc_time){                         //Start the pulse after 1250 micro seconds.
+  while(end_time > esc_time){
     if (esc_time - start_time >= throttle[0]) PORTB &= B11111110; //front left
-    if (esc_time - start_time >= throttle[1]) PORTB &= B11111101; //front left
-    if (esc_time - start_time >= throttle[2]) PORTB &= B11111011; //front left
-    if (esc_time - start_time >= throttle[3]) PORTB &= B11110111; //front left
+    if (esc_time - start_time >= throttle[1]) PORTB &= B11111101; //front right
+    if (esc_time - start_time >= throttle[2]) PORTB &= B11111011; //back left
+    if (esc_time - start_time >= throttle[3]) PORTB &= B11110111; //back right
     esc_time = micros();
   }
   PORTB &= B11110000; //turn all pulses off for safety
@@ -643,8 +646,8 @@ void setup(){
     EEPROM_get();
     /*Serial.print(P_pitch_a); Serial.print("\t"); Serial.print(I_pitch_a); Serial.print("\t"); Serial.println(D_pitch_a);
     Serial.print(P_yaw); Serial.print("\t"); Serial.print(I_yaw); Serial.print("\t"); Serial.println(D_yaw);
-    Serial.print(P_pitch_h); Serial.print("\t"); Serial.print(I_pitch_h); Serial.print("\t"); Serial.println(D_pitch_h);*/
-    Serial.println("Retrieved PID parameters.");
+    Serial.print(P_pitch_h); Serial.print("\t"); Serial.print(I_pitch_h); Serial.print("\t"); Serial.println(D_pitch_h);
+    Serial.println("Retrieved PID parameters.");*/
   #else
     /*EEPROM_get();
     Serial.print(P_pitch_a); Serial.print("\t"); Serial.print(I_pitch_a); Serial.print("\t"); Serial.println(D_pitch_a);
@@ -675,9 +678,10 @@ void setup(){
     P_roll_h = 4.0;
 
     P_yaw = 2.0;
-    I_yaw = 0.01;
+    I_yaw = 0.8;
 
-    //EEPROM_put();
+    //
+    EEPROM_put();
   #endif
 
 
@@ -751,12 +755,12 @@ void update_horizon(uint32_t t){
   //map inputs to angles
   rad_roll = map_d((double)receiver_input_channel_1,1000.0, 2000.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
   rad_pitch = map_d((double)receiver_input_channel_2,1000.0, 2000.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
-  rad_yaw = map_d((double)receiver_input_channel_4,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
+  rad_yaw = map_d((double)receiver_input_channel_4,1000.0, 2000.0, -REF_MAX_YAW, REF_MAX_YAW);
 
   //calculate pids
                                                                           //may need to calibrate for offsets
-  pid_pitch_stab.update(&pitch_stab, rad_pitch, (imu.ypr[1]-2.5), timed, 1.0);  //(imu.ypr[1]-2.7)
-  pid_roll_stab.update(&roll_stab, rad_roll, (imu.ypr[2]-0.2), timed, 1.0);     //(imu.ypr[2]-0.3)
+  pid_pitch_stab.update(&pitch_stab, rad_pitch, (imu.ypr[1]-0.4), timed, 1.0);  //(imu.ypr[1]-0.4)
+  pid_roll_stab.update(&roll_stab, rad_roll, (imu.ypr[2]-0.35), timed, 1.0);     //(imu.ypr[2]-0.3)
 
   pid_pitch_rate.update(&front, (double)pitch_stab, imu.y_gyr*RAD_TO_DEG, timed, -1.0);
   pid_roll_rate.update(&left, (double)roll_stab, imu.x_gyr*RAD_TO_DEG, timed, 1.0);
@@ -792,10 +796,13 @@ void update_acro(uint32_t t){
   //p.K_tmp = map_d((double)receiver_input_channel_6,1000.0, 2000.0, 0.0, 0.8);
 
   //map inputs to anglerates
-  rad_roll = map_x3((double)(receiver_input_channel_1-1500));
-  rad_pitch = map_x3((double)(receiver_input_channel_2-1500));
-  rad_yaw = map_d((double)receiver_input_channel_4,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
+  //rad_roll = map_x3((double)(receiver_input_channel_1-1500));
+  //rad_pitch = map_x3((double)(receiver_input_channel_2-1500));
   //rad_yaw = map_x3((double)(receiver_input_channel_4-1500));
+
+  rad_roll = map_d((double)receiver_input_channel_1,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
+  rad_pitch = map_d((double)receiver_input_channel_2,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
+  rad_yaw = map_d((double)receiver_input_channel_4,1000.0, 2000.0, -REF_MAX_YAW, REF_MAX_YAW);
   
   //Serial.println(rad_roll); delay(50);
 
@@ -859,6 +866,27 @@ void loop(){
       flight_mode = MODE_ACRO;
     }
 
+
+
+    if (radio_off_counter >= LOST_CONNECTION_COUNT){
+      receiver_input_channel_1 = 1500;
+      receiver_input_channel_2 = 1500;
+      receiver_input_channel_3 = 1100;
+      receiver_input_channel_4 = 1500;
+      receiver_input_channel_5 = 1000;
+
+      if (radio_off_counter >= LOST_CONNECTION_COUNT2){
+        receiver_input_channel_6 = 1000;
+      }else{
+        receiver_input_channel_6 = 2000;
+      }  
+      
+    }
+
+    //radio_off_counter++;
+
+
+
     #ifdef TUNING_MODE
 
       tun = map_d((double)receiver_input_channel_6, 1000.0, 2000.0, TUNING_MIN, TUNING_MAX);
@@ -914,6 +942,7 @@ void loop(){
         update_acro(time_diff);
       }    
       //apply new speed to motors
+      //Serial.println(micros() - time_last);
       set_motor_speeds();
     }else{
       //keep motors updated

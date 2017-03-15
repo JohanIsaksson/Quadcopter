@@ -13,7 +13,8 @@
 #define RAD_TO_DEG 180.0/M_PI
 #define DEG_TO_RAD M_PI/180.0
 
-#define LP_BUFFER_SIZE 20
+#define LP_BUFFER_SIZE 16
+#define LP_SHIFT 4
 
 #define YAW 0
 #define PITCH 1
