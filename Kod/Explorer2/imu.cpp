@@ -93,7 +93,7 @@ void IMU::calculate_gyro(){
 }
 
 // Reads raw data from sensors and calculates yaw, pitch and roll
-void IMU::update_horizon(double tim){
+void IMU::update(double tim){
 
 	// read raw accel/gyro measurements from device
   //MPU6050_read();
@@ -127,27 +127,14 @@ void IMU::update_horizon(double tim){
   ypr[YAW] = ypr_rad[YAW] * RAD_TO_DEG;
 
   //scale and filter angular velocity
-  y_gyr = y_gyr*0.8 + (((double)(gy)) * GYRO_SCALE_Y)*0.2;
+  calculate_gyro();
+  /*y_gyr = y_gyr*0.8 + (((double)(gy)) * GYRO_SCALE_Y)*0.2;
   x_gyr = x_gyr*0.8 + (((double)(gx)) * GYRO_SCALE_X)*0.2;
-  z_gyr = z_gyr*0.8 + (((double)(gz)) * GYRO_SCALE_Z)*0.2;
+  z_gyr = z_gyr*0.8 + (((double)(gz)) * GYRO_SCALE_Z)*0.2;*/
   
 
   //get height
   //height_estimation(g, t);
 
   
-}
-
-//only reads mpu6050 for gyro
-void IMU::update_acro(double tim){
-
-  // read raw accel/gyro measurements from device
-  //MPU6050_read();
-  //imu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-
-  //scale angular velocity
-  y_gyr = y_gyr*0.8 + (((double)(gy)) * GYRO_SCALE_Y)*0.2;
-  x_gyr = x_gyr*0.8 + (((double)(gx)) * GYRO_SCALE_X)*0.2;
-  z_gyr = z_gyr*0.8 + (((double)(gz)) * GYRO_SCALE_Z)*0.2;
-
 }

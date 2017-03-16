@@ -91,9 +91,6 @@ public:
 	/* Reads raw data from sensors and perform complementary filtering */
 	void update_horizon(double tim);
 
-	/* only reads mpu6050 for gyroscope */
-	void update_acro(double tim);
-
 };
 
 #endif

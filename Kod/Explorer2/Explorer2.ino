@@ -2,13 +2,13 @@
 
 
   TODO
-    - radio
-    - motor speed
+    - radio x
+    - motor speed x
     - acro mode in imu
     - 
 
 
-  ++
+  TODO++
     -KALMAN height controller
 
 
@@ -81,6 +81,31 @@ int throttle[4]; /* 0 = front left
                     2 = back left
                     3 = back right
                   */
+
+//motor pins
+#define fl_pin 10 //front left
+#define fr_pin 11 //front right
+#define bl_pin 12 //back left
+#define br_pin 13 //back right
+
+//faster IO for samd21
+#ifdef _VARIANT_ARDUINO_ZERO_
+  volatile uint32_t *set_fl = &PORT->Group[g_APinDescription[fl_pin].ulPort].OUTSET.reg;
+  volatile uint32_t *clr_fl = &PORT->Group[g_APinDescription[fl_pin].ulPort].OUTCLR.reg;
+  const uint32_t  fl_MASK = (1ul << g_APinDescription[fl_pin].ulPin);
+
+  volatile uint32_t *set_fr = &PORT->Group[g_APinDescription[fr_pin].ulPort].OUTSET.reg;
+  volatile uint32_t *clr_fr = &PORT->Group[g_APinDescription[fr_pin].ulPort].OUTCLR.reg;
+  const uint32_t  fr_MASK = (1ul << g_APinDescription[fr_pin].ulPin);
+
+  volatile uint32_t *set_bl = &PORT->Group[g_APinDescription[bl_pin].ulPort].OUTSET.reg;
+  volatile uint32_t *clr_bl = &PORT->Group[g_APinDescription[bl_pin].ulPort].OUTCLR.reg;
+  const uint32_t  bl_MASK = (1ul << g_APinDescription[bl_pin].ulPin);
+
+  volatile uint32_t *set_br = &PORT->Group[g_APinDescription[br_pin].ulPort].OUTSET.reg;
+  volatile uint32_t *clr_br = &PORT->Group[g_APinDescription[br_pin].ulPort].OUTCLR.reg;
+  const uint32_t  br_MASK = (1ul << g_APinDescription[br_pin].ulPin);
+#endif
 
 //pid
 int front;
@@ -196,18 +221,31 @@ uint16_t limit(uint16_t x, uint16_t a, uint16_t b){
   return r;
 }
 
+void start_motor_pulses(){
+  set_fl = fl_MASK; //front left
+  set_fr = fr_MASK; //front right
+  set_bl = bl_MASK; //back left
+  set_br = br_MASK; //back right
+}
+void stop_motor_pulses(){
+  clr_fl = fl_MASK; //front left
+  clr_fr = fr_MASK; //front right
+  clr_bl = bl_MASK; //back left
+  clr_br = br_MASK; //back right
+}
+
 void set_motor_speeds(){
   //front left
-  throttle[0] = rad_throttle + front + left + cw; //+ CALIBRATION_COMP;
+  throttle[0] = rad_throttle + front + left + cw;
 
   //front right
-  throttle[1] = rad_throttle + front - left - cw; //+ CALIBRATION_COMP;
+  throttle[1] = rad_throttle + front - left - cw;
 
   //back left
-  throttle[2] = rad_throttle - front + left - cw; //- CALIBRATION_COMP;
+  throttle[2] = rad_throttle - front + left - cw;
 
   //back right
-  throttle[3] = rad_throttle - front - left + cw; //- CALIBRATION_COMP;
+  throttle[3] = rad_throttle - front - left + cw;
 
   //check and set speeds
   throttle[0] = limit(throttle[0], SPEED_MIN, SPEED_MAX);
@@ -215,19 +253,17 @@ void set_motor_speeds(){
   throttle[2] = limit(throttle[2], SPEED_MIN, SPEED_MAX);
   throttle[3] = limit(throttle[3], SPEED_MIN, SPEED_MAX);
     
- 
-
-  //Serial.println(micros() - time_last);
   esc_time = micros();
 
-  /*while(end_time > esc_time){
-    if (esc_time - start_time >= throttle[0]) PORTB &= B11111110; //front left
-    if (esc_time - start_time >= throttle[1]) PORTB &= B11111101; //front right
-    if (esc_time - start_time >= throttle[2]) PORTB &= B11111011; //back left
-    if (esc_time - start_time >= throttle[3]) PORTB &= B11110111; //back right
+  while(end_time > esc_time){
+    if (esc_time - start_time >= throttle[0]) clr_fl = fl_MASK; //front left
+    if (esc_time - start_time >= throttle[1]) clr_fr = fr_MASK; //front right
+    if (esc_time - start_time >= throttle[2]) clr_bl = bl_MASK; //back left
+    if (esc_time - start_time >= throttle[3]) clr_br = br_MASK; //back right
     esc_time = micros();
   }
-  PORTB &= B11110000; //turn all pulses off for safety*/
+  //turn all pulses off for safety
+  stop_motor_pulses();
 
   if (flight_mode == MODE_HORIZON){
     while(micros() - time_last < 4000);
@@ -240,11 +276,11 @@ void set_motor_speeds_min(){
   //start esc pulses
   start_time = micros(); 
   end_time = start_time + 1000;
-  /*PORTB |= B00001111;
+  start_motor_pulses();
 
 
   while(end_time > micros());
-  PORTB &= B11110000; //turn all pulses off for safety*/
+  stop_motor_pulses();
 
     
   while(micros() - time_last < 4000);
@@ -254,10 +290,10 @@ void set_motor_speeds_max(){
   //start esc pulses
   start_time = micros(); 
   end_time = start_time + 2000;
-  /*PORTB |= B00001111;
+  start_motor_pulses();
 
   while(end_time > micros());
-  PORTB &= B11110000; //turn all pulses off for safety*/
+  stop_motor_pulses();
 
     
   while(micros() - time_last < 4000);
@@ -394,12 +430,12 @@ void update_horizon(uint32_t t){
   timed = (double)t/1000000.0;
 
   //update all sensor on the imu
-  imu.update_horizon(timed); 
+  imu.update(timed); 
 
   //start esc pulses
   start_time = micros(); 
   end_time = start_time + 2000;
-  //PORTB |= B00001111;
+  start_motor_pulses();
 
 
   //compensate for mistimings with deadband
@@ -428,7 +464,7 @@ void update_horizon(uint32_t t){
 
   pid_pitch_rate.update(&front, (double)pitch_stab, imu.y_gyr*RAD_TO_DEG, timed, -1.0);
   pid_roll_rate.update(&left, (double)roll_stab, imu.x_gyr*RAD_TO_DEG, timed, 1.0);
-  pid_yaw_rate.update(&cw, rad_yaw, (double)yaw_stab, timed, -1.0);
+  pid_yaw_rate.update(&cw, (double)yaw_stab, -imu.z_gyr*RAD_TO_DEG, timed, -1.0);
 
 }
 
@@ -445,12 +481,12 @@ void update_acro(uint32_t t){
   timed = (double)t/1000000.0;
 
   //update only the gyroscope on the imu
-  imu.update_acro(timed); 
+  imu.update(timed); 
 
   //start esc pulses
   start_time = micros(); 
   end_time = start_time + 2000;
-  //PORTB |= B00001111;
+  start_motor_pulses();
 
   //compensate for mistimings with deadband
   if (receiver_input_channel_1 > 1475 && receiver_input_channel_1 < 1525) receiver_input_channel_1 = 1500;
