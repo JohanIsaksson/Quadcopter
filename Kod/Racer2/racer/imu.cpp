@@ -87,8 +87,9 @@ void IMU::complementary_filter(double tim){
   ays = (double)ay * ACC_SCALE_Y;
   azs = (double)az * ACC_SCALE_Z;
 
-  x_acc = atan(axs/sqrt(ays*ays + azs*azs));
-  //y_gyr = ((double)(gy)) * GYRO_SCALE_Y;
+  x_acc = atan(axs/sqrt(ays*ays + azs*azs)); //can be optimized to
+  //x_acc = atan(ax/sqrt(ay*ay + az*az));
+
 
   y_acc = atan(ays/sqrt(axs*axs + azs*azs));
   //x_gyr = ((double)(gx)) * GYRO_SCALE_X;
@@ -104,17 +105,17 @@ void IMU::complementary_filter(double tim){
 
 
 
-  ypr_rad[PITCH] = -(P1*(-ypr_rad[PITCH] - y_gyr*tim*GYRO_GAIN_PITCH) + (1.0-P1)*x_acc);
-  ypr_rad[ROLL] = (P2*(ypr_rad[ROLL] + x_gyr*tim*GYRO_GAIN_ROLL) + (1.0-P2)*y_acc);
+  //ypr_rad[PITCH] = -(P1*(-ypr_rad[PITCH] - y_gyr*tim*GYRO_GAIN_PITCH) + (1.0-P1)*x_acc);
+  ypr_rad[PITCH] = P1*(ypr_rad[PITCH] + y_gyr*tim*GYRO_GAIN_PITCH) - _P1*x_acc;
+
+
+  ypr_rad[ROLL] = (P2*(ypr_rad[ROLL] + x_gyr*tim*GYRO_GAIN_ROLL) + _P2*y_acc);
 
 
   ypr[PITCH] = ypr_rad[PITCH] * RAD_TO_DEG;
   ypr[ROLL] = ypr_rad[ROLL] * RAD_TO_DEG;
 
-  /*cosr = cos(ypr_rad[ROLL]);
-  sinr = sin(ypr_rad[ROLL]);
-  sinp = sin(ypr_rad[PITCH]);
-  cosp = cos(ypr_rad[PITCH]);*/
+  //240us + 2*atan + 2*sqrt
 }
 
 void IMU::tilt_compensation(){

@@ -73,8 +73,11 @@
 #define GYRO_GAIN_PITCH 1.2
 #define GYRO_GAIN_ROLL 1.3
 #define P1 0.99
+#define _P1 0.01 	//1.0-P1
 #define P2 0.99
+#define _P2 0.01
 #define P3 0.99
+#define _P3 0.01
 
 
 class IMU{

@@ -167,10 +167,9 @@ void init_motors(){
 
 //limit x to [a,b]
 uint16_t limit(uint16_t x, uint16_t a, uint16_t b){
-  uint16_t r;
-  if (x < a) r = a;
-  else if (x > b) r = b;
-  return r;
+  if (x < a) return a;
+  else if (x > b)  return b;
+  return x;
 }
 
 void set_motor_speeds(){
@@ -196,6 +195,11 @@ void set_motor_speeds(){
 
   //Serial.println(micros() - time_last);
   esc_time = micros();
+
+  //TODO tests
+  //T_PORT = ((TCNT1 >= throttle[3]) << 3) + ((TCNT1 >= throttle[2]) << 2) + ((TCNT1 >= throttle[1]) << 1) + (TCNT1 >= throttle[0]) + B11110000;
+  //PORTB &= T_PORT;
+
 
   while(end_time > esc_time){
     if (esc_time - start_time >= throttle[0]) PORTB &= B11111110; //front left
@@ -845,7 +849,7 @@ void loop(){
     pid_roll_stab.set_constants(P_roll_h, I_roll_h, D_roll_h, INTEGRAL_MAX);
 
   }else{
-
+    //calculate cycle time
     time_diff = micros() - time_last;
     time_last = micros();
 
@@ -867,24 +871,24 @@ void loop(){
     }
 
 
-
+    //check if radio signal is lost
     if (radio_off_counter >= LOST_CONNECTION_COUNT){
       receiver_input_channel_1 = 1500;
       receiver_input_channel_2 = 1500;
-      receiver_input_channel_3 = 1100;
-      receiver_input_channel_4 = 1500;
-      receiver_input_channel_5 = 1000;
+      receiver_input_channel_3 = 1200;  //low throttle for descent
+      receiver_input_channel_4 = 1500;  
+      receiver_input_channel_5 = 1000;  //fligth mode = horizon mode
 
-      if (radio_off_counter >= LOST_CONNECTION_COUNT2){
-        receiver_input_channel_6 = 1000;
+      //wait approx 30 sec before turning of motors
+      if (!motors_on || radio_off_counter >= LOST_CONNECTION_COUNT2){
+        receiver_input_channel_6 = 1000;  //motors off
       }else{
-        receiver_input_channel_6 = 2000;
+        receiver_input_channel_6 = 2000;  //motors on
       }  
       
     }
 
     //radio_off_counter++;
-
 
 
     #ifdef TUNING_MODE
@@ -930,7 +934,6 @@ void loop(){
       }
 
       Serial.println(tun); delay(500);
-
     #endif
     
 
@@ -940,9 +943,10 @@ void loop(){
         update_horizon(time_diff);
       }else if (flight_mode == MODE_ACRO){
         update_acro(time_diff);
-      }    
+      }
+      //Serial.println(micros() - time_last);    
+      
       //apply new speed to motors
-      //Serial.println(micros() - time_last);
       set_motor_speeds();
     }else{
       //keep motors updated
@@ -951,25 +955,6 @@ void loop(){
   }
   //delay(10);
   //Serial.println(imu.ypr[1]);
-
-  /*delay(25);
-  Serial.print(receiver_input_channel_1);
-  Serial.print("\t\t");
-
-  Serial.print(receiver_input_channel_2);
-  Serial.print("\t\t");
-
-  Serial.print(receiver_input_channel_3);
-  Serial.print("\t\t");
-
-  Serial.print(receiver_input_channel_4);
-  Serial.print("\t\t");
-
-  Serial.print(receiver_input_channel_5);
-  Serial.print("\t\t");
-
-  Serial.print(receiver_input_channel_6);
-  Serial.println("\t\t");*/
 } 
 
 
@@ -1049,3 +1034,35 @@ ISR(PCINT2_vect){
 }
 
 
+
+/*
+void timer_setup(){
+  //set timer1 interrupt at 1Hz
+  TCCR1A = 0; // clear timer control registers from arduino stuff
+  TCCR1B = 0;
+  TCNT1  = 0;//initialize counter value to 0
+  // set compare match register for 1hz increments
+  OCR1A = 15624;// = (16*10^6) / (1*1024) - 1 (must be <65536)
+  // turn on CTC mode
+  TCCR1B |= (1 << WGM12);
+  // Set CS10 and CS12 bits for 1024 prescaler
+  TCCR1B |= (1 << CS12) | (1 << CS10);  
+  // enable timer compare interrupt
+  TIMSK1 |= (1 << OCIE1A);
+}
+
+ISR(TIMER1_COMPA_vect){
+  micro_seconds += 4;
+
+  if (esc_time - start_time >= throttle[0]) PORTB &= B11111110; //front left
+  if (esc_time - start_time >= throttle[1]) PORTB &= B11111101; //front right
+  if (esc_time - start_time >= throttle[2]) PORTB &= B11111011; //back left
+  if (esc_time - start_time >= throttle[3]) PORTB &= B11110111; //back right
+
+  T_PORT = ((TCNT1 >= throttle[3]) << 3) + ((TCNT1 >= throttle[2]) << 2) + ((TCNT1 >= throttle[1]) << 1) + (TCNT1 >= throttle[0]) + B11110000;
+  PORTB &= T_PORT;
+
+
+}
+
+*/
