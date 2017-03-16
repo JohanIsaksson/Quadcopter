@@ -3,60 +3,6 @@
 #include "imu.h"
 
 
-
-void IMU::MPU6050_init(){
-  I2Cdev::writeBits(MPU6050_ADDR, 0x6B, 2, 3, 0x01); //set internal clock to XGYRO - should be best
-
-  I2Cdev::writeBits(MPU6050_ADDR, 0x1B, 4, 2, 0x00); //set full scale gyro range +- 250 deg/s
-
-  I2Cdev::writeBits(MPU6050_ADDR, 0x1C, 4, 2, 0x00); //set full scale accelerometer range +- 2g
-
-  I2Cdev::writeBit(MPU6050_ADDR, 0x6B, 6, false); //set sleep to false
-
-
-  //set offsets (on chip 1)
-  I2Cdev::writeWord(MPU6050_ADDR, 0x06, 1085); //x acc
-  I2Cdev::writeWord(MPU6050_ADDR, 0x08, -1008); //y acc
-  I2Cdev::writeWord(MPU6050_ADDR, 0x0A, 1659); //z acc
-
-  I2Cdev::writeWord(MPU6050_ADDR, 0x13, 86);// 98); //x gyro
-  I2Cdev::writeWord(MPU6050_ADDR, 0x15, 39);// 32); //y gyro
-  I2Cdev::writeWord(MPU6050_ADDR, 0x17, -32);// 18); //z gyro
-}
-
-void IMU::MPU6050_read(){
-  I2Cdev::readBytes(MPU6050_ADDR, MPU6050_DATAREG, 14, I2C_buffer);
-  ax = (((int16_t)I2C_buffer[0]) << 8) | I2C_buffer[1];
-  ay = (((int16_t)I2C_buffer[2]) << 8) | I2C_buffer[3];
-  az = (((int16_t)I2C_buffer[4]) << 8) | I2C_buffer[5];
-  gx = (((int16_t)I2C_buffer[8]) << 8) | I2C_buffer[9];
-  gy = (((int16_t)I2C_buffer[10]) << 8) | I2C_buffer[11];
-  gz = (((int16_t)I2C_buffer[12]) << 8) | I2C_buffer[13];
-}
-
-void IMU::read_magnetometer(){
-  uint8_t buffer[6];
-
-  //read from magnetometer
-  I2Cdev::readBytes(MAG_ADDR, 0x03, 6, buffer);
-  mx = (((int16_t)buffer[0]) << 8) | buffer[1];
-  mz = (((int16_t)buffer[2]) << 8) | buffer[3];
-  my = (((int16_t)buffer[4]) << 8) | buffer[5];
-}
-/* special offset removal for magnetometer */  
-void IMU::remove_offsets() {
-  /* remove bias */
-  mx = mx - MAG_OFF_X;
-  my = my - MAG_OFF_Y;
-  mz = mz - MAG_OFF_Z;
-
-  /* remove hard and soft iron offset */
-  x_mag = M11*((double)mx) + M12*((double)my) + M13*((double)mz);
-  y_mag = M21*((double)mx) + M22*((double)my) + M23*((double)mz);
-  z_mag = M31*((double)mx) + M32*((double)my) + M33*((double)mz);
-}
-
-
 void IMU::complementary_filter(double tim){
 
   /* low pass filter through moving average */
@@ -87,53 +33,30 @@ void IMU::complementary_filter(double tim){
   ays = (double)ay * ACC_SCALE_Y;
   //azs = (double)az * ACC_SCALE_Z;
 
-  //x_acc = atan(axs/sqrt(ays*ays + azs*azs));
+  // accelerometer angles
   x_acc = SpeedTrig.atan2(axs,sqrt(ACC_SCALE_X *((double)(ay*ay + az*az))));
-  //y_gyr = ((double)(gy)) * GYRO_SCALE_Y;
-
-  //y_acc = atan(ays/sqrt(axs*axs + azs*azs));
   y_acc = SpeedTrig.atan2(ays,sqrt(ACC_SCALE_X *((double)(ax*ax + az*az))));
-  //x_gyr = ((double)(gx)) * GYRO_SCALE_X;
   
 
-  ///* scale angular velocity */
-  y_gyr = y_gyr*0.8 + (((double)(gy)) * GYRO_SCALE_Y)*0.2;
-  x_gyr = x_gyr*0.8 + (((double)(gx)) * GYRO_SCALE_X)*0.2;
-  z_gyr = z_gyr*0.8 + (((double)(gz)) * GYRO_SCALE_Z)*0.2;
+  // scale and filter angular velocity
+  y_gyr_u = (y_gyr_u >> 2) + (y_gyr_u >> 1) + (gy >> 1);
+  y_gyr = ((double)y_gyr_u)*GYRO_SCALE_Y;
 
+  x_gyr_u = (x_gyr_u >> 2) + (x_gyr_u >> 1) + (gx >> 1);
+  x_gyr = ((double)x_gyr_u)*GYRO_SCALE_X;
 
-  
+  z_gyr_u = (z_gyr_u >> 2) + (z_gyr_u >> 1) + (gz >> 1);
+  z_gyr = ((double)z_gyr_u)*GYRO_SCALE_Z;
 
+  //z_gyr = z_gyr*0.75 + (((double)(gz)) * GYRO_SCALE_Z)*0.25;
 
 
   ypr_rad[PITCH] = -(P1*(-ypr_rad[PITCH] - y_gyr*tim*GYRO_GAIN_PITCH) + (1.0-P1)*x_acc);
   ypr_rad[ROLL] = (P2*(ypr_rad[ROLL] + x_gyr*tim*GYRO_GAIN_ROLL) + (1.0-P2)*y_acc);
 
-
   ypr[PITCH] = ypr_rad[PITCH] * RAD_TO_DEG;
   ypr[ROLL] = ypr_rad[ROLL] * RAD_TO_DEG;
 
-  /*cosr = cos(ypr_rad[ROLL]);
-  sinr = sin(ypr_rad[ROLL]);
-  sinp = sin(ypr_rad[PITCH]);
-  cosp = cos(ypr_rad[PITCH]);*/
-}
-
-void IMU::tilt_compensation(){
-
-  /* perform tilt compensation */
-  xh = x_mag*cosp 
-          + y_mag*sinp*sinr 
-          + z_mag*sinp*cosr;
-
-  yh = y_mag*cosr 
-          - z_mag*sinr;
-
-  ypr_rad[YAW] = atan2(-yh, xh);
-  ypr[YAW] = ypr_rad[YAW]*RAD_TO_DEG;
-
-  /* get yaw rate from gyro */
-  z_gyr = (double)gz * GYRO_SCALE_Z;
 }
 
 
@@ -146,62 +69,83 @@ void IMU::init(){
       Fastwire::setup(400, true);
   #endif
 
-  // initialize MPU6050
-  MPU6050_init();
-
-  // initialize HMC5883L
-  Wire.beginTransmission(MAG_ADDR);
-  Wire.write(0x02); //select mode register
-  Wire.write(0x00); //continuous measurement mode
-  Wire.endTransmission();
-
-  // lp filter
-  for (int i = 0; i < LP_BUFFER_SIZE; i++){
-    ax_buf[i] = 0;
-    ay_buf[i] = 0;
-    az_buf[i] = 0;
+  // init mpu
+  if (imu.begin() != INV_SUCCESS)
+  {
+    while (1); //break
   }
-  ax_sum = 0;
-  ay_sum = 0;
-  az_sum = 0;
-  lp_pos = 0;
-
-  // angles
-  for (int i = 0; i < 3; i++){
-    ypr[i] =  0.0;
-  }
-
+  
+  imu.dmpBegin(DMP_FEATURE_6X_LP_QUAT | // Enable 6-axis quat
+               DMP_FEATURE_GYRO_CAL, // Use gyro calibration
+              200); // Set DMP FIFO rate to 200 Hz
 }
 
-/* Reads raw data from sensors and calculates yaw, pitch and roll */
+void IMU::calculate_gyro(){
+  // scale and filter angular velocity
+  y_gyr_u = (y_gyr_u >> 2) + (y_gyr_u >> 1) + (imu.gy >> 1);
+  y_gyr = ((double)y_gyr_u)*GYRO_SCALE_Y;
+
+  x_gyr_u = (x_gyr_u >> 2) + (x_gyr_u >> 1) + (imu.gx >> 1);
+  x_gyr = ((double)x_gyr_u)*GYRO_SCALE_X;
+
+  z_gyr_u = (z_gyr_u >> 2) + (z_gyr_u >> 1) + (imu.gz >> 1);
+  z_gyr = ((double)z_gyr_u)*GYRO_SCALE_Z;
+}
+
+// Reads raw data from sensors and calculates yaw, pitch and roll
 void IMU::update_horizon(double tim){
 
 	// read raw accel/gyro measurements from device
-  MPU6050_read();
+  //MPU6050_read();
+  if (imu.fifoAvailable()){
+    // Use dmpUpdateFifo to update the ax, gx, mx, etc. values
+    if (imu.dmpUpdateFifo() == INV_SUCCESS){
+      // computeEulerAngles can be used -- after updating the
+      // quaternion values -- to estimate roll, pitch, and yaw
+      //mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+      //imu.computeEulerAngles();
+      }
+  }
 
-  // read raw data from magnetometer
-  //read_magnetometer(g);
+  float q0 = imu.calcQuat(imu.qw);
+  float q1 = imu.calcQuat(imu.qx);
+  float q2 = imu.calcQuat(imu.qy);
+  float q3 = imu.calcQuat(imu.qz);
 
-  //offsets
-  //remove_offsets(g);
+  float sq0 = q0*q0;
+  float sq1 = q1*q1;
+  float sq2 = q2*q2;
+  float sq3 = q3*q3;
   
-  //get pitch and roll
-  complementary_filter(tim);
+  // we can now use the same terms as in the textbook.
+  ypr_rad[ROLL]  = atan2f(2.0f * q2 * q3 + 2.0f * q0 * q1, sq3 - sq2 - sq1 + sq0);
+  ypr_rad[PITCH] = -asin(2.0f * q1 * q3 - 2.0f * q0 * q2);
+  ypr_rad[YAW] = atan2f(2.0f * q1 * q2 + 2.0f * q0 * q3, sq1 + sq0 - sq3 - sq2);
 
-  //get yaw
-  //tilt_compensation(g);
+  ypr[PITCH] = ypr_rad[PITCH] * RAD_TO_DEG;
+  ypr[ROLL] = ypr_rad[ROLL] * RAD_TO_DEG;
+  ypr[YAW] = ypr_rad[YAW] * RAD_TO_DEG;
+
+  //scale and filter angular velocity
+  y_gyr = y_gyr*0.8 + (((double)(gy)) * GYRO_SCALE_Y)*0.2;
+  x_gyr = x_gyr*0.8 + (((double)(gx)) * GYRO_SCALE_X)*0.2;
+  z_gyr = z_gyr*0.8 + (((double)(gz)) * GYRO_SCALE_Z)*0.2;
+  
 
   //get height
   //height_estimation(g, t);
+
+  
 }
 
 //only reads mpu6050 for gyro
 void IMU::update_acro(double tim){
 
   // read raw accel/gyro measurements from device
-  MPU6050_read();
+  //MPU6050_read();
+  //imu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 
-  ///* scale angular velocity */
+  //scale angular velocity
   y_gyr = y_gyr*0.8 + (((double)(gy)) * GYRO_SCALE_Y)*0.2;
   x_gyr = x_gyr*0.8 + (((double)(gx)) * GYRO_SCALE_X)*0.2;
   z_gyr = z_gyr*0.8 + (((double)(gz)) * GYRO_SCALE_Z)*0.2;
