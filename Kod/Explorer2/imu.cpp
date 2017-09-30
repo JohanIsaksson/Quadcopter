@@ -104,30 +104,32 @@ void IMU::update(double tim){
       // quaternion values -- to estimate roll, pitch, and yaw
       //mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
       //imu.computeEulerAngles();
-      }
+
+      float q0 = imu.calcQuat(imu.qw);
+      float q1 = imu.calcQuat(imu.qx);
+      float q2 = imu.calcQuat(imu.qy);
+      float q3 = imu.calcQuat(imu.qz);
+
+      float sq0 = q0*q0;
+      float sq1 = q1*q1;
+      float sq2 = q2*q2;
+      float sq3 = q3*q3;
+      
+      // we can now use the same terms as in the textbook.
+      ypr_rad[ROLL]  = atan2f(2.0f * q2 * q3 + 2.0f * q0 * q1, sq3 - sq2 - sq1 + sq0);
+      ypr_rad[PITCH] = -asin(2.0f * q1 * q3 - 2.0f * q0 * q2);
+      ypr_rad[YAW] = atan2f(2.0f * q1 * q2 + 2.0f * q0 * q3, sq1 + sq0 - sq3 - sq2);
+
+      ypr[PITCH] = ypr_rad[PITCH] * RAD_TO_DEG;
+      ypr[ROLL] = ypr_rad[ROLL] * RAD_TO_DEG;
+      ypr[YAW] = ypr_rad[YAW] * RAD_TO_DEG;
+
+      //scale and filter angular velocity
+      calculate_gyro();
+    }
   }
 
-  float q0 = imu.calcQuat(imu.qw);
-  float q1 = imu.calcQuat(imu.qx);
-  float q2 = imu.calcQuat(imu.qy);
-  float q3 = imu.calcQuat(imu.qz);
-
-  float sq0 = q0*q0;
-  float sq1 = q1*q1;
-  float sq2 = q2*q2;
-  float sq3 = q3*q3;
   
-  // we can now use the same terms as in the textbook.
-  ypr_rad[ROLL]  = atan2f(2.0f * q2 * q3 + 2.0f * q0 * q1, sq3 - sq2 - sq1 + sq0);
-  ypr_rad[PITCH] = -asin(2.0f * q1 * q3 - 2.0f * q0 * q2);
-  ypr_rad[YAW] = atan2f(2.0f * q1 * q2 + 2.0f * q0 * q3, sq1 + sq0 - sq3 - sq2);
-
-  ypr[PITCH] = ypr_rad[PITCH] * RAD_TO_DEG;
-  ypr[ROLL] = ypr_rad[ROLL] * RAD_TO_DEG;
-  ypr[YAW] = ypr_rad[YAW] * RAD_TO_DEG;
-
-  //scale and filter angular velocity
-  calculate_gyro();
   /*y_gyr = y_gyr*0.8 + (((double)(gy)) * GYRO_SCALE_Y)*0.2;
   x_gyr = x_gyr*0.8 + (((double)(gx)) * GYRO_SCALE_X)*0.2;
   z_gyr = z_gyr*0.8 + (((double)(gz)) * GYRO_SCALE_Z)*0.2;*/

@@ -9,8 +9,8 @@
 #define SPEED_MAX 2000
 
 #define REF_MAX_HORIZON 25.0
-#define REF_MAX_ACRO 90.0
-#define REF_MAX_YAW 180.0
+#define REF_MAX_ACRO 360.0
+#define REF_MAX_YAW 360.0
 
 #define INTEGRAL_MAX 150.0
 
@@ -32,6 +32,7 @@
 //#define RADIO_DATA
 //#define ESC_DATA
 
+//#define CALIBRATION
 
 // Tunig control
 #define TUNING_MAX 10.0
@@ -241,6 +242,45 @@ void set_motor_speeds_max(){
   PORTB &= B11110000; //turn all pulses off for safety
 
     
+  while(micros() - time_last < 4000);
+}
+
+void set_motor_speeds_calibration(int fl, int fr, int bl, int br){
+  //start esc pulses
+  start_time = micros(); 
+  end_time = start_time + 2000;
+  PORTB |= B00001111;
+
+  while(end_time > micros());
+  //front left
+  throttle[0] = fl;
+
+  //front right
+  throttle[1] = fr;
+
+  //back left
+  throttle[2] = bl; 
+
+  //back right
+  throttle[3] = br;
+
+  //check and set speeds
+  throttle[0] = limit(throttle[0], SPEED_MIN, SPEED_MAX);
+  throttle[1] = limit(throttle[1], SPEED_MIN, SPEED_MAX);
+  throttle[2] = limit(throttle[2], SPEED_MIN, SPEED_MAX);
+  throttle[3] = limit(throttle[3], SPEED_MIN, SPEED_MAX);
+    
+  esc_time = micros();
+  while(end_time > esc_time){
+    if (esc_time - start_time >= throttle[0]) PORTB &= B11111110; //front left
+    if (esc_time - start_time >= throttle[1]) PORTB &= B11111101; //front right
+    if (esc_time - start_time >= throttle[2]) PORTB &= B11111011; //back left
+    if (esc_time - start_time >= throttle[3]) PORTB &= B11110111; //back right
+    esc_time = micros();
+  }
+  PORTB &= B11110000; //turn all pulses off for safety
+
+
   while(micros() - time_last < 4000);
 }
 
@@ -648,10 +688,10 @@ void setup(){
   //retrieve pid parameters from eeprom
   #ifndef TUNING_MODE
     EEPROM_get();
-    /*Serial.print(P_pitch_a); Serial.print("\t"); Serial.print(I_pitch_a); Serial.print("\t"); Serial.println(D_pitch_a);
+    Serial.print(P_pitch_a); Serial.print("\t"); Serial.print(I_pitch_a); Serial.print("\t"); Serial.println(D_pitch_a);
     Serial.print(P_yaw); Serial.print("\t"); Serial.print(I_yaw); Serial.print("\t"); Serial.println(D_yaw);
     Serial.print(P_pitch_h); Serial.print("\t"); Serial.print(I_pitch_h); Serial.print("\t"); Serial.println(D_pitch_h);
-    Serial.println("Retrieved PID parameters.");*/
+    Serial.println("Retrieved PID parameters.");
   #else
     /*EEPROM_get();
     Serial.print(P_pitch_a); Serial.print("\t"); Serial.print(I_pitch_a); Serial.print("\t"); Serial.println(D_pitch_a);
@@ -672,20 +712,26 @@ void setup(){
     P_pitch_a = 1.2;
     P_roll_a = 1.2;
 
-    I_pitch_a = 0.8;
-    I_roll_a = 0.8;
+    I_pitch_a = 0.85;
+    I_roll_a = 0.85;
 
-    D_pitch_a = 0.06;
-    D_roll_a = 0.06;
+    D_pitch_a = 0.055;
+    D_roll_a = 0.055;
 
-    P_pitch_h = 4.0;
-    P_roll_h = 4.0;
+    P_pitch_h = 3.8;
+    P_roll_h = 3.8;
+
+    I_pitch_h = 0.2;
+    I_roll_h = 0.2;
 
     P_yaw = 2.0;
     I_yaw = 0.8;
 
     //
     EEPROM_put();
+    Serial.println("New pid variables set.");
+    while(1);
+
   #endif
 
 
@@ -718,7 +764,9 @@ void setup(){
   DDRB |= B00001111; //set pins as outputs
 
   //initialize escs
-  init_motors();
+  #ifndef CALIBRATION
+    init_motors();
+  #endif
   motors_on = false;
   //motors_on = true;
 
@@ -828,6 +876,12 @@ void update_acro(uint32_t t){
  ###### ####   ####  ##
 */
 void loop(){
+
+  #ifdef CALIBRATION
+    if (receiver_input_channel_3 > 1500) set_motor_speeds_calibration(2000,1000,1000,1000);
+    else set_motor_speeds_min();//calibration(1000,1000,1000,1000);
+    return;
+  #endif
 
   if (digitalRead(12) == LOW){
     delay(2000);

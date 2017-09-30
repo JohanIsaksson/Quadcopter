@@ -25,7 +25,7 @@ public:
 	void set_integration(bool b);
 	void set_constants(double KP_, double KI_, double KD_, double INT_MAX_);
 	void update(int* out, double ref, double mea, double dt, double scale);
-
+	//void update_(int* out, int ref, int mea, int scale);
 
 	//testing variable
 	double K_tmp;

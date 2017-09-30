@@ -175,6 +175,7 @@ uint8_t flight_mode;
 //yaw control
 bool set_yaw;
 
+#define SerialPort SerialUSB
 
 double map_d(double x, double in_min, double in_max, double out_min, double out_max){
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
@@ -222,16 +223,16 @@ uint16_t limit(uint16_t x, uint16_t a, uint16_t b){
 }
 
 void start_motor_pulses(){
-  set_fl = fl_MASK; //front left
-  set_fr = fr_MASK; //front right
-  set_bl = bl_MASK; //back left
-  set_br = br_MASK; //back right
+  *set_fl = fl_MASK; //front left
+  *set_fr = fr_MASK; //front right
+  *set_bl = bl_MASK; //back left
+  *set_br = br_MASK; //back right
 }
 void stop_motor_pulses(){
-  clr_fl = fl_MASK; //front left
-  clr_fr = fr_MASK; //front right
-  clr_bl = bl_MASK; //back left
-  clr_br = br_MASK; //back right
+  *clr_fl = fl_MASK; //front left
+  *clr_fr = fr_MASK; //front right
+  *clr_bl = bl_MASK; //back left
+  *clr_br = br_MASK; //back right
 }
 
 void set_motor_speeds(){
@@ -256,10 +257,10 @@ void set_motor_speeds(){
   esc_time = micros();
 
   while(end_time > esc_time){
-    if (esc_time - start_time >= throttle[0]) clr_fl = fl_MASK; //front left
-    if (esc_time - start_time >= throttle[1]) clr_fr = fr_MASK; //front right
-    if (esc_time - start_time >= throttle[2]) clr_bl = bl_MASK; //back left
-    if (esc_time - start_time >= throttle[3]) clr_br = br_MASK; //back right
+    if (esc_time - start_time >= throttle[0]) *clr_fl = fl_MASK; //front left
+    if (esc_time - start_time >= throttle[1]) *clr_fr = fr_MASK; //front right
+    if (esc_time - start_time >= throttle[2]) *clr_bl = bl_MASK; //back left
+    if (esc_time - start_time >= throttle[3]) *clr_br = br_MASK; //back right
     esc_time = micros();
   }
   //turn all pulses off for safety
@@ -312,8 +313,8 @@ void set_motor_speeds_max(){
 void setup(){
 
 
-  Serial.begin(38400);
-  Serial.println("Starting up");
+  SerialPort.begin(38400);
+  SerialPort.println("Starting up");
 
 	//Arduino (Atmega) pins default to inputs, so they don't need to be explicitly declared as inputs
   //Mask:                       Channel:    Signal:
@@ -335,23 +336,23 @@ void setup(){
   //retrieve pid parameters from eeprom
   #ifndef TUNING_MODE
     //EEPROM_get();
-    /*Serial.print(P_pitch_a); Serial.print("\t"); Serial.print(I_pitch_a); Serial.print("\t"); Serial.println(D_pitch_a);
-    Serial.print(P_yaw); Serial.print("\t"); Serial.print(I_yaw); Serial.print("\t"); Serial.println(D_yaw);
-    Serial.print(P_pitch_h); Serial.print("\t"); Serial.print(I_pitch_h); Serial.print("\t"); Serial.println(D_pitch_h);
-    Serial.println("Retrieved PID parameters.");*/
+    /*SerialPort.print(P_pitch_a); SerialPort.print("\t"); SerialPort.print(I_pitch_a); SerialPort.print("\t"); SerialPort.println(D_pitch_a);
+    SerialPort.print(P_yaw); SerialPort.print("\t"); SerialPort.print(I_yaw); SerialPort.print("\t"); SerialPort.println(D_yaw);
+    SerialPort.print(P_pitch_h); SerialPort.print("\t"); SerialPort.print(I_pitch_h); SerialPort.print("\t"); SerialPort.println(D_pitch_h);
+    SerialPort.println("Retrieved PID parameters.");*/
   #else
     /*EEPROM_get();
-    Serial.print(P_pitch_a); Serial.print("\t"); Serial.print(I_pitch_a); Serial.print("\t"); Serial.println(D_pitch_a);
-    Serial.print(1.2); Serial.print("\t"); Serial.print(0.8); Serial.print("\t"); Serial.println(0.06);
+    SerialPort.print(P_pitch_a); SerialPort.print("\t"); SerialPort.print(I_pitch_a); SerialPort.print("\t"); SerialPort.println(D_pitch_a);
+    SerialPort.print(1.2); SerialPort.print("\t"); SerialPort.print(0.8); SerialPort.print("\t"); SerialPort.println(0.06);
 
 
-    Serial.println();
-    Serial.print(P_pitch_h); Serial.print("\t"); Serial.print(I_pitch_h); Serial.print("\t"); Serial.println(D_pitch_h);
-    Serial.print(4.0); Serial.print("\t"); Serial.print(0.0); Serial.print("\t"); Serial.println(0.0);
+    SerialPort.println();
+    SerialPort.print(P_pitch_h); SerialPort.print("\t"); SerialPort.print(I_pitch_h); SerialPort.print("\t"); SerialPort.println(D_pitch_h);
+    SerialPort.print(4.0); SerialPort.print("\t"); SerialPort.print(0.0); SerialPort.print("\t"); SerialPort.println(0.0);
 
-    Serial.println();
-    Serial.print(P_yaw); Serial.print("\t"); Serial.print(I_yaw); Serial.print("\t"); Serial.println(D_yaw);
-    Serial.print(2.0); Serial.print("\t"); Serial.print(0.0); Serial.print("\t"); Serial.println(0.0);*/
+    SerialPort.println();
+    SerialPort.print(P_yaw); SerialPort.print("\t"); SerialPort.print(I_yaw); SerialPort.print("\t"); SerialPort.println(D_yaw);
+    SerialPort.print(2.0); SerialPort.print("\t"); SerialPort.print(0.0); SerialPort.print("\t"); SerialPort.println(0.0);*/
 
 
     P_pitch_a = 1.2;
@@ -399,7 +400,7 @@ void setup(){
   count = 0;
 
   //wait for esc init;
-  Serial.println("Initializing ESCs...");
+  SerialPort.println("Initializing ESCs...");
   //asign motors to pins
 
   //DDRB |= B00001111; //set pins as outputs
@@ -411,9 +412,9 @@ void setup(){
 
 
   time_last = micros();
-  Serial.println("Running...");
+  SerialPort.println("Running...");
 
-  //PCICR |= (1 << PCIE2);    // set PCIE2 to enable PCMSK0 scan
+  setup_radio();
 }
 
 
@@ -504,7 +505,7 @@ void update_acro(uint32_t t){
   rad_pitch = map_d((double)receiver_input_channel_2,1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
   rad_yaw = map_d((double)receiver_input_channel_4,1000.0, 2000.0, -REF_MAX_YAW, REF_MAX_YAW);
   
-  //Serial.println(rad_roll); delay(50);
+  //SerialPort.println(rad_roll); delay(50);
 
 
   //calculate pids
@@ -530,6 +531,15 @@ void loop(){
   time_last = micros();
 
   rad_throttle = map(receiver_input_channel_3, 1000, 2000, 1060, 1800);
+
+  imu.update(0.1);
+  SerialPort.print(imu.ypr[0]);
+  SerialPort.print(", ");
+  SerialPort.print(imu.ypr[1]);
+  SerialPort.print(", ");
+  SerialPort.println(imu.ypr[2]);
+
+  return;
 
   //motor arming control
   if (receiver_input_channel_6 < 1300){
@@ -609,7 +619,7 @@ void loop(){
 
       }
 
-      Serial.println(tun); delay(500);
+      SerialPort.println(tun); delay(500);
 
     #endif
     
@@ -622,7 +632,7 @@ void loop(){
         update_acro(time_diff);
       }    
       //apply new speed to motors
-      //Serial.println(micros() - time_last);
+      //SerialPort.println(micros() - time_last);
       set_motor_speeds();
     }else{
       //keep motors updated
@@ -630,26 +640,26 @@ void loop(){
     }
   }
   //delay(10);
-  //Serial.println(imu.ypr[1]);
+  //SerialPort.println(imu.ypr[1]);
 
   /*delay(25);
-  Serial.print(receiver_input_channel_1);
-  Serial.print("\t\t");
+  SerialPort.print(receiver_input_channel_1);
+  SerialPort.print("\t\t");
 
-  Serial.print(receiver_input_channel_2);
-  Serial.print("\t\t");
+  SerialPort.print(receiver_input_channel_2);
+  SerialPort.print("\t\t");
 
-  Serial.print(receiver_input_channel_3);
-  Serial.print("\t\t");
+  SerialPort.print(receiver_input_channel_3);
+  SerialPort.print("\t\t");
 
-  Serial.print(receiver_input_channel_4);
-  Serial.print("\t\t");
+  SerialPort.print(receiver_input_channel_4);
+  SerialPort.print("\t\t");
 
-  Serial.print(receiver_input_channel_5);
-  Serial.print("\t\t");
+  SerialPort.print(receiver_input_channel_5);
+  SerialPort.print("\t\t");
 
-  Serial.print(receiver_input_channel_6);
-  Serial.println("\t\t");*/
+  SerialPort.print(receiver_input_channel_6);
+  SerialPort.println("\t\t");*/
 } 
 
 
@@ -686,11 +696,11 @@ void setup_radio(){
 void radio_roll_ISR(){
   us = micros();
   //Channel 1=========================================
-  if(last_channel_1 == 0 && PIND & B00000100 ){         //Input 8 changed from 0 to 1
+  if(last_channel_1 == 0 && digitalRead(radio_roll_pin)){         //Input 8 changed from 0 to 1
     last_channel_1 = 1;                                 //Remember current input state
     timer_1 = us;                                 //Set timer_1 to micros()
   }
-  else if(last_channel_1 == 1 && !(PIND & B00000100)){  //Input 8 changed from 1 to 0
+  else if(last_channel_1 == 1 && !(digitalRead(radio_roll_pin))){  //Input 8 changed from 1 to 0
     last_channel_1 = 0;                                 //Remember current input state
     receiver_input_channel_1 = us - timer_1;      //Channel 1 is micros() - timer_1
   }
@@ -699,11 +709,11 @@ void radio_roll_ISR(){
 void radio_pitch_ISR(){
   us = micros();
   //Channel 2=========================================
-  if(last_channel_2 == 0 && PIND & B00001000 ){         //Input 9 changed from 0 to 1
+  if(last_channel_2 == 0 && digitalRead(radio_pitch_pin)){         //Input 9 changed from 0 to 1
     last_channel_2 = 1;                                 //Remember current input state
     timer_2 = us;                                 //Set timer_2 to micros()
   }
-  else if(last_channel_2 == 1 && !(PIND & B00001000)){  //Input 9 changed from 1 to 0
+  else if(last_channel_2 == 1 && !(digitalRead(radio_pitch_pin))){  //Input 9 changed from 1 to 0
     last_channel_2 = 0;                                 //Remember current input state
     receiver_input_channel_2 = us - timer_2;      //Channel 2 is micros() - timer_2
   }
@@ -712,11 +722,11 @@ void radio_pitch_ISR(){
 void radio_throttle_ISR(){
   us = micros();
   //Channel 3=========================================
-  if(last_channel_3 == 0 && PIND & B00010000 ){         //Input 10 changed from 0 to 1
+  if(last_channel_3 == 0 && digitalRead(radio_throttle_pin)){         //Input 10 changed from 0 to 1
     last_channel_3 = 1;                                 //Remember current input state
     timer_3 = us;                                 //Set timer_3 to micros()
   }
-  else if(last_channel_3 == 1 && !(PIND & B00010000)){  //Input 10 changed from 1 to 0
+  else if(last_channel_3 == 1 && !(digitalRead(radio_throttle_pin))){  //Input 10 changed from 1 to 0
     last_channel_3 = 0;                                 //Remember current input state
     receiver_input_channel_3 = us - timer_3;      //Channel 3 is micros() - timer_3
   }
@@ -725,11 +735,11 @@ void radio_throttle_ISR(){
 void radio_yaw_ISR(){
   us = micros();
   //Channel 4=========================================
-  if(last_channel_4 == 0 && PIND & B00100000 ){         //Input 11 changed from 0 to 1
+  if(last_channel_4 == 0 && digitalRead(radio_yaw_pin)){         //Input 11 changed from 0 to 1
     last_channel_4 = 1;                                 //Remember current input state
     timer_4 = us;                                 //Set timer_4 to micros()
   }
-  else if(last_channel_4 == 1 && !(PIND & B00100000)){  //Input 11 changed from 1 to 0
+  else if(last_channel_4 == 1 && !(digitalRead(radio_yaw_pin))){  //Input 11 changed from 1 to 0
     last_channel_4 = 0;                                 //Remember current input state
     receiver_input_channel_4 = us - timer_4;      //Channel 4 is micros() - timer_4
   }
@@ -738,11 +748,11 @@ void radio_yaw_ISR(){
 void radio_mode_ISR(){
   us = micros();
   //Channel 5=========================================
-  if(last_channel_5 == 0 && PIND & B01000000 ){         //Input 10 changed from 0 to 1
+  if(last_channel_5 == 0 && digitalRead(radio_mode_pin)){         //Input 10 changed from 0 to 1
     last_channel_5 = 1;                                 //Remember current input state
     timer_5 = us;                                 //Set timer_3 to micros()
   }
-  else if(last_channel_5 == 1 && !(PIND & B01000000)){  //Input 10 changed from 1 to 0
+  else if(last_channel_5 == 1 && !(digitalRead(radio_mode_pin))){  //Input 10 changed from 1 to 0
     last_channel_5 = 0;                                 //Remember current input state
     receiver_input_channel_5 = us - timer_5;      //Channel 3 is micros() - timer_3
   }
@@ -751,11 +761,11 @@ void radio_mode_ISR(){
 void radio_kill_ISR(){
   us = micros();
   //Channel 6=========================================
-  if(last_channel_6 == 0 && PIND & B10000000 ){         //Input 11 changed from 0 to 1
+  if(last_channel_6 == 0 && digitalRead(radio_kill_pin)){         //Input 11 changed from 0 to 1
     last_channel_6 = 1;                                 //Remember current input state
     timer_6 = us;                                 //Set timer_4 to micros()
   }
-  else if(last_channel_6 == 1 && !(PIND & B10000000)){  //Input 11 changed from 1 to 0
+  else if(last_channel_6 == 1 && !(digitalRead(radio_kill_pin))){  //Input 11 changed from 1 to 0
     last_channel_6 = 0;                                 //Remember current input state
     receiver_input_channel_6 = us - timer_6;      //Channel 4 is micros() - timer_4
   }

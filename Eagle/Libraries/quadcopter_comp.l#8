@@ -327,24 +327,6 @@
 <pad name="SIGNAL" x="0" y="1.27" drill="0.8" rot="R270"/>
 <pad name="GND" x="0" y="-1.27" drill="0.8"/>
 </package>
-<package name="RADIO_10CH">
-<wire x1="-2.54" y1="-8.89" x2="-2.54" y2="8.89" width="0.127" layer="21"/>
-<wire x1="-2.54" y1="8.89" x2="2.54" y2="8.89" width="0.127" layer="21"/>
-<wire x1="2.54" y1="8.89" x2="2.54" y2="-8.89" width="0.127" layer="21"/>
-<wire x1="2.54" y1="-8.89" x2="-2.54" y2="-8.89" width="0.127" layer="21"/>
-<pad name="CH3" x="-1.27" y="5.08" drill="0.8" diameter="1.778"/>
-<pad name="CH4" x="1.27" y="5.08" drill="0.8" diameter="1.778"/>
-<pad name="CH5" x="-1.27" y="2.54" drill="0.8" diameter="1.778"/>
-<pad name="CH6" x="1.27" y="2.54" drill="0.8" diameter="1.778"/>
-<pad name="CH7" x="-1.27" y="0" drill="0.8" diameter="1.778"/>
-<pad name="CH9" x="-1.27" y="-2.54" drill="0.8" diameter="1.778"/>
-<pad name="VCC" x="-1.27" y="-7.62" drill="0.8" diameter="1.778"/>
-<pad name="CH2" x="1.27" y="7.62" drill="0.8" diameter="1.778"/>
-<pad name="CH8" x="1.27" y="0" drill="0.8" diameter="1.778"/>
-<pad name="CH10" x="1.27" y="-2.54" drill="0.8" diameter="1.778"/>
-<pad name="CH1" x="-1.27" y="7.62" drill="0.8" diameter="1.778"/>
-<pad name="GND" x="1.27" y="-7.62" drill="0.8" diameter="1.778"/>
-</package>
 </packages>
 <symbols>
 <symbol name="SAMD21G-MINI">
@@ -613,22 +595,6 @@
 <pin name="CH10" x="-10.16" y="-7.62" length="middle"/>
 <pin name="VCC" x="-10.16" y="-12.7" length="middle"/>
 <pin name="GND" x="-10.16" y="-15.24" length="middle"/>
-</symbol>
-<symbol name="RADIO_8CH">
-<wire x1="-5.08" y1="15.24" x2="5.08" y2="15.24" width="0.254" layer="94"/>
-<wire x1="5.08" y1="15.24" x2="5.08" y2="-15.24" width="0.254" layer="94"/>
-<wire x1="5.08" y1="-15.24" x2="-5.08" y2="-15.24" width="0.254" layer="94"/>
-<wire x1="-5.08" y1="-15.24" x2="-5.08" y2="15.24" width="0.254" layer="94"/>
-<pin name="CH1" x="-10.16" y="12.7" length="middle"/>
-<pin name="CH2" x="-10.16" y="10.16" length="middle"/>
-<pin name="CH3" x="-10.16" y="7.62" length="middle"/>
-<pin name="CH4" x="-10.16" y="5.08" length="middle"/>
-<pin name="CH5" x="-10.16" y="2.54" length="middle"/>
-<pin name="CH6" x="-10.16" y="0" length="middle"/>
-<pin name="CH7" x="-10.16" y="-2.54" length="middle"/>
-<pin name="CH8" x="-10.16" y="-5.08" length="middle"/>
-<pin name="VCC" x="-10.16" y="-10.16" length="middle"/>
-<pin name="GND" x="-10.16" y="-12.7" length="middle"/>
 </symbol>
 </symbols>
 <devicesets>
@@ -960,32 +926,6 @@
 <connect gate="G$1" pin="GND2" pad="GND2"/>
 <connect gate="G$1" pin="HV" pad="HV"/>
 <connect gate="G$1" pin="LV" pad="LV"/>
-</connects>
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-</devices>
-</deviceset>
-<deviceset name="RADIO_10CH">
-<gates>
-<gate name="G$1" symbol="RADIO_10CH" x="0" y="0"/>
-</gates>
-<devices>
-<device name="" package="RADIO_10CH">
-<connects>
-<connect gate="G$1" pin="CH1" pad="CH1"/>
-<connect gate="G$1" pin="CH10" pad="CH10"/>
-<connect gate="G$1" pin="CH2" pad="CH2"/>
-<connect gate="G$1" pin="CH3" pad="CH3"/>
-<connect gate="G$1" pin="CH4" pad="CH4"/>
-<connect gate="G$1" pin="CH5" pad="CH5"/>
-<connect gate="G$1" pin="CH6" pad="CH6"/>
-<connect gate="G$1" pin="CH7" pad="CH7"/>
-<connect gate="G$1" pin="CH8" pad="CH8"/>
-<connect gate="G$1" pin="CH9" pad="CH9"/>
-<connect gate="G$1" pin="GND" pad="GND"/>
-<connect gate="G$1" pin="VCC" pad="VCC"/>
 </connects>
 <technologies>
 <technology name=""/>

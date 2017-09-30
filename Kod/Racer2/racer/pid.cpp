@@ -53,7 +53,7 @@ void Pid::update(int* out, double ref, double mea, double dt, double scale){
 // faster by using integers aritmetics instead of floats
 // approx. time consume = 42 cc
 //						= 3 us
-void Pid::update_(int* out, int ref, int mea, int scale){
+/*void Pid::update_(int* out, int ref, int mea, int scale){
 	error = ref - mea; //2 cc
 
 	//TODO:
@@ -82,4 +82,4 @@ void Pid::update_(int* out, int ref, int mea, int scale){
 
 	//set values
 	*out = scale*output; // 4 +2 cc 
-}
+}*/

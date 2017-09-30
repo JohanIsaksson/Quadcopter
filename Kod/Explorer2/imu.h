@@ -89,7 +89,7 @@ public:
 	void init();
 
 	/* Reads raw data from sensors and perform complementary filtering */
-	void update_horizon(double tim);
+	void update(double tim);
 
 };
 
