@@ -60,13 +60,13 @@ void IMU::ComplementaryFilter(double tim){
 
 void IMU::CalculateGyro(){
   // scale and filter angular velocity
-  y_gyr_u = (y_gyr_u >> 2) + (y_gyr_u >> 1) + (imu.gy >> 1);
+  y_gyr_u = (y_gyr_u >> 2) + (y_gyr_u >> 1) + (imu.gy >> 2);
   y_gyr = ((double)y_gyr_u)*GYRO_SCALE_Y;
 
-  x_gyr_u = (x_gyr_u >> 2) + (x_gyr_u >> 1) + (imu.gx >> 1);
+  x_gyr_u = (x_gyr_u >> 2) + (x_gyr_u >> 1) + (imu.gx >> 2);
   x_gyr = ((double)x_gyr_u)*GYRO_SCALE_X;
 
-  z_gyr_u = (z_gyr_u >> 2) + (z_gyr_u >> 1) + (imu.gz >> 1);
+  z_gyr_u = (z_gyr_u >> 2) + (z_gyr_u >> 1) + (imu.gz >> 2);
   z_gyr = ((double)z_gyr_u)*GYRO_SCALE_Z;
 }
 
@@ -87,7 +87,7 @@ void IMU::Init(){
   
   imu.dmpBegin(DMP_FEATURE_6X_LP_QUAT | // Enable 6-axis quat
                DMP_FEATURE_GYRO_CAL, // Use gyro calibration
-              200); // Set DMP FIFO rate to 200 Hz
+              10); // Set DMP FIFO rate to 200 Hz
 }
 
 /* ------------------------------------------------------------------------- */
@@ -126,7 +126,7 @@ void IMU::BMP180_pressure_start(){
   I2Cdev::writeByte(BMP180_ADDR, BMP180_REG_CONTROL, BMP180_COMMAND_PRESSURE0);
 }
 
-void IMU::BMP180_pressure_read(imu* g){
+void IMU::BMP180_pressure_read(){
   double pu,s,x,y,z;
 
   I2Cdev::readBytes(BMP180_ADDR, BMP180_REG_RESULT, 3, I2C_buffer);
@@ -164,7 +164,7 @@ void IMU::BMP180_pressure_read(imu* g){
     altitude = 44330.0*(1-pow(pressure/base_pressure,1/5.255));
 }
 
-void IMU::BMP180_init(imu* g){
+void IMU::BMP180_init(){
 
   // Retrieve calibration data from device:
   I2Cdev::readBytes(BMP180_ADDR, 0xAA, 22, I2C_buffer);
@@ -203,10 +203,10 @@ void IMU::BMP180_init(imu* g){
   //get initial values
   BMP180_temp_start();
   delay(10);
-  BMP180_temp_read(g);
+  BMP180_temp_read();
   BMP180_pressure_start();
   delay(30);
-  BMP180_pressure_read(g);
+  BMP180_pressure_read();
   base_pressure = pressure;
   altitude = 0.0;
   baro_state = 0;
@@ -251,7 +251,7 @@ void IMU::BMP180_update(){
         baro_temp_count = 0;
         BMP180_temp_start();
       }else{
-        baro_state = 2
+        baro_state = 2;
         baro_temp_count++;
       }
       baro_state = 1;
@@ -313,7 +313,7 @@ void IMU::Update(double dt){
       ypr[YAW] = ypr_rad[YAW] * RAD_TO_DEG;
 
       //scale and filter angular velocity
-      calculate_gyro();
+      CalculateGyro();
     }
   }
 
@@ -358,14 +358,14 @@ void IMU::UpdateHorizon(double dt){
       ypr[YAW] = ypr_rad[YAW] * RAD_TO_DEG;
 
       //scale and filter angular velocity
-      calculate_gyro();
+      CalculateGyro();
     }
   }
 }
 
-void IMU::UpdateGyro(double dt){
+void IMU::UpdateAcro(double dt){
   // read raw accel/gyro measurements from device
   //mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
   //scale and filter angular velocity
-  calculate_gyro();
+  CalculateGyro();
 }

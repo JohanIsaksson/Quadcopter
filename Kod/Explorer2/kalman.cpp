@@ -2,7 +2,7 @@
 
 
 
- void Kalman::init_preset(){
+ void Kalman::InitPreset(){
  	u = 9.82; //gravity
 
 
@@ -39,7 +39,7 @@
 
  }
 
- void Kalman::update(double baro, double acc, double dt){
+ void Kalman::Update(double baro, double acc, double dt){
 
  	// set A and B matrices 	
  	A.data[1] = dt;
@@ -70,6 +70,6 @@
  	
 }
 
-double Kalman::get_altitude(){
+double Kalman::GetAltitude(){
     return x.data[0];
 }

@@ -21,10 +21,10 @@ class Pid{
 	//double KP, KI, KD;
 	bool enable_integral;
 public:
-	void init();
-	void set_integration(bool b);
-	void set_constants(double KP_, double KI_, double KD_, double INT_MAX_);
-	void update(int* out, double ref, double mea, double dt, double scale);
+	void Init();
+	void SetIntegration(bool b);
+	void SetConstants(double KP_, double KI_, double KD_, double INT_MAX_);
+	void Update(int* out, double ref, double mea, double dt, double scale);
 
 
 	//testing variable

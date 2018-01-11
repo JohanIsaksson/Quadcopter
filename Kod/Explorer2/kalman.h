@@ -20,10 +20,10 @@ class Kalman{
 	
 public:
 
-	void init();
+	void InitPreset();
 
-	void update(double baro, double acc, double dt);
+	void Update(double baro, double acc, double dt);
 
-	double get_altitude();
+	double GetAltitude();
 
 };

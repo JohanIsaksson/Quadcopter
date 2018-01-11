@@ -189,9 +189,9 @@ void init_motors(){
     esc_time = micros();
 
     while(end_time > esc_time){                         
-      if (esc_time - start_time >= throttle[0]) *clr_f1 = fl_MASK; //front left
+      if (esc_time - start_time >= throttle[0]) *clr_fl = fl_MASK; //front left
       if (esc_time - start_time >= throttle[1]) *clr_fr = fr_MASK; //front right
-      if (esc_time - start_time >= throttle[2]) *clr_b1 = bl_MASK; //back left
+      if (esc_time - start_time >= throttle[2]) *clr_bl = bl_MASK; //back left
       if (esc_time - start_time >= throttle[3]) *clr_br = br_MASK; //back right
       esc_time = micros();
     }
@@ -321,7 +321,7 @@ void set_motor_speeds_max(){
 void setup(){
 
 
-  SerialPort.begin(38400);
+  SerialPort.begin(115200);
   SerialPort.println("Starting up");
 
 	//Arduino (Atmega) pins default to inputs, so they don't need to be explicitly declared as inputs
@@ -383,29 +383,26 @@ void setup(){
   #endif
 
 
-  imu.init();
+  imu.Init();
 	
 
-  pid_pitch_rate.init();
-  pid_pitch_rate.set_constants(P_pitch_a, I_pitch_a, D_pitch_a, INTEGRAL_MAX);
-  pid_roll_rate.init();
-  pid_roll_rate.set_constants(P_roll_a, I_roll_a, D_roll_a, INTEGRAL_MAX);
-  pid_yaw_rate.init();
-  pid_yaw_rate.set_constants(P_yaw, I_yaw, D_yaw, INTEGRAL_MAX);
+  pid_pitch_rate.Init();
+  pid_pitch_rate.SetConstants(P_pitch_a, I_pitch_a, D_pitch_a, INTEGRAL_MAX);
+  pid_roll_rate.Init();
+  pid_roll_rate.SetConstants(P_roll_a, I_roll_a, D_roll_a, INTEGRAL_MAX);
+  pid_yaw_rate.Init();
+  pid_yaw_rate.SetConstants(P_yaw, I_yaw, D_yaw, INTEGRAL_MAX);
 
-  pid_pitch_stab.init();
-  pid_pitch_stab.set_constants(P_pitch_h, I_pitch_h, D_pitch_h, INTEGRAL_MAX);
-  pid_roll_stab.init();
-  pid_roll_stab.set_constants(P_roll_h, I_roll_h, D_roll_h, INTEGRAL_MAX);
-  pid_yaw_stab.init();
-  pid_yaw_stab.set_constants(P_yaw, I_yaw, D_yaw, INTEGRAL_MAX);
+  pid_pitch_stab.Init();
+  pid_pitch_stab.SetConstants(P_pitch_h, I_pitch_h, D_pitch_h, INTEGRAL_MAX);
+  pid_roll_stab.Init();
+  pid_roll_stab.SetConstants(P_roll_h, I_roll_h, D_roll_h, INTEGRAL_MAX);
+  pid_yaw_stab.Init();
+  pid_yaw_stab.SetConstants(P_yaw, I_yaw, D_yaw, INTEGRAL_MAX);
 
   front = 0;
   left = 0;
   cw = 0;
-
-
-  count = 0;
 
   //wait for esc init;
   SerialPort.println("Initializing ESCs...");
@@ -435,11 +432,11 @@ void setup(){
  ##  ## ##  ## ## ##   ##  ##     ##  ## ##  ##
  ##  ##  ####  ##  ## #### ######  ####  ##  ##
 */
-void update_horizon(uint32_t t){
+void Update_horizon(uint32_t t){
   timed = (double)t/1000000.0;
 
-  //update all sensor on the imu
-  imu.update(timed); 
+  //Update all sensor on the imu
+  imu.UpdateHorizon(timed); 
 
   //start esc pulses
   start_time = micros(); 
@@ -467,13 +464,13 @@ void update_horizon(uint32_t t){
 
   //calculate pids
                                                                           //may need to calibrate for offsets
-  pid_pitch_stab.update(&pitch_stab, rad_pitch, (imu.ypr[1]-0.4), timed, 1.0);  //(imu.ypr[1]-0.4)
-  pid_roll_stab.update(&roll_stab, rad_roll, (imu.ypr[2]-0.35), timed, 1.0);     //(imu.ypr[2]-0.3)
-  pid_yaw_stab.update(&yaw_stab, rad_yaw, (imu.ypr[0]), timed, 1.0);
+  pid_pitch_stab.Update(&pitch_stab, rad_pitch, (imu.ypr[1]-0.4), timed, 1.0);  //(imu.ypr[1]-0.4)
+  pid_roll_stab.Update(&roll_stab, rad_roll, (imu.ypr[2]-0.35), timed, 1.0);     //(imu.ypr[2]-0.3)
+  pid_yaw_stab.Update(&yaw_stab, rad_yaw, (imu.ypr[0]), timed, 1.0);
 
-  pid_pitch_rate.update(&front, (double)pitch_stab, imu.y_gyr*RAD_TO_DEG, timed, -1.0);
-  pid_roll_rate.update(&left, (double)roll_stab, imu.x_gyr*RAD_TO_DEG, timed, 1.0);
-  pid_yaw_rate.update(&cw, (double)yaw_stab, -imu.z_gyr*RAD_TO_DEG, timed, -1.0);
+  pid_pitch_rate.Update(&front, (double)pitch_stab, imu.y_gyr*RAD_TO_DEG, timed, -1.0);
+  pid_roll_rate.Update(&left, (double)roll_stab, imu.x_gyr*RAD_TO_DEG, timed, 1.0);
+  pid_yaw_rate.Update(&cw, (double)yaw_stab, -imu.z_gyr*RAD_TO_DEG, timed, -1.0);
 
 }
 
@@ -486,11 +483,11 @@ void update_horizon(uint32_t t){
  ##  ## ##  ## ## ##  ##  ## ##  ## ##  ## ##    ## ##  ##
  ##  ##  ####  ##  ##  ####  #####  ##  ## ##   #### ####
 */
-void update_acro(uint32_t t){
+void Update_acro(uint32_t t){
   timed = (double)t/1000000.0;
 
-  //update only the gyroscope on the imu
-  imu.update(timed); 
+  //Update only the gyroscope on the imu
+  imu.UpdateAcro(timed); 
 
   //start esc pulses
   start_time = micros(); 
@@ -517,9 +514,9 @@ void update_acro(uint32_t t){
 
 
   //calculate pids
-  pid_pitch_rate.update(&front, rad_pitch, imu.y_gyr*RAD_TO_DEG, timed, -1.0);
-  pid_roll_rate.update(&left, rad_roll, imu.x_gyr*RAD_TO_DEG, timed, 1.0);
-  pid_yaw_rate.update(&cw, rad_yaw, -imu.z_gyr*RAD_TO_DEG, timed, -1.0);
+  pid_pitch_rate.Update(&front, rad_pitch, imu.y_gyr*RAD_TO_DEG, timed, -1.0);
+  pid_roll_rate.Update(&left, rad_roll, imu.x_gyr*RAD_TO_DEG, timed, 1.0);
+  pid_yaw_rate.Update(&cw, rad_yaw, -imu.z_gyr*RAD_TO_DEG, timed, -1.0);
 }
 
 
@@ -540,12 +537,18 @@ void loop(){
 
   rad_throttle = map(receiver_input_channel_3, 1000, 2000, 1060, 1800);
 
-  imu.update(0.1);
+  imu.UpdateHorizon(0.1);
   SerialPort.print(imu.ypr[0]);
   SerialPort.print(", ");
   SerialPort.print(imu.ypr[1]);
   SerialPort.print(", ");
-  SerialPort.println(imu.ypr[2]);
+  SerialPort.print(imu.ypr[2]);
+  SerialPort.print(", ");
+  SerialPort.print(imu.x_gyr);
+  SerialPort.print(", ");
+  SerialPort.print(imu.y_gyr);
+  SerialPort.print(", ");
+  SerialPort.println(imu.z_gyr);
 
   return;
 
@@ -592,37 +595,37 @@ void loop(){
 
       switch (TUNING_MODE) {
           case 0:            
-            pid_pitch_rate.set_constants(tun, I_pitch_a, D_pitch_a, INTEGRAL_MAX);
-            pid_roll_rate.set_constants(tun, I_pitch_a, D_pitch_a, INTEGRAL_MAX);
+            pid_pitch_rate.SetConstants(tun, I_pitch_a, D_pitch_a, INTEGRAL_MAX);
+            pid_roll_rate.SetConstants(tun, I_pitch_a, D_pitch_a, INTEGRAL_MAX);
             break;
           case 1:
-            pid_pitch_rate.set_constants(P_pitch_a, tun, D_pitch_a, INTEGRAL_MAX);
-            pid_roll_rate.set_constants(P_pitch_a, tun, D_pitch_a, INTEGRAL_MAX);
+            pid_pitch_rate.SetConstants(P_pitch_a, tun, D_pitch_a, INTEGRAL_MAX);
+            pid_roll_rate.SetConstants(P_pitch_a, tun, D_pitch_a, INTEGRAL_MAX);
             break;
           case 2:
-            pid_pitch_rate.set_constants(P_pitch_a, I_pitch_a, tun, INTEGRAL_MAX);
-            pid_roll_rate.set_constants(P_pitch_a, I_pitch_a, tun, INTEGRAL_MAX);
+            pid_pitch_rate.SetConstants(P_pitch_a, I_pitch_a, tun, INTEGRAL_MAX);
+            pid_roll_rate.SetConstants(P_pitch_a, I_pitch_a, tun, INTEGRAL_MAX);
             break;
           case 3:
-            pid_yaw_rate.set_constants(tun, I_yaw, D_yaw, INTEGRAL_MAX);
+            pid_yaw_rate.SetConstants(tun, I_yaw, D_yaw, INTEGRAL_MAX);
             break;
           case 4:
-            pid_yaw_rate.set_constants(P_yaw, tun, D_yaw, INTEGRAL_MAX);
+            pid_yaw_rate.SetConstants(P_yaw, tun, D_yaw, INTEGRAL_MAX);
             break;
           case 5:
-            pid_yaw_rate.set_constants(P_yaw, I_yaw, tun, INTEGRAL_MAX);
+            pid_yaw_rate.SetConstants(P_yaw, I_yaw, tun, INTEGRAL_MAX);
             break;
           case 6:
-            pid_pitch_stab.set_constants(tun, I_pitch_h, D_pitch_h, INTEGRAL_MAX);
-            pid_roll_stab.set_constants(tun, I_roll_h, D_roll_h, INTEGRAL_MAX);
+            pid_pitch_stab.SetConstants(tun, I_pitch_h, D_pitch_h, INTEGRAL_MAX);
+            pid_roll_stab.SetConstants(tun, I_roll_h, D_roll_h, INTEGRAL_MAX);
             break;
           case 7:
-            pid_pitch_stab.set_constants(P_pitch_h, tun, D_pitch_h, INTEGRAL_MAX);
-            pid_roll_stab.set_constants(P_roll_h, tun, D_roll_h, INTEGRAL_MAX);
+            pid_pitch_stab.SetConstants(P_pitch_h, tun, D_pitch_h, INTEGRAL_MAX);
+            pid_roll_stab.SetConstants(P_roll_h, tun, D_roll_h, INTEGRAL_MAX);
             break;
           case 8:
-            pid_pitch_stab.set_constants(P_pitch_h, I_pitch_h, tun, INTEGRAL_MAX);
-            pid_roll_stab.set_constants(P_roll_h, I_roll_h, tun, INTEGRAL_MAX);
+            pid_pitch_stab.SetConstants(P_pitch_h, I_pitch_h, tun, INTEGRAL_MAX);
+            pid_roll_stab.SetConstants(P_roll_h, I_roll_h, tun, INTEGRAL_MAX);
             break;
 
       }
@@ -633,17 +636,17 @@ void loop(){
     
 
     if (motors_on){
-      //update according to set flight mode
+      //Update according to set flight mode
       if(flight_mode == MODE_HORIZON){
-        update_horizon(time_diff);
+        Update_horizon(time_diff);
       }else if (flight_mode == MODE_ACRO){
-        update_acro(time_diff);
+        Update_acro(time_diff);
       }    
       //apply new speed to motors
       //SerialPort.println(micros() - time_last);
       set_motor_speeds();
     }else{
-      //keep motors updated
+      //keep motors Updated
       set_motor_speeds_min();
     }
   }

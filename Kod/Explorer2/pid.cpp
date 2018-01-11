@@ -2,20 +2,20 @@
 #include "pid.h"
 
 
-void Pid::nit(){
+void Pid::Init(){
 	integral = 0.0;
 	error_prev = 0.0;
 	enable_integral = true;
 }
 
-void Pid::set_constants(double KP_, double KI_, double KD_, double INT_MAX_){
+void Pid::SetConstants(double KP_, double KI_, double KD_, double INT_MAX_){
 	KP = KP_;
 	KI = KI_;
 	KD = KD_;
 	INTEGRAL_MAX = INT_MAX_;
 }
 
-void Pid::update(int* out, double ref, double mea, double dt, double scale){
+void Pid::Update(int* out, double ref, double mea, double dt, double scale){
 	error = ref - mea;
 
 	//TODO:
