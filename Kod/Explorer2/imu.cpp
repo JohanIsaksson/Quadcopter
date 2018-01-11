@@ -39,14 +39,7 @@ void IMU::ComplementaryFilter(double tim){
   
 
   // scale and filter angular velocity
-  y_gyr_u = (y_gyr_u >> 2) + (y_gyr_u >> 1) + (gy >> 1);
-  y_gyr = ((double)y_gyr_u)*GYRO_SCALE_Y;
-
-  x_gyr_u = (x_gyr_u >> 2) + (x_gyr_u >> 1) + (gx >> 1);
-  x_gyr = ((double)x_gyr_u)*GYRO_SCALE_X;
-
-  z_gyr_u = (z_gyr_u >> 2) + (z_gyr_u >> 1) + (gz >> 1);
-  z_gyr = ((double)z_gyr_u)*GYRO_SCALE_Z;
+  CalculateGyro();
 
   //z_gyr = z_gyr*0.75 + (((double)(gz)) * GYRO_SCALE_Z)*0.25;
 
@@ -60,13 +53,13 @@ void IMU::ComplementaryFilter(double tim){
 
 void IMU::CalculateGyro(){
   // scale and filter angular velocity
-  y_gyr_u = (y_gyr_u >> 2) + (y_gyr_u >> 1) + (imu.gy >> 2);
+  y_gyr_u = (y_gyr_u >> 2) + (y_gyr_u >> 1) + (gy >> 2);
   y_gyr = ((double)y_gyr_u)*GYRO_SCALE_Y;
 
-  x_gyr_u = (x_gyr_u >> 2) + (x_gyr_u >> 1) + (imu.gx >> 2);
+  x_gyr_u = (x_gyr_u >> 2) + (x_gyr_u >> 1) + (gx >> 2);
   x_gyr = ((double)x_gyr_u)*GYRO_SCALE_X;
 
-  z_gyr_u = (z_gyr_u >> 2) + (z_gyr_u >> 1) + (imu.gz >> 2);
+  z_gyr_u = (z_gyr_u >> 2) + (z_gyr_u >> 1) + (gz >> 2);
   z_gyr = ((double)z_gyr_u)*GYRO_SCALE_Z;
 }
 
@@ -79,6 +72,10 @@ void IMU::Init(){
       Fastwire::setup(400, true);
   #endif
 
+  //BMP180_init();
+  MPU9250_init();
+
+/*
   // init mpu
   if (imu.begin() != INV_SUCCESS)
   {
@@ -87,7 +84,7 @@ void IMU::Init(){
   
   imu.dmpBegin(DMP_FEATURE_6X_LP_QUAT | // Enable 6-axis quat
                DMP_FEATURE_GYRO_CAL, // Use gyro calibration
-              10); // Set DMP FIFO rate to 200 Hz
+              10); // Set DMP FIFO rate to 200 Hz*/
 }
 
 /* ------------------------------------------------------------------------- */
@@ -282,9 +279,50 @@ void IMU::CalculateAltitude(double dt){
 
 /* ------------------------------------------------------------------------- */
 
+void MPU9250_init(){
+
+  I2Cdev::writeBits(MPU9250_ADDR, 0x6B, 2, 3, 0x01); //set internal clock to XGYRO - should be best
+  I2Cdev::writeBits(MPU9250_ADDR, 0x1B, 4, 2, 0x00); //set full scale gyro range +- 250 deg/s
+  I2Cdev::writeBits(MPU9250_ADDR, 0x1C, 4, 2, 0x00); //set full scale accelerometer range +- 2g
+  I2Cdev::writeBit(MPU9250_ADDR, 0x6B, 6, false); //set sleep to false
+
+  // Set offsets
+  I2Cdev::writeWord(MPU9250_ADDR, 0x77, -1753); //x acc
+  I2Cdev::writeWord(MPU9250_ADDR, 0x7A, 989); //y acc
+  I2Cdev::writeWord(MPU9250_ADDR, 0x7D, 1617); //z acc
+
+  I2Cdev::writeWord(MPU9250_ADDR, 0x13, 159); //x gyro
+  I2Cdev::writeWord(MPU9250_ADDR, 0x15, -9); //y gyro
+  I2Cdev::writeWord(MPU9250_ADDR, 0x17, 104); //z gyro
+
+  //I2Cdev::writeWord(MPU9250_ADDR, 0x13, 159); //x mag
+  //I2Cdev::writeWord(MPU9250_ADDR, 0x15, -9); //y mag
+  //I2Cdev::writeWord(MPU9250_ADDR, 0x17, 104); //z mag
+}
+
+void MPU9250_update(){
+  I2Cdev::readBytes(MPU9250_ADDR, 0x3B, 14, I2C_buffer);
+  ax = (((int16_t)I2C_buffer[0]) << 8) | I2C_buffer[1];
+  ay = (((int16_t)I2C_buffer[2]) << 8) | I2C_buffer[3];
+  az = (((int16_t)I2C_buffer[4]) << 8) | I2C_buffer[5];
+  gx = (((int16_t)I2C_buffer[8]) << 8) | I2C_buffer[9];
+  gy = (((int16_t)I2C_buffer[10]) << 8) | I2C_buffer[11];
+  gz = (((int16_t)I2C_buffer[12]) << 8) | I2C_buffer[13];
+}
+
+/* ------------------------------------------------------------------------- */
+
 void IMU::Update(double dt){
 
-	// read raw accel/gyro measurements from device
+	// Update attitude and heading estimates
+  MPU9250_update();
+  ComplementaryFilter();
+
+  // Update altitude estimate
+  //BMP180_update();
+  //CalculateAltitude();
+
+  /*
   if (imu.fifoAvailable()){
     // Use dmpUpdateFifo to update the ax, gx, mx, etc. values
     if (imu.dmpUpdateFifo() == INV_SUCCESS){
@@ -317,20 +355,19 @@ void IMU::Update(double dt){
     }
   }
 
-  
-  /*y_gyr = y_gyr*0.8 + (((double)(gy)) * GYRO_SCALE_Y)*0.2;
-  x_gyr = x_gyr*0.8 + (((double)(gx)) * GYRO_SCALE_X)*0.2;
-  z_gyr = z_gyr*0.8 + (((double)(gz)) * GYRO_SCALE_Z)*0.2;*/
-  
+  */
 
-  //get height
-  //height_estimation(g, t);
 }
 
 void IMU::UpdateHorizon(double dt){
 
+  // Update attitude and heading estimates
+  MPU9250_update();
+  ComplementaryFilter();
+
+
   // read raw accel/gyro measurements from device
-  if (imu.fifoAvailable()){
+  /*if (imu.fifoAvailable()){
     // Use dmpUpdateFifo to update the ax, gx, mx, etc. values
     if (imu.dmpUpdateFifo() == INV_SUCCESS){
       // computeEulerAngles can be used -- after updating the
@@ -360,12 +397,11 @@ void IMU::UpdateHorizon(double dt){
       //scale and filter angular velocity
       CalculateGyro();
     }
-  }
+  }*/
 }
 
 void IMU::UpdateAcro(double dt){
-  // read raw accel/gyro measurements from device
-  //mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-  //scale and filter angular velocity
+  // Scale and filter angular velocity
+  MPU9250_update();
   CalculateGyro();
 }

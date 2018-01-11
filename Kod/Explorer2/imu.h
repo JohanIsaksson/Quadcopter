@@ -8,7 +8,9 @@
 #endif
 
 #include <math.h>
-#include <SparkFunMPU9250-DMP.h>
+//#include <SparkFunMPU9250-DMP.h>
+
+#define MPU9250_ADDR 0x71
 
 #define RAD_TO_DEG 180.0/M_PI
 #define DEG_TO_RAD M_PI/180.0
@@ -85,7 +87,7 @@ private:
 	int lp_pos;
 	int32_t ax_sum, ay_sum, az_sum;
 
-	MPU9250_DMP imu;
+	//MPU9250_DMP imu;
 
 	/* Barometer variables */
 	double altitude, temp;
