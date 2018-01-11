@@ -19,8 +19,6 @@
 
 #include "imu.h"
 #include "pid.h"
-//#include <EEPROM.h>
-//#include "fixed_point.h"
 
 #define SPEED_MIN 1000
 #define SPEED_MAX 2000
@@ -50,7 +48,7 @@
 //#define ESC_DATA
 
 
-// Tunig control
+// Tuning control
 #define TUNING_MAX 10.0
 #define TUNING_MIN 0.0
 //#define TUNING_MODE 6
@@ -70,25 +68,22 @@ double tun;
 
 */
 
-
-
-
 IMU imu;
 
-//motors
+// Motor signals
 int throttle[4]; /* 0 = front left
                     1 = front right
                     2 = back left
                     3 = back right
                   */
 
-//motor pins
+// Motor pins
 #define fl_pin 10 //front left
 #define fr_pin 11 //front right
 #define bl_pin 12 //back left
 #define br_pin 13 //back right
 
-//faster IO for samd21
+// Faster IO for samd21
 #ifdef _VARIANT_ARDUINO_ZERO_
   volatile uint32_t *set_fl = &PORT->Group[g_APinDescription[fl_pin].ulPort].OUTSET.reg;
   volatile uint32_t *clr_fl = &PORT->Group[g_APinDescription[fl_pin].ulPort].OUTCLR.reg;
@@ -107,43 +102,38 @@ int throttle[4]; /* 0 = front left
   const uint32_t  br_MASK = (1ul << g_APinDescription[br_pin].ulPin);
 #endif
 
-//pid
+// PID outputs for each axis
 int front;
 int left;
 int cw;
 
-// horizon mode stab outputs
+// Horizon mode stabilzation outputs
 int pitch_stab, roll_stab, yaw_stab;
 
-//pid controllers for each axis
+// PID controllers for each axis
 Pid pid_pitch_rate, pid_roll_rate, pid_yaw_rate;
 Pid pid_pitch_stab, pid_roll_stab, pid_yaw_stab;
 
-//pid parameters
+// PID parameters
 double P_pitch_a, I_pitch_a, D_pitch_a,
         P_pitch_h, I_pitch_h, D_pitch_h,
         P_roll_a, I_roll_a, D_roll_a,
         P_roll_h, I_roll_h, D_roll_h,
         P_yaw, I_yaw, D_yaw;
 
+// Maximum angle and rotation sppeds
 uint16_t max_pitch, max_roll, max_yaw;
 uint16_t max_p, max_r, max_y;
-uint8_t exp_lin;
 
-uint8_t buf[26];
-
-//output
-int count;
-
-//safety stuff
+// L.O.S. safety counter
 int radio_off_counter;
 
-//time keeping
+// Time keeping
 uint32_t time_diff;
 uint32_t time_last;
 double timed;
 
-//radio variables
+// Radio variables
 byte last_channel_1, 
       last_channel_2, 
       last_channel_3, 
@@ -165,27 +155,25 @@ uint32_t timer_1,
 double rad_roll, rad_pitch, rad_yaw;
 uint16_t rad_throttle;
 
-//motor control variables
+// Motor control variables
 bool motors_on, disable_sticks;
 uint32_t us, esc_time, start_time, end_time;
 
-//flight mode control
+// Flight mode control
 uint8_t flight_mode;
 
-//yaw control
+// Yaw control
 bool set_yaw;
 
+// Serial bus for SAMD21
 #define SerialPort SerialUSB
 
+// Mapping function for double data type
 double map_d(double x, double in_min, double in_max, double out_min, double out_max){
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-/* Third order polynomial */
-double map_x3(double x){
-  return x*(0.00000096*x*x + 0.12);
-}
-
+// Initalizes ESCs by keeping throttle low for 3s. (MUST BE DONE ASAP AT POWER ON)
 void init_motors(){
   uint32_t init_esc_time = micros() + 3000000;
   for(int i = 0; i < 4; i++){
@@ -196,6 +184,21 @@ void init_motors(){
 
     start_time = micros();
     end_time = start_time + 2000;
+    start_motor_pulses();
+
+    esc_time = micros();
+
+    while(end_time > esc_time){                         
+      if (esc_time - start_time >= throttle[0]) *clr_f1 = fl_MASK; //front left
+      if (esc_time - start_time >= throttle[1]) *clr_fr = fr_MASK; //front right
+      if (esc_time - start_time >= throttle[2]) *clr_b1 = bl_MASK; //back left
+      if (esc_time - start_time >= throttle[3]) *clr_br = br_MASK; //back right
+      esc_time = micros();
+    }
+
+    stop_motor_pulses(); //for safety, set all outputs to 0*/
+
+
     /*PORTB |= B00001111; // set all inputs to 1
 
     esc_time = micros();
@@ -214,7 +217,7 @@ void init_motors(){
   }
 }
 
-//limit x to [a,b]
+// Limit integer x to interval [a,b]
 uint16_t limit(uint16_t x, uint16_t a, uint16_t b){
   uint16_t r;
   if (x < a) r = a;
@@ -222,12 +225,15 @@ uint16_t limit(uint16_t x, uint16_t a, uint16_t b){
   return r;
 }
 
+// Sets all motor pulses high
 void start_motor_pulses(){
   *set_fl = fl_MASK; //front left
   *set_fr = fr_MASK; //front right
   *set_bl = bl_MASK; //back left
   *set_br = br_MASK; //back right
 }
+
+// Sets all motor pulses low
 void stop_motor_pulses(){
   *clr_fl = fl_MASK; //front left
   *clr_fr = fr_MASK; //front right
@@ -235,6 +241,7 @@ void stop_motor_pulses(){
   *clr_br = br_MASK; //back right
 }
 
+// Sets final throttle by combining outputs from all PIDs 
 void set_motor_speeds(){
   //front left
   throttle[0] = rad_throttle + front + left + cw;
@@ -268,11 +275,12 @@ void set_motor_speeds(){
 
   if (flight_mode == MODE_HORIZON){
     while(micros() - time_last < 4000);
-    }else{
-      while(micros() - time_last < 2800);
-    }
+  }else if (flight_mode == MODE_ACRO){
+    while(micros() - time_last < 2800);
+  }
 }
 
+// Sets minimum throttle for all motors
 void set_motor_speeds_min(){
   //start esc pulses
   start_time = micros(); 
@@ -696,11 +704,11 @@ void setup_radio(){
 void radio_roll_ISR(){
   us = micros();
   //Channel 1=========================================
-  if(last_channel_1 == 0 && digitalRead(radio_roll_pin)){         //Input 8 changed from 0 to 1
+  if(last_channel_1 == 0 && digitalRead(radio_roll_pin)){         //Input 9 changed from 0 to 1
     last_channel_1 = 1;                                 //Remember current input state
     timer_1 = us;                                 //Set timer_1 to micros()
   }
-  else if(last_channel_1 == 1 && !(digitalRead(radio_roll_pin))){  //Input 8 changed from 1 to 0
+  else if(last_channel_1 == 1 && !(digitalRead(radio_roll_pin))){  //Input 9 changed from 1 to 0
     last_channel_1 = 0;                                 //Remember current input state
     receiver_input_channel_1 = us - timer_1;      //Channel 1 is micros() - timer_1
   }
@@ -709,11 +717,11 @@ void radio_roll_ISR(){
 void radio_pitch_ISR(){
   us = micros();
   //Channel 2=========================================
-  if(last_channel_2 == 0 && digitalRead(radio_pitch_pin)){         //Input 9 changed from 0 to 1
+  if(last_channel_2 == 0 && digitalRead(radio_pitch_pin)){         //Input 8 changed from 0 to 1
     last_channel_2 = 1;                                 //Remember current input state
     timer_2 = us;                                 //Set timer_2 to micros()
   }
-  else if(last_channel_2 == 1 && !(digitalRead(radio_pitch_pin))){  //Input 9 changed from 1 to 0
+  else if(last_channel_2 == 1 && !(digitalRead(radio_pitch_pin))){  //Input 8 changed from 1 to 0
     last_channel_2 = 0;                                 //Remember current input state
     receiver_input_channel_2 = us - timer_2;      //Channel 2 is micros() - timer_2
   }
@@ -722,11 +730,11 @@ void radio_pitch_ISR(){
 void radio_throttle_ISR(){
   us = micros();
   //Channel 3=========================================
-  if(last_channel_3 == 0 && digitalRead(radio_throttle_pin)){         //Input 10 changed from 0 to 1
+  if(last_channel_3 == 0 && digitalRead(radio_throttle_pin)){         //Input 7 changed from 0 to 1
     last_channel_3 = 1;                                 //Remember current input state
     timer_3 = us;                                 //Set timer_3 to micros()
   }
-  else if(last_channel_3 == 1 && !(digitalRead(radio_throttle_pin))){  //Input 10 changed from 1 to 0
+  else if(last_channel_3 == 1 && !(digitalRead(radio_throttle_pin))){  //Input 7 changed from 1 to 0
     last_channel_3 = 0;                                 //Remember current input state
     receiver_input_channel_3 = us - timer_3;      //Channel 3 is micros() - timer_3
   }
@@ -735,11 +743,11 @@ void radio_throttle_ISR(){
 void radio_yaw_ISR(){
   us = micros();
   //Channel 4=========================================
-  if(last_channel_4 == 0 && digitalRead(radio_yaw_pin)){         //Input 11 changed from 0 to 1
+  if(last_channel_4 == 0 && digitalRead(radio_yaw_pin)){         //Input 6 changed from 0 to 1
     last_channel_4 = 1;                                 //Remember current input state
     timer_4 = us;                                 //Set timer_4 to micros()
   }
-  else if(last_channel_4 == 1 && !(digitalRead(radio_yaw_pin))){  //Input 11 changed from 1 to 0
+  else if(last_channel_4 == 1 && !(digitalRead(radio_yaw_pin))){  //Input 6 changed from 1 to 0
     last_channel_4 = 0;                                 //Remember current input state
     receiver_input_channel_4 = us - timer_4;      //Channel 4 is micros() - timer_4
   }
@@ -748,11 +756,11 @@ void radio_yaw_ISR(){
 void radio_mode_ISR(){
   us = micros();
   //Channel 5=========================================
-  if(last_channel_5 == 0 && digitalRead(radio_mode_pin)){         //Input 10 changed from 0 to 1
+  if(last_channel_5 == 0 && digitalRead(radio_mode_pin)){         //Input 5 changed from 0 to 1
     last_channel_5 = 1;                                 //Remember current input state
     timer_5 = us;                                 //Set timer_3 to micros()
   }
-  else if(last_channel_5 == 1 && !(digitalRead(radio_mode_pin))){  //Input 10 changed from 1 to 0
+  else if(last_channel_5 == 1 && !(digitalRead(radio_mode_pin))){  //Input 5 changed from 1 to 0
     last_channel_5 = 0;                                 //Remember current input state
     receiver_input_channel_5 = us - timer_5;      //Channel 3 is micros() - timer_3
   }
@@ -761,11 +769,11 @@ void radio_mode_ISR(){
 void radio_kill_ISR(){
   us = micros();
   //Channel 6=========================================
-  if(last_channel_6 == 0 && digitalRead(radio_kill_pin)){         //Input 11 changed from 0 to 1
+  if(last_channel_6 == 0 && digitalRead(radio_kill_pin)){         //Input 3 changed from 0 to 1
     last_channel_6 = 1;                                 //Remember current input state
     timer_6 = us;                                 //Set timer_4 to micros()
   }
-  else if(last_channel_6 == 1 && !(digitalRead(radio_kill_pin))){  //Input 11 changed from 1 to 0
+  else if(last_channel_6 == 1 && !(digitalRead(radio_kill_pin))){  //Input 3 changed from 1 to 0
     last_channel_6 = 0;                                 //Remember current input state
     receiver_input_channel_6 = us - timer_6;      //Channel 4 is micros() - timer_4
   }

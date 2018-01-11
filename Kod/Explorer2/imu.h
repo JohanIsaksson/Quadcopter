@@ -16,6 +16,12 @@
 #define LP_BUFFER_SIZE 16
 #define LP_SHIFT 4
 
+#define LP_TEMP_BUFFER_SIZE 4
+#define LP_TEMP_SHIFT 2
+
+#define LP_PRESSURE_BUFFER_SIZE 4
+#define LP_PRESSURE_SHIFT 2
+
 #define YAW 0
 #define PITCH 1
 #define ROLL 2
@@ -70,26 +76,54 @@ private:
 
 	MPU9250_DMP imu;
 
+	/* Barometer variables */
+	double altitude, temp;
+	double pressure, base_pressure;
+	double vertical_speed;
+	double vertical_acc;
+	int16_t AC1,AC2,AC3,VB1,VB2,MB,MC,MD;
+	uint16_t AC4,AC5,AC6; 
+	double c5,c6,mc,md,x0,x1,x2,y0,y1,y2,p0,p1,p2;
+	uint8_t baro_state;
+	uint8_t I2C_buffer[22];
+
+	int16_t temp_buf[LP_TEMP_BUFFER_SIZE];
+	int temp_pos;
+	int32_t temp_sum;
+
+	int32_t pressure_buf[LP_TEMP_BUFFER_SIZE];
+	int pressure_pos;
+	int32_t pressure_sum;
 
 
-	void complementary_filter(double time);
-	void calculate_gyro();
+	void ComplementaryFilter(double time);
+	void CalculateGyro();
 
 public:
 
-	// angles
+	/* Angles */
 	double ypr[3];
 	double ypr_rad[3];
 
-	// gyro angular rates
+	/* Angular rates */
 	int16_t x_gyr_u, y_gyr_u, z_gyr_u;
 	double x_gyr, y_gyr, z_gyr;
 
-	/* Initializes the gyro and sets parameters */
-	void init();
+	/* Altitude estimation */
+	double altitude, vertical_speed, vertical_acc;
 
-	/* Reads raw data from sensors and perform complementary filtering */
-	void update(double tim);
+	/* Initializes the gyro and sets parameters */
+	void Init();
+
+	/* Update Everything: Gyroscope, Accelerometer, Barometer, (GPS) */
+	void Update(double dt);
+
+	/* Update gyroscope and accelerometer data */
+	void UpdateHorizon(double dt);
+
+	/* Update gyroscope data only */
+	void UpdateAcro(double dt);
+
 
 };
 

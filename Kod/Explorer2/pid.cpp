@@ -2,7 +2,7 @@
 #include "pid.h"
 
 
-void Pid::init(){
+void Pid::nit(){
 	integral = 0.0;
 	error_prev = 0.0;
 	enable_integral = true;
