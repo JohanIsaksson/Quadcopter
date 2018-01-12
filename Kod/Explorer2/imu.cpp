@@ -281,7 +281,16 @@ void IMU::CalculateAltitude(double dt){
 
 void IMU::MPU9250_init(){
 
-  I2Cdev::writeBits(MPU9250_ADDR, 0x6B, 2, 3, 0x01); //set internal clock to XGYRO - should be best
+  I2Cdev::writeBit(MPU9250_ADDR, 0x6B, 7, true); // Reset chip
+
+  I2Cdev::writeByte(MPU9250_ADDR, 0x23, 0x00); // Disabled fifo
+  I2Cdev::writeBit(MPU9250_ADDR, 0x38, 6, false); // Disable interrupts
+  I2Cdev::writeBit(MPU9250_ADDR, 0x38, 4, false); //
+  I2Cdev::writeBit(MPU9250_ADDR, 0x38, 3, false); //
+  I2Cdev::writeBit(MPU9250_ADDR, 0x38, 0, false); //
+
+
+  I2Cdev::writeBits(MPU9250_ADDR, 0x6B, 2, 3, 0x01); //set internal clock to pll if available
   I2Cdev::writeBits(MPU9250_ADDR, 0x1B, 4, 2, 0x00); //set full scale gyro range +- 250 deg/s
   I2Cdev::writeBits(MPU9250_ADDR, 0x1C, 4, 2, 0x00); //set full scale accelerometer range +- 2g
   I2Cdev::writeBit(MPU9250_ADDR, 0x6B, 6, false); //set sleep to false
