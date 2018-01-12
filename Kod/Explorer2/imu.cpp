@@ -279,7 +279,7 @@ void IMU::CalculateAltitude(double dt){
 
 /* ------------------------------------------------------------------------- */
 
-void MPU9250_init(){
+void IMU::MPU9250_init(){
 
   I2Cdev::writeBits(MPU9250_ADDR, 0x6B, 2, 3, 0x01); //set internal clock to XGYRO - should be best
   I2Cdev::writeBits(MPU9250_ADDR, 0x1B, 4, 2, 0x00); //set full scale gyro range +- 250 deg/s
@@ -300,7 +300,7 @@ void MPU9250_init(){
   //I2Cdev::writeWord(MPU9250_ADDR, 0x17, 104); //z mag
 }
 
-void MPU9250_update(){
+void IMU::MPU9250_update(){
   I2Cdev::readBytes(MPU9250_ADDR, 0x3B, 14, I2C_buffer);
   ax = (((int16_t)I2C_buffer[0]) << 8) | I2C_buffer[1];
   ay = (((int16_t)I2C_buffer[2]) << 8) | I2C_buffer[3];
@@ -316,7 +316,7 @@ void IMU::Update(double dt){
 
 	// Update attitude and heading estimates
   MPU9250_update();
-  ComplementaryFilter();
+  ComplementaryFilter(dt);
 
   // Update altitude estimate
   //BMP180_update();
@@ -363,7 +363,7 @@ void IMU::UpdateHorizon(double dt){
 
   // Update attitude and heading estimates
   MPU9250_update();
-  ComplementaryFilter();
+  ComplementaryFilter(dt);
 
 
   // read raw accel/gyro measurements from device

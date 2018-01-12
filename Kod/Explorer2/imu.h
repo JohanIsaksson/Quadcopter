@@ -121,6 +121,8 @@ private:
 
 	void CalculateAltitude(double dt);
 
+  void MPU9250_init();
+  void MPU9250_update();
 
 
 public:

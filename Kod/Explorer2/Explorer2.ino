@@ -134,19 +134,19 @@ uint32_t time_last;
 double timed;
 
 // Radio variables
-byte last_channel_1, 
+volatile byte last_channel_1, 
       last_channel_2, 
       last_channel_3, 
       last_channel_4,
       last_channel_5, 
       last_channel_6;
-int receiver_input_channel_1, 
+volatile int receiver_input_channel_1, 
     receiver_input_channel_2, 
     receiver_input_channel_3, 
     receiver_input_channel_4, 
     receiver_input_channel_5, 
     receiver_input_channel_6;
-uint32_t timer_1, 
+volatile uint32_t timer_1, 
           timer_2, 
           timer_3, 
           timer_4,
@@ -695,13 +695,21 @@ void setup_radio(){
   radio_yaw_pin = 6;
   radio_mode_pin = 5;
   radio_kill_pin = 3;
+
+  pinMode(radio_roll_pin, INPUT);
+  pinMode(radio_pitch_pin, INPUT);
+  pinMode(radio_throttle_pin, INPUT);
+  pinMode(radio_yaw_pin, INPUT);
+  pinMode(radio_mode_pin, INPUT);
+  pinMode(radio_kill_pin, INPUT);
                                                                                           //  channel:
-  attachInterrupt(digitalPinToInterrupt(radio_roll_pin), radio_roll_ISR, CHANGE);         //  1  
+  /*attachInterrupt(digitalPinToInterrupt(radio_roll_pin), radio_roll_ISR, CHANGE);         //  1  
   attachInterrupt(digitalPinToInterrupt(radio_pitch_pin), radio_pitch_ISR, CHANGE);       //  2
   attachInterrupt(digitalPinToInterrupt(radio_throttle_pin), radio_throttle_ISR, CHANGE); //  3
   attachInterrupt(digitalPinToInterrupt(radio_yaw_pin), radio_yaw_ISR, CHANGE);           //  4
   attachInterrupt(digitalPinToInterrupt(radio_mode_pin), radio_mode_ISR, CHANGE);         //  5
   attachInterrupt(digitalPinToInterrupt(radio_kill_pin), radio_kill_ISR, CHANGE);         //  6
+  */
 }
 
 void radio_roll_ISR(){
