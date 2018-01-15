@@ -9,17 +9,17 @@ void IMU::ComplementaryFilter(double tim){
   ax_sum -= ax_buf[lp_pos];
   ax_buf[lp_pos] = ax;
   ax_sum += ax;
-  ax = ax_sum >> LP_SHIFT;
+  //ax = ax_sum >> LP_SHIFT;
 
   ay_sum -= ay_buf[lp_pos];
   ay_buf[lp_pos] = ay;
   ay_sum += ay;
-  ay = ay_sum >> LP_SHIFT;
+  //ay = ay_sum >> LP_SHIFT;
 
   az_sum -= az_buf[lp_pos];
   az_buf[lp_pos] = az;
   az_sum += az;
-  az = az_sum >> LP_SHIFT;
+  //az = az_sum >> LP_SHIFT;
 
   if (lp_pos < LP_BUFFER_SIZE-1){
     lp_pos++;
@@ -72,7 +72,9 @@ void IMU::Init(){
       Fastwire::setup(400, true);
   #endif
 
-  //BMP180_init();
+  SerialUSB.println("INIT IMU");
+
+  BMP180_init();
   MPU9250_init();
 
 /*
@@ -98,7 +100,7 @@ void IMU::BMP180_temp_read(){
   I2Cdev::readBytes(BMP180_ADDR, BMP180_REG_RESULT, 2, I2C_buffer);
 
   int16_t tu_ = I2C_buffer[0];
-  tu_ <<= 8;
+  tu_ = tu_ << 8;
   tu_ += I2C_buffer[1];
 
   /* low pass filter through moving average */
@@ -106,6 +108,8 @@ void IMU::BMP180_temp_read(){
   temp_buf[temp_pos] = tu_;
   temp_sum += tu_;
   tu_ = temp_sum >> LP_TEMP_SHIFT;
+
+  temp_pos = (temp_pos + 1) % LP_TEMP_BUFFER_SIZE;
 
   tu = (double)tu_;
 
@@ -129,9 +133,9 @@ void IMU::BMP180_pressure_read(){
   I2Cdev::readBytes(BMP180_ADDR, BMP180_REG_RESULT, 3, I2C_buffer);
 
   int32_t pu_1 = I2C_buffer[0];
-  pu_1 <<= 16;
+  pu_1 = pu_1 << 16;
   int32_t pu_2 = I2C_buffer[1];
-  pu_2 <<= 8;
+  pu_2 = pu_2 << 8;
   int32_t pu_3 = (pu_1 + pu_2 + I2C_buffer[2]);
 
   /* low pass filter through moving average */
@@ -139,6 +143,8 @@ void IMU::BMP180_pressure_read(){
   pressure_buf[pressure_pos] = pu_3;
   pressure_sum += pu_3;
   pu_3 = pressure_sum >> LP_PRESSURE_SHIFT;
+
+  pressure_pos = (pressure_pos + 1) % LP_PRESSURE_BUFFER_SIZE;
 
   pu = (double)pu_3 / 256.0;
 
@@ -197,13 +203,30 @@ void IMU::BMP180_init(){
   p1 = 1.0 - 7357.0 * pow(2,-20);
   p2 = 3038.0 * 100.0 * pow(2,-36);
 
-  //get initial values
-  BMP180_temp_start();
-  delay(10);
-  BMP180_temp_read();
-  BMP180_pressure_start();
-  delay(30);
-  BMP180_pressure_read();
+  // Reset filters
+  temp_sum = 0;
+  temp_pos = 0;
+  pressure_sum = 0;
+  pressure_pos = 0;
+
+  for (int i = 0; i < LP_TEMP_BUFFER_SIZE; i++){
+    temp_buf[i] = 0;
+  }
+  for (int i = 0; i < LP_PRESSURE_BUFFER_SIZE; i++){
+    pressure_buf[i] = 0;
+  }
+  
+
+  // Get initial values
+  for (int i = 0; i < 8; i++){
+    BMP180_temp_start();
+    delay(10);
+    BMP180_temp_read();
+    BMP180_pressure_start();
+    delay(30);
+    BMP180_pressure_read();
+  }
+
   base_pressure = pressure;
   altitude = 0.0;
   baro_state = 0;
@@ -270,9 +293,6 @@ void IMU::CalculateAltitude(double dt){
   // Calculate vertical acceleration (needs more testing)
   vertical_acc = axs*sinp + ays*cosp*sinr + azs*cosp*cosr;
 
-  // Get barometer data
-  BMP180_update();
-
   // Run kalman 
   //KalmanUpdate(altitude, vertical_acc, dt);
 }
@@ -281,28 +301,34 @@ void IMU::CalculateAltitude(double dt){
 
 void IMU::MPU9250_init(){
 
-  I2Cdev::writeBit(MPU9250_ADDR, 0x6B, 7, true); // Reset chip
+  SerialUSB.println("INIT MPU9250");
 
-  I2Cdev::writeByte(MPU9250_ADDR, 0x23, 0x00); // Disabled fifo
-  I2Cdev::writeBit(MPU9250_ADDR, 0x38, 6, false); // Disable interrupts
-  I2Cdev::writeBit(MPU9250_ADDR, 0x38, 4, false); //
-  I2Cdev::writeBit(MPU9250_ADDR, 0x38, 3, false); //
-  I2Cdev::writeBit(MPU9250_ADDR, 0x38, 0, false); //
+  //I2Cdev::writeByte(MPU9250_ADDR, 0x23, 0x00); // Disabled fifo
+  
 
+  I2Cdev::writeBit(MPU9250_ADDR, 0x1D, 3, 1); //
+  I2Cdev::writeBit(MPU9250_ADDR, 0x37, 7, 1); //
 
-  I2Cdev::writeBits(MPU9250_ADDR, 0x6B, 2, 3, 0x01); //set internal clock to pll if available
+  I2Cdev::writeBit(MPU9250_ADDR, 0x67, 1, 1); //
+  I2Cdev::writeBit(MPU9250_ADDR, 0x67, 0, 1); //
+
+  //I2Cdev::writeByte(MPU9250_ADDR, 0x19, 0); //
+
+  //I2Cdev::writeBits(MPU9250_ADDR, 0x6A, 6, 2, 0x00); // disable fifo and i2c master
+  //I2Cdev::writeBits(MPU9250_ADDR, 0x1A, 2, 3, 0x00); // disable low pass filter
+  I2Cdev::writeBits(MPU9250_ADDR, 0x6B, 2, 3, 0x01); //set to internal clock  
   I2Cdev::writeBits(MPU9250_ADDR, 0x1B, 4, 2, 0x00); //set full scale gyro range +- 250 deg/s
   I2Cdev::writeBits(MPU9250_ADDR, 0x1C, 4, 2, 0x00); //set full scale accelerometer range +- 2g
   I2Cdev::writeBit(MPU9250_ADDR, 0x6B, 6, false); //set sleep to false
 
-  // Set offsets
-  I2Cdev::writeWord(MPU9250_ADDR, 0x77, -1753); //x acc
-  I2Cdev::writeWord(MPU9250_ADDR, 0x7A, 989); //y acc
-  I2Cdev::writeWord(MPU9250_ADDR, 0x7D, 1617); //z acc
+  // Set offsets  
+  I2Cdev::writeWord(MPU9250_ADDR, 0x77, 0); //x acc
+  I2Cdev::writeWord(MPU9250_ADDR, 0x7A, 0); //y acc
+  I2Cdev::writeWord(MPU9250_ADDR, 0x7D, 0); //z acc
 
-  I2Cdev::writeWord(MPU9250_ADDR, 0x13, 159); //x gyro
-  I2Cdev::writeWord(MPU9250_ADDR, 0x15, -9); //y gyro
-  I2Cdev::writeWord(MPU9250_ADDR, 0x17, 104); //z gyro
+  I2Cdev::writeWord(MPU9250_ADDR, 0x13, -36); //x gyro
+  I2Cdev::writeWord(MPU9250_ADDR, 0x15, -169); //y gyro
+  I2Cdev::writeWord(MPU9250_ADDR, 0x17, -37); //z gyro
 
   //I2Cdev::writeWord(MPU9250_ADDR, 0x13, 159); //x mag
   //I2Cdev::writeWord(MPU9250_ADDR, 0x15, -9); //y mag
@@ -311,6 +337,7 @@ void IMU::MPU9250_init(){
 
 void IMU::MPU9250_update(){
   I2Cdev::readBytes(MPU9250_ADDR, 0x3B, 14, I2C_buffer);
+  
   ax = (((int16_t)I2C_buffer[0]) << 8) | I2C_buffer[1];
   ay = (((int16_t)I2C_buffer[2]) << 8) | I2C_buffer[3];
   az = (((int16_t)I2C_buffer[4]) << 8) | I2C_buffer[5];
@@ -328,8 +355,8 @@ void IMU::Update(double dt){
   ComplementaryFilter(dt);
 
   // Update altitude estimate
-  //BMP180_update();
-  //CalculateAltitude();
+  BMP180_update();
+  CalculateAltitude(dt);
 
   /*
   if (imu.fifoAvailable()){

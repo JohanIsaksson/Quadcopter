@@ -10,7 +10,7 @@
 #include <math.h>
 //#include <SparkFunMPU9250-DMP.h>
 
-#define MPU9250_ADDR 0x71
+#define MPU9250_ADDR 0x68
 
 #define RAD_TO_DEG 180.0/M_PI
 #define DEG_TO_RAD M_PI/180.0
@@ -72,10 +72,6 @@ class IMU{
 private:
 	uint8_t I2C_buffer[22];
 
-	// mpu6050 raw data
-	int16_t ax, ay, az;
-	int16_t gx, gy, gz;
-
 	//mpu6050 scaled data
 	double axs, ays, azs;
 
@@ -90,10 +86,8 @@ private:
 	//MPU9250_DMP imu;
 
 	/* Barometer variables */
-	double altitude, temp;
+	double temp;
 	double pressure, base_pressure;
-	double vertical_speed;
-	double vertical_acc;
 	int16_t AC1,AC2,AC3,VB1,VB2,MB,MC,MD;
 	uint16_t AC4,AC5,AC6; 
 	double c5,c6,mc,md,x0,x1,x2,y0,y1,y2,p0,p1,p2;
@@ -104,7 +98,7 @@ private:
 	int temp_pos;
 	int32_t temp_sum;
 
-	int32_t pressure_buf[LP_TEMP_BUFFER_SIZE];
+	int32_t pressure_buf[LP_PRESSURE_BUFFER_SIZE];
 	int pressure_pos;
 	int32_t pressure_sum;
 
@@ -127,6 +121,10 @@ private:
 
 public:
 
+  // mpu6050 raw data
+  int16_t ax, ay, az;
+  int16_t gx, gy, gz;
+
 	/* Angles */
 	double ypr[3];
 	double ypr_rad[3];
@@ -136,7 +134,7 @@ public:
 	double x_gyr, y_gyr, z_gyr;
 
 	/* Altitude estimation */
-	//double altitude, vertical_speed, vertical_acc;
+	double altitude, vertical_speed, vertical_acc;
 
 	/* Initializes the gyro and sets parameters */
 	void Init();

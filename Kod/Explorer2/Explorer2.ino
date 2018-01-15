@@ -319,7 +319,7 @@ void set_motor_speeds_max(){
   ####  ######   ##    ####  ##
 */
 void setup(){
-
+  delay(2000);
 
   SerialPort.begin(115200);
   SerialPort.println("Starting up");
@@ -537,18 +537,42 @@ void loop(){
 
   rad_throttle = map(receiver_input_channel_3, 1000, 2000, 1060, 1800);
 
-  imu.UpdateHorizon(0.1);
+  imu.Update(((double)time_diff)/1000000.0);
+
+  //SerialPort.println("R");
+
+  SerialPort.println(imu.altitude);
+  
+  /*
+  SerialPort.print(imu.ax);
+  SerialPort.print(", ");
+  SerialPort.print(imu.ay);
+  SerialPort.print(", ");
+  SerialPort.print(imu.az);
+  SerialPort.print(", ");
+  SerialPort.print(imu.gx);
+  SerialPort.print(", ");
+  SerialPort.print(imu.gy);
+  SerialPort.print(", ");
+  SerialPort.println(imu.gz);
+  */
+  /*
   SerialPort.print(imu.ypr[0]);
   SerialPort.print(", ");
   SerialPort.print(imu.ypr[1]);
   SerialPort.print(", ");
-  SerialPort.print(imu.ypr[2]);
+  SerialPort.println(imu.ypr[2]);
+  */
+  /*
   SerialPort.print(", ");
   SerialPort.print(imu.x_gyr);
   SerialPort.print(", ");
   SerialPort.print(imu.y_gyr);
   SerialPort.print(", ");
   SerialPort.println(imu.z_gyr);
+  */
+
+  delay(20);
 
   return;
 
