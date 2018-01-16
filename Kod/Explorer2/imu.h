@@ -10,6 +10,11 @@
 #include <math.h>
 //#include <SparkFunMPU9250-DMP.h>
 
+#define MAG_ADDR 0x1E
+
+#define MPU6050_ADDR 0x68
+#define MPU6050_DATAREG 0x3B
+
 #define MPU9250_ADDR 0x68
 
 #define RAD_TO_DEG 180.0/M_PI
@@ -74,10 +79,7 @@ private:
 
 	//mpu6050 scaled data
 	double axs, ays, azs;
-
-	// accelerometer angles
-	double x_acc, y_acc, z_acc;
-
+ 
 	// accelerometer low pass filter
 	int16_t ax_buf[LP_BUFFER_SIZE], ay_buf[LP_BUFFER_SIZE], az_buf[LP_BUFFER_SIZE];
 	int lp_pos;
@@ -115,6 +117,9 @@ private:
 
 	void CalculateAltitude(double dt);
 
+  void MPU6050_init();
+  void MPU6050_update();
+
   void MPU9250_init();
   void MPU9250_update();
 
@@ -128,6 +133,9 @@ public:
 	/* Angles */
 	double ypr[3];
 	double ypr_rad[3];
+
+  // accelerometer angles
+  double x_acc, y_acc, z_acc;
 
 	/* Angular rates */
 	int16_t x_gyr_u, y_gyr_u, z_gyr_u;

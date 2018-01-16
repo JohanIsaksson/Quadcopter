@@ -9,17 +9,17 @@ void IMU::ComplementaryFilter(double tim){
   ax_sum -= ax_buf[lp_pos];
   ax_buf[lp_pos] = ax;
   ax_sum += ax;
-  //ax = ax_sum >> LP_SHIFT;
+  ax = ax_sum >> LP_SHIFT;
 
   ay_sum -= ay_buf[lp_pos];
   ay_buf[lp_pos] = ay;
   ay_sum += ay;
-  //ay = ay_sum >> LP_SHIFT;
+  ay = ay_sum >> LP_SHIFT;
 
   az_sum -= az_buf[lp_pos];
   az_buf[lp_pos] = az;
   az_sum += az;
-  //az = az_sum >> LP_SHIFT;
+  az = az_sum >> LP_SHIFT;
 
   if (lp_pos < LP_BUFFER_SIZE-1){
     lp_pos++;
@@ -34,9 +34,10 @@ void IMU::ComplementaryFilter(double tim){
   //azs = (double)az * ACC_SCALE_Z;
 
   // accelerometer angles
-  x_acc = SpeedTrig.atan2(axs,sqrt(ACC_SCALE_X *((double)(ay*ay + az*az))));
-  y_acc = SpeedTrig.atan2(ays,sqrt(ACC_SCALE_X *((double)(ax*ax + az*az))));
-  
+  //x_acc = SpeedTrig.atan2(axs,sqrt(ACC_SCALE_X *((double)(ay*ay + az*az))));
+  //y_acc = SpeedTrig.atan2(ays,sqrt(ACC_SCALE_X *((double)(ax*ax + az*az))));
+  x_acc = atan(axs/sqrt(ACC_SCALE_X * ACC_SCALE_X *((double)(ay*ay + az*az)))); //Bov
+  y_acc = atan(ays/sqrt(ACC_SCALE_X * ACC_SCALE_X *((double)(ax*ax + az*az))));
 
   // scale and filter angular velocity
   CalculateGyro();
@@ -44,8 +45,8 @@ void IMU::ComplementaryFilter(double tim){
   //z_gyr = z_gyr*0.75 + (((double)(gz)) * GYRO_SCALE_Z)*0.25;
 
 
-  ypr_rad[PITCH] = -(P1*(-ypr_rad[PITCH] - y_gyr*tim*GYRO_GAIN_PITCH) + (1.0-P1)*x_acc);
-  ypr_rad[ROLL] = (P2*(ypr_rad[ROLL] + x_gyr*tim*GYRO_GAIN_ROLL) + (1.0-P2)*y_acc);
+  ypr_rad[PITCH] = -(P1*(-ypr_rad[PITCH] - y_gyr*tim) + (1.0-P1)*x_acc);
+  ypr_rad[ROLL] = (P2*(ypr_rad[ROLL] + x_gyr*tim) + (1.0-P2)*y_acc);
 
   ypr[PITCH] = ypr_rad[PITCH] * RAD_TO_DEG;
   ypr[ROLL] = ypr_rad[ROLL] * RAD_TO_DEG;
@@ -75,7 +76,8 @@ void IMU::Init(){
   SerialUSB.println("INIT IMU");
 
   BMP180_init();
-  MPU9250_init();
+  MPU6050_init();
+  //MPU9250_init();
 
 /*
   // init mpu
@@ -299,6 +301,41 @@ void IMU::CalculateAltitude(double dt){
 
 /* ------------------------------------------------------------------------- */
 
+void IMU::MPU6050_init(){
+  I2Cdev::writeBits(MPU6050_ADDR, 0x6B, 2, 3, 0x01); //set internal clock to XGYRO - should be best
+  I2Cdev::writeBits(MPU6050_ADDR, 0x1B, 4, 2, 0x00); //set full scale gyro range +- 250 deg/s
+  I2Cdev::writeBits(MPU6050_ADDR, 0x1C, 4, 2, 0x00); //set full scale accelerometer range +- 2g
+  I2Cdev::writeBit(MPU6050_ADDR, 0x6B, 6, false); //set sleep to false
+
+  //set offsets (on chip 1)
+  I2Cdev::writeWord(MPU6050_ADDR, 0x06, 217); //x acc
+  I2Cdev::writeWord(MPU6050_ADDR, 0x08, -3180); //y acc
+  I2Cdev::writeWord(MPU6050_ADDR, 0x0A, 2319); //z acc
+
+  I2Cdev::writeWord(MPU6050_ADDR, 0x13, 28);// 98); //x gyro
+  I2Cdev::writeWord(MPU6050_ADDR, 0x15, -19);// 32); //y gyro
+  I2Cdev::writeWord(MPU6050_ADDR, 0x17, 70);// 18); //z gyro
+
+  // Reset low pass filters
+  for (int i = 0; i < LP_BUFFER_SIZE; i++){
+    ax_buf[i] = 0;
+    ay_buf[i] = 0;
+    az_buf[i] = 0;
+  }
+  lp_pos = 0;
+  
+}
+
+void IMU::MPU6050_update(){
+  I2Cdev::readBytes(MPU6050_ADDR, MPU6050_DATAREG, 14, I2C_buffer);
+  ax = (((int16_t)I2C_buffer[0]) << 8) | I2C_buffer[1];
+  ay = (((int16_t)I2C_buffer[2]) << 8) | I2C_buffer[3];
+  az = (((int16_t)I2C_buffer[4]) << 8) | I2C_buffer[5];
+  gx = (((int16_t)I2C_buffer[8]) << 8) | I2C_buffer[9];
+  gy = (((int16_t)I2C_buffer[10]) << 8) | I2C_buffer[11];
+  gz = (((int16_t)I2C_buffer[12]) << 8) | I2C_buffer[13];
+}
+
 void IMU::MPU9250_init(){
 
   SerialUSB.println("INIT MPU9250");
@@ -351,7 +388,8 @@ void IMU::MPU9250_update(){
 void IMU::Update(double dt){
 
 	// Update attitude and heading estimates
-  MPU9250_update();
+  //MPU9250_update();
+  MPU6050_update();
   ComplementaryFilter(dt);
 
   // Update altitude estimate
@@ -398,7 +436,8 @@ void IMU::Update(double dt){
 void IMU::UpdateHorizon(double dt){
 
   // Update attitude and heading estimates
-  MPU9250_update();
+  //MPU9250_update();
+  MPU6050_update();
   ComplementaryFilter(dt);
 
 

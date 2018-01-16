@@ -539,10 +539,17 @@ void loop(){
 
   imu.Update(((double)time_diff)/1000000.0);
 
+  //SerialPort.println(time_diff);
+  //SerialPort.print(", ");
+
   //SerialPort.println("R");
 
-  SerialPort.println(imu.altitude);
-  
+  //SerialPort.println(imu.altitude);
+  /*
+  SerialPort.print(imu.x_acc);
+  SerialPort.print(", ");
+  SerialPort.println(imu.y_acc);
+  */
   /*
   SerialPort.print(imu.ax);
   SerialPort.print(", ");
@@ -556,13 +563,13 @@ void loop(){
   SerialPort.print(", ");
   SerialPort.println(imu.gz);
   */
-  /*
+  
   SerialPort.print(imu.ypr[0]);
   SerialPort.print(", ");
   SerialPort.print(imu.ypr[1]);
   SerialPort.print(", ");
   SerialPort.println(imu.ypr[2]);
-  */
+  
   /*
   SerialPort.print(", ");
   SerialPort.print(imu.x_gyr);
@@ -572,7 +579,7 @@ void loop(){
   SerialPort.println(imu.z_gyr);
   */
 
-  delay(20);
+  //delay(20);
 
   return;
 

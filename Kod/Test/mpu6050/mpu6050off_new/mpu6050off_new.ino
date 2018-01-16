@@ -201,7 +201,7 @@ void calibration(){
 
     if (abs(16384-mean_az)<=acel_deadzone) ready++;
     else az_offset=az_offset+(16384-mean_az)/acel_deadzone;
-/*
+
     if (abs(mean_gx)<=giro_deadzone) ready++;
     else gx_offset=gx_offset-mean_gx/(giro_deadzone+1);
 
@@ -210,7 +210,7 @@ void calibration(){
 
     if (abs(mean_gz)<=giro_deadzone) ready++;
     else gz_offset=gz_offset-mean_gz/(giro_deadzone+1);
-*/
-    if (ready==3) break;
+
+    if (ready==6) break;
   }
 }
