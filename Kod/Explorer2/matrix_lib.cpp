@@ -1,5 +1,4 @@
 #include "matrix_lib.h"
-#include <stdlib.h>
 
 matrix matrix_create(int r, int c, double* d){
   matrix m;
@@ -9,28 +8,8 @@ matrix matrix_create(int r, int c, double* d){
   return m; 
 }
 
-void matrix_delete(matrix A){
-  free(A.data);
-}
-
-matrix matrix_multiply(matrix A, matrix B){
-  double* data = (double*)malloc(A.rows*B.columns*sizeof(double));
-  matrix m = matrix_create(A.rows, B.columns, data);    
-
-  for (int i = 0; i < A.rows; ++i){
-    for (int j = 0; j < B.columns; ++j){
-      double s = 0;
-      for (int k = 0; k < B.rows; ++k){
-        s += (A.data[i*A.columns + k]) * (B.data[k*B.rows + j]);
-      }
-      m.data[i*m.columns + j] = s;
-    }
-  }
-  return m;
-}
-
-matrix matrix_create_identity(int r, int c){
-  double* data = (double*)malloc(r*c*sizeof(double));
+void matrix_create_identity(int r, int c){
+  /*double* data = (double*)malloc(r*c*sizeof(double));
   for (int i = 0; i < r; ++i){
     for (int j = 0; j < c; ++j){
       if (j == i){
@@ -40,72 +19,69 @@ matrix matrix_create_identity(int r, int c){
       }
     }
   }
-  return matrix_create(r, c, data);
+  return matrix_create(r, c, data);*/
 }
 
-matrix matrix_scale(matrix A, double b){
-  double* data = (double*)malloc(A.rows*A.columns*sizeof(double));
-  matrix m = matrix_create(A.rows, A.columns, data);
+void matrix_multiply(matrix R, matrix A, matrix B){
+  double s;
   for (int i = 0; i < A.rows; ++i){
-    for (int j = 0; j < A.columns; ++j){
-      m.data[i*A.columns + j] = A.data[i*A.columns + j] * b;
+    for (int j = 0; j < B.columns; ++j){
+      s = 0;
+      for (int k = 0; k < B.rows; ++k){
+        s += (A.data[i*A.columns + k]) * (B.data[k*B.rows + j]);
+      }
+      R.data[i*R.columns + j] = s;
     }
   }
-  return m;
 }
 
-matrix matrix_add(matrix A, matrix B){
-  double* data = (double*)malloc(A.rows*A.columns*sizeof(double));
-  matrix m = matrix_create(A.rows, A.columns, data);
+void matrix_scale(matrix R, matrix A, double b){
   for (int i = 0; i < A.rows; ++i){
     for (int j = 0; j < A.columns; ++j){
-      m.data[i*A.columns + j] = A.data[i*A.columns + j] + B.data[i*A.columns + j];
+      R.data[i*A.columns + j] = A.data[i*A.columns + j] * b;
     }
   }
-  return m;
+}
+
+void matrix_add(matrix R, matrix A, matrix B){
+  for (int i = 0; i < A.rows; ++i){
+    for (int j = 0; j < A.columns; ++j){
+      R.data[i*A.columns + j] = A.data[i*A.columns + j] + B.data[i*A.columns + j];
+    }
+  }
 }
 
 
-matrix matrix_subtract(matrix A, matrix B){
-  double* data = (double*)malloc(A.rows*A.columns*sizeof(double));
-  matrix m = matrix_create(A.rows, A.columns, data);
+void matrix_subtract(matrix R, matrix A, matrix B){
   for (int i = 0; i < A.rows; ++i){
     for (int j = 0; j < A.columns; ++j){
-      m.data[i*A.columns + j] = A.data[i*A.columns + j] - B.data[i*A.columns + j];
+      R.data[i*A.columns + j] = A.data[i*A.columns + j] - B.data[i*A.columns + j];
     }
   }
-  return m;
 } 
 
 
-matrix matrix_transpose(matrix A){
-  double* data = (double*)malloc(A.rows*A.columns*sizeof(double));
-  matrix m = matrix_create(A.columns, A.rows, data);
+void matrix_transpose(matrix R, matrix A){
   for (int i = 0; i < A.rows; ++i){
     for (int j = 0; j < A.columns; ++j){
-      m.data[i*A.columns + j] = A.data[j*A.columns + i];
+      R.data[i*A.columns + j] = A.data[j*A.columns + i];
     }
   }
-  return m;
 }
 
 
 // only works for 2x2 matrices
-matrix matrix_inverse(matrix A){
-  double* data = (double*)malloc(A.rows*A.columns*sizeof(double));
-  data[0] = A.data[0];
-  data[3] = A.data[3];
-  data[1] = -A.data[2];
-  data[2] = -A.data[1];
-  double s = data[0] * A.data[3] - data[2] * A.data[1];
-  matrix B = matrix_create(A.rows, A.columns, data);
-  matrix C = matrix_scale(B, 1.0/s);
-  matrix_delete(B);
-  return C;
+void matrix_inverse(matrix R, matrix A){
+  R.data[0] = A.data[0];
+  R.data[3] = A.data[3];
+  R.data[1] = -A.data[2];
+  R.data[2] = -A.data[1];
+  double s = R.data[0] * A.data[3] - R.data[2] * A.data[1];
+  matrix_scale(R, R, 1.0/s);
 }
 
 
-
+/*
 matrix operator*(matrix A, matrix B){
   return matrix_multiply(A,B);
 }
@@ -133,3 +109,4 @@ matrix operator/(matrix A, matrix B){
   matrix_delete(C);
   return D;
 }
+*/

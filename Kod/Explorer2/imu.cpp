@@ -5,7 +5,7 @@
 
 void IMU::ComplementaryFilter(double tim){
 
-  /* low pass filter through moving average */
+  // Low pass filter accelerometer data through moving average */
   ax_sum -= ax_buf[lp_pos];
   ax_buf[lp_pos] = ax;
   ax_sum += ax;
@@ -25,26 +25,22 @@ void IMU::ComplementaryFilter(double tim){
     lp_pos++;
   }else{
     lp_pos = 0;
-  }
-  
+  }  
 
-  /* calculate accelerometer angle and angular velocity */
-  axs = (double)ax * ACC_SCALE_X;
-  ays = (double)ay * ACC_SCALE_Y;
-  //azs = (double)az * ACC_SCALE_Z;
+  // Calculate accelerometer angles
+  axs = (double)ax * ACC_SCALE;
+  ays = (double)ay * ACC_SCALE;
+  azs = (double)az * ACC_SCALE;
 
-  // accelerometer angles
   //x_acc = SpeedTrig.atan2(axs,sqrt(ACC_SCALE_X *((double)(ay*ay + az*az))));
   //y_acc = SpeedTrig.atan2(ays,sqrt(ACC_SCALE_X *((double)(ax*ax + az*az))));
-  x_acc = atan(axs/sqrt(ACC_SCALE_X * ACC_SCALE_X *((double)(ay*ay + az*az)))); //Bov
-  y_acc = atan(ays/sqrt(ACC_SCALE_X * ACC_SCALE_X *((double)(ax*ax + az*az))));
+  x_acc = atan(axs/sqrt(ACC_SCALE_2 *((double)(ay*ay + az*az))));
+  y_acc = atan(ays/sqrt(ACC_SCALE_2 *((double)(ax*ax + az*az))));
 
-  // scale and filter angular velocity
+  // Scale and filter angular velocity
   CalculateGyro();
 
-  //z_gyr = z_gyr*0.75 + (((double)(gz)) * GYRO_SCALE_Z)*0.25;
-
-
+  // Calculate pitch and roll
   ypr_rad[PITCH] = -(P1*(-ypr_rad[PITCH] - y_gyr*tim) + (1.0-P1)*x_acc);
   ypr_rad[ROLL] = (P2*(ypr_rad[ROLL] + x_gyr*tim) + (1.0-P2)*y_acc);
 
@@ -77,18 +73,6 @@ void IMU::Init(){
 
   BMP180_init();
   MPU6050_init();
-  //MPU9250_init();
-
-/*
-  // init mpu
-  if (imu.begin() != INV_SUCCESS)
-  {
-    while (1); //break
-  }
-  
-  imu.dmpBegin(DMP_FEATURE_6X_LP_QUAT | // Enable 6-axis quat
-               DMP_FEATURE_GYRO_CAL, // Use gyro calibration
-              10); // Set DMP FIFO rate to 200 Hz*/
 }
 
 /* ------------------------------------------------------------------------- */
@@ -150,23 +134,22 @@ void IMU::BMP180_pressure_read(){
 
   pu = (double)pu_3 / 256.0;
 
-
   //pu = (I2C_buffer[0] * 256.0) + I2C_buffer[1] + (I2C_buffer[2]/256.0);
 
-    //example from Bosch datasheet
-    //pu = 23843;
+  //example from Bosch datasheet
+  //pu = 23843;
 
-    //example from http://wmrx00.sourceforge.net/Arduino/BMP085-Calcs.pdf, pu = 0x982FC0; 
-    //pu = (0x98 * 256.0) + 0x2F + (0xC0/256.0);
-    
-    s = temp - 25.0;
-    x = (x2 * pow(s,2)) + (x1 * s) + x0;
-    y = (y2 * pow(s,2)) + (y1 * s) + y0;
-    z = (pu - x) / y;
-    pressure = (p2 * pow(z,2)) + (p1 * z) + p0;  
+  //example from http://wmrx00.sourceforge.net/Arduino/BMP085-Calcs.pdf, pu = 0x982FC0; 
+  //pu = (0x98 * 256.0) + 0x2F + (0xC0/256.0);
+  
+  s = temp - 25.0;
+  x = (x2 * pow(s,2)) + (x1 * s) + x0;
+  y = (y2 * pow(s,2)) + (y1 * s) + y0;
+  z = (pu - x) / y;
+  pressure = (p2 * pow(z,2)) + (p1 * z) + p0;  
 
-    // Calculate altitude from air pressure
-    altitude = 44330.0*(1-pow(pressure/base_pressure,1/5.255));
+  // Calculate altitude from air pressure
+  altitude = 44330.0*(1-pow(pressure/base_pressure,1/5.255));
 }
 
 void IMU::BMP180_init(){
@@ -386,9 +369,7 @@ void IMU::MPU9250_update(){
 /* ------------------------------------------------------------------------- */
 
 void IMU::Update(double dt){
-
-	// Update attitude and heading estimates
-  //MPU9250_update();
+	// Update attitude estimates
   MPU6050_update();
   ComplementaryFilter(dt);
 
@@ -396,87 +377,21 @@ void IMU::Update(double dt){
   BMP180_update();
   CalculateAltitude(dt);
 
-  /*
-  if (imu.fifoAvailable()){
-    // Use dmpUpdateFifo to update the ax, gx, mx, etc. values
-    if (imu.dmpUpdateFifo() == INV_SUCCESS){
-      // computeEulerAngles can be used -- after updating the
-      // quaternion values -- to estimate roll, pitch, and yaw
-      //mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-      //imu.computeEulerAngles();
+  // Update heading estimate
 
-      float q0 = imu.calcQuat(imu.qw);
-      float q1 = imu.calcQuat(imu.qx);
-      float q2 = imu.calcQuat(imu.qy);
-      float q3 = imu.calcQuat(imu.qz);
 
-      float sq0 = q0*q0;
-      float sq1 = q1*q1;
-      float sq2 = q2*q2;
-      float sq3 = q3*q3;
-      
-      // we can now use the same terms as in the textbook.
-      ypr_rad[ROLL]  = atan2f(2.0f * q2 * q3 + 2.0f * q0 * q1, sq3 - sq2 - sq1 + sq0);
-      ypr_rad[PITCH] = -asin(2.0f * q1 * q3 - 2.0f * q0 * q2);
-      ypr_rad[YAW] = atan2f(2.0f * q1 * q2 + 2.0f * q0 * q3, sq1 + sq0 - sq3 - sq2);
-
-      ypr[PITCH] = ypr_rad[PITCH] * RAD_TO_DEG;
-      ypr[ROLL] = ypr_rad[ROLL] * RAD_TO_DEG;
-      ypr[YAW] = ypr_rad[YAW] * RAD_TO_DEG;
-
-      //scale and filter angular velocity
-      CalculateGyro();
-    }
-  }
-
-  */
+  // Update position estimate
 
 }
 
 void IMU::UpdateHorizon(double dt){
-
-  // Update attitude and heading estimates
-  //MPU9250_update();
+  // Update attitude estimates
   MPU6050_update();
   ComplementaryFilter(dt);
-
-
-  // read raw accel/gyro measurements from device
-  /*if (imu.fifoAvailable()){
-    // Use dmpUpdateFifo to update the ax, gx, mx, etc. values
-    if (imu.dmpUpdateFifo() == INV_SUCCESS){
-      // computeEulerAngles can be used -- after updating the
-      // quaternion values -- to estimate roll, pitch, and yaw
-      //mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-      //imu.computeEulerAngles();
-
-      float q0 = imu.calcQuat(imu.qw);
-      float q1 = imu.calcQuat(imu.qx);
-      float q2 = imu.calcQuat(imu.qy);
-      float q3 = imu.calcQuat(imu.qz);
-
-      float sq0 = q0*q0;
-      float sq1 = q1*q1;
-      float sq2 = q2*q2;
-      float sq3 = q3*q3;
-      
-      // we can now use the same terms as in the textbook.
-      ypr_rad[ROLL]  = atan2f(2.0f * q2 * q3 + 2.0f * q0 * q1, sq3 - sq2 - sq1 + sq0);
-      ypr_rad[PITCH] = -asin(2.0f * q1 * q3 - 2.0f * q0 * q2);
-      ypr_rad[YAW] = atan2f(2.0f * q1 * q2 + 2.0f * q0 * q3, sq1 + sq0 - sq3 - sq2);
-
-      ypr[PITCH] = ypr_rad[PITCH] * RAD_TO_DEG;
-      ypr[ROLL] = ypr_rad[ROLL] * RAD_TO_DEG;
-      ypr[YAW] = ypr_rad[YAW] * RAD_TO_DEG;
-
-      //scale and filter angular velocity
-      CalculateGyro();
-    }
-  }*/
 }
 
 void IMU::UpdateAcro(double dt){
   // Scale and filter angular velocity
-  MPU9250_update();
+  MPU6050_update();
   CalculateGyro();
 }

@@ -14,24 +14,22 @@ struct matrix
 };
 
 matrix matrix_create(int r, int c, double* d);
-void matrix_delete(matrix A);
 
-matrix matrix_create_identity(int r, int c);
+void matrix_create_identity(int r, int c);
 
+void matrix_multiply(matrix R, matrix A, matrix B);
 
-matrix matrix_multiply(matrix A, matrix B);
+void matrix_scale(matrix R, matrix A, double b );
 
-matrix matrix_scale(matrix A, double b );
+void matrix_add(matrix R, matrix A, matrix B);
 
-matrix matrix_add(matrix A, matrix B);
+void matrix_subtract(matrix R, matrix A, matrix B);
 
-matrix matrix_subtract(matrix A, matrix B);
+void matrix_transpose(matrix R, matrix A);
 
-matrix matrix_transpose(matrix A);
+void matrix_inverse(matrix R, matrix A);
 
-matrix matrix_inverse(matrix A);
-
-
+/*
 matrix operator*(matrix A, matrix B);
 matrix operator+(matrix A, matrix B);
 matrix operator-(matrix A, matrix B);
@@ -39,7 +37,7 @@ matrix operator/(matrix A, matrix B);
 
 matrix operator*(matrix A, double b);
 matrix operator*(double b, matrix A);
-
+*/
 
 
 /*

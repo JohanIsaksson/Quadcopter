@@ -31,8 +31,32 @@ int main(){
   matrix B = matrix_create(3,3,dataB);
   print_matrix(B);
 
+  double dataC[9] = {0.0,  0.0,  0.0,
+                     0.0,  0.0,  0.0,
+                     0.0,  0.0,  0.0};
+  matrix C = matrix_create(3,3,dataC);
 
-  matrix C = A + B;
+  double dataD[9] = {0.0,  0.0,  0.0,
+                     0.0,  0.0,  0.0,
+                     0.0,  0.0,  0.0};
+  matrix D = matrix_create(3,3,dataD);
+
+  double dataE[9] = {0.0,  0.0,  0.0,
+                     0.0,  0.0,  0.0,
+                     0.0,  0.0,  0.0};
+  matrix E = matrix_create(3,3,dataE);
+
+  double dataF[9] = {0.0,  0.0,  0.0,
+                     0.0,  0.0,  0.0,
+                     0.0,  0.0,  0.0};
+  matrix F = matrix_create(3,3,dataF);
+
+  double dataG[9] = {0.0,  0.0,  0.0,
+                     0.0,  0.0,  0.0,
+                     0.0,  0.0,  0.0};
+  matrix G = matrix_create(3,3,dataG);
+
+  /*matrix C = A + B;
   matrix D = A * B;
   matrix E = matrix_transpose(A);
 
@@ -43,19 +67,8 @@ int main(){
   print_matrix(D);
   print_matrix(E);
   print_matrix(F);
-  print_matrix(G);
+  print_matrix(G);*/
 
-  printf("---------------------\n");
-  printf("Deleting matrices.\n");
-  printf("---------------------\n");
-
-  /*matrix_delete(A);
-  matrix_delete(B);*/
-  matrix_delete(C);
-  matrix_delete(D);
-  matrix_delete(E);
-  matrix_delete(F);
-  matrix_delete(G);
 
   printf("---------------------\n");
   printf("Ending matrix test.\n");

@@ -33,25 +33,14 @@
 #define PITCH 1
 #define ROLL 2
 
-// gyro offsets 
-#define GYRO_OFF_X -20
-#define GYRO_OFF_Y -25
-#define GYRO_OFF_Z -16
-
 // gyro scalers
 #define GYRO_SCALE_X M_PI/23870.0
 #define GYRO_SCALE_Y M_PI/23870.0
 #define GYRO_SCALE_Z M_PI/23870.0
 
-// accelerometer offsets
-#define ACC_OFF_X 525
-#define ACC_OFF_Y -128
-#define ACC_OFF_Z -200
-
 // accelerometer scalers
-#define ACC_SCALE_X 1.0/16384.0 //15800.0
-#define ACC_SCALE_Y 1.0/16384.0 //16600.0
-#define ACC_SCALE_Z 1.0/16384.0 //15300.0
+#define ACC_SCALE 1.0/16384.0
+#define ACC_SCALE_2 (ACC_SCALE*ACC_SCALE)
 
 // complementary parameters
 #define GYRO_GAIN_PITCH 1.2
