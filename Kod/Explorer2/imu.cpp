@@ -41,8 +41,8 @@ void IMU::ComplementaryFilter(double tim){
   CalculateGyro();
 
   // Calculate pitch and roll
-  ypr_rad[PITCH] = -(P1*(-ypr_rad[PITCH] - y_gyr*tim) + (1.0-P1)*x_acc);
-  ypr_rad[ROLL] = (P2*(ypr_rad[ROLL] + x_gyr*tim) + (1.0-P2)*y_acc);
+  ypr_rad[PITCH] = -(P*(-ypr_rad[PITCH] - y_gyr*tim) + P_*x_acc);
+  ypr_rad[ROLL] = (P*(ypr_rad[ROLL] + x_gyr*tim) + P_*y_acc);
 
   ypr[PITCH] = ypr_rad[PITCH] * RAD_TO_DEG;
   ypr[ROLL] = ypr_rad[ROLL] * RAD_TO_DEG;
@@ -149,7 +149,7 @@ void IMU::BMP180_pressure_read(){
   pressure = (p2 * pow(z,2)) + (p1 * z) + p0;  
 
   // Calculate altitude from air pressure
-  altitude = 44330.0*(1-pow(pressure/base_pressure,1/5.255));
+  baro_altitude = 44330.0*(1-pow(pressure/base_pressure,1/5.255));
 }
 
 void IMU::BMP180_init(){
@@ -214,10 +214,11 @@ void IMU::BMP180_init(){
 
   base_pressure = pressure;
   altitude = 0.0;
+  baro_altitude = 0.0;
   baro_state = 0;
 
   // Init kalman filter
-  //KalmanInit();
+  kalman.InitPreset();
 }
 
 void IMU::BMP180_update(){
@@ -276,10 +277,12 @@ void IMU::CalculateAltitude(double dt){
   double cosp = cos(ypr_rad[PITCH]);
 
   // Calculate vertical acceleration (needs more testing)
-  vertical_acc = axs*sinp + ays*cosp*sinr + azs*cosp*cosr;
+  vertical_acc = -axs*sinp*cosr + ays*cosp*sinr + azs*cosp*cosr;
 
   // Run kalman 
-  //KalmanUpdate(altitude, vertical_acc, dt);
+  kalman.Update(baro_altitude, vertical_acc, dt);
+  altitude = kalman.GetAltitude();
+  //altitude = baro_altitude;
 }
 
 /* ------------------------------------------------------------------------- */

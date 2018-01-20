@@ -8,6 +8,7 @@
 #endif
 
 #include <math.h>
+#include "kalman.h"
 //#include <SparkFunMPU9250-DMP.h>
 
 #define MAG_ADDR 0x1E
@@ -45,9 +46,9 @@
 // complementary parameters
 #define GYRO_GAIN_PITCH 1.2
 #define GYRO_GAIN_ROLL 1.3
-#define P1 0.99
-#define P2 0.99
-#define P3 0.99
+
+#define P 0.99
+#define P_ (1.0 - P)
 
 #define BMP180_ADDR 0x77 // 7-bit address
 
@@ -79,6 +80,7 @@ private:
 	/* Barometer variables */
 	double temp;
 	double pressure, base_pressure;
+	double baro_altitude;
 	int16_t AC1,AC2,AC3,VB1,VB2,MB,MC,MD;
 	uint16_t AC4,AC5,AC6; 
 	double c5,c6,mc,md,x0,x1,x2,y0,y1,y2,p0,p1,p2;
@@ -92,6 +94,8 @@ private:
 	int32_t pressure_buf[LP_PRESSURE_BUFFER_SIZE];
 	int pressure_pos;
 	int32_t pressure_sum;
+
+	Kalman kalman;
 
 
 	void ComplementaryFilter(double time);

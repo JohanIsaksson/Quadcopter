@@ -544,7 +544,9 @@ void loop(){
 
   //SerialPort.println("R");
 
-  //SerialPort.println(imu.altitude);
+  SerialPort.print(imu.altitude);
+  SerialPort.print(", ");
+  SerialPort.println(imu.vertical_acc);
   /*
   SerialPort.print(imu.x_acc);
   SerialPort.print(", ");
@@ -563,13 +565,13 @@ void loop(){
   SerialPort.print(", ");
   SerialPort.println(imu.gz);
   */
-  
+  /*
   SerialPort.print(imu.ypr[0]);
   SerialPort.print(", ");
   SerialPort.print(imu.ypr[1]);
   SerialPort.print(", ");
   SerialPort.println(imu.ypr[2]);
-  
+  */
   /*
   SerialPort.print(", ");
   SerialPort.print(imu.x_gyr);

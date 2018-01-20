@@ -78,11 +78,11 @@ void matrix_transpose(matrix R, matrix A){
 
 // only works for 2x2 matrices
 void matrix_inverse(matrix R, matrix A){
-  R.data[0] = A.data[0];
-  R.data[3] = A.data[3];
+  R.data[0] = A.data[3];
+  R.data[3] = A.data[0];
   R.data[1] = -A.data[2];
   R.data[2] = -A.data[1];
-  double s = R.data[0] * A.data[3] - R.data[2] * A.data[1];
+  double s = A.data[0] * A.data[3] - A.data[2] * A.data[1];
   matrix_scale(R, R, 1.0/s);
 }
 

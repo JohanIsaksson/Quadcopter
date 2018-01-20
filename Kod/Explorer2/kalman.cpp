@@ -89,8 +89,11 @@ void Kalman::InitPreset(){
              dataQ);
   Q = matrix_create(3,3,dataQ); 
 
-  I = matrix_create(3,3,dataI)
+  I = matrix_create(3,3,dataI);
   matrix_identity(I);
+
+  K = matrix_create(3,3,dataK);
+  matrix_zeroes(K);
 
   fillMatrix(0.3943, 0.0028,
              0.0028, 0.1338,
@@ -154,7 +157,7 @@ void Kalman::InitPreset(){
   matrix_zeroes(IKH);
 
   // Gravity
-  u = 9.82;
+  u = -0.98*9.82;
 }
 
 void Kalman::Update(double baro, double acc, double dt){
@@ -173,7 +176,7 @@ void Kalman::Update(double baro, double acc, double dt){
   matrix_multiply(Ax, A, x);  // Ax = 3*1
   matrix_scale(Bu, B, u);     // Bu = 3*1
   matrix_add(Buw, Bu, w);     // Buw = 3*1
-  matrix_add(x_p, Ax, Buw);   // 3,1
+  matrix_add(x_p, Ax, Bu);   // 3,1
 
   //P_p = A*P*At + Q;
   matrix_multiply(AP, A, P);      // 3,3
@@ -183,7 +186,7 @@ void Kalman::Update(double baro, double acc, double dt){
 
   // Measurment input 	
   y.data[0] = baro;
-  y.data[1] = acc;
+  y.data[1] = acc*9.82;
 
 
   // Calculate gain and new state
@@ -217,6 +220,6 @@ double Kalman::GetVerticalSpeed(){
   return x.data[1];
 }
 
-double Kalman::GetVerticalAcceleration*(){
+double Kalman::GetVerticalAcceleration(){
   return x.data[2];
 }

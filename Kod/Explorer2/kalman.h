@@ -22,7 +22,7 @@ class Kalman{
 
 	// Help matrices
 	matrix Ax, Bu, Buw, AP, APAt, PHt, HPHt, HPHtR, HPHtR_, Hx, yHx, KyHx, KH, IKH;
-	double dataA[3], dataBu[3], dataBuw[3], dataAP[9], dataAPAt[9], 
+	double dataAx[3], dataBu[3], dataBuw[3], dataAP[9], dataAPAt[9], 
 		   dataPHt[6], dataHPHt[4], dataHPHtR[4], dataHPHtR_[4], dataHx[2], 
 		   datayHx[2], dataKyHx[3], dataKH[9], dataIKH[9];
 
