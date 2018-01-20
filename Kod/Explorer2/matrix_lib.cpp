@@ -8,18 +8,24 @@ matrix matrix_create(int r, int c, double* d){
   return m; 
 }
 
-void matrix_create_identity(int r, int c){
-  /*double* data = (double*)malloc(r*c*sizeof(double));
-  for (int i = 0; i < r; ++i){
-    for (int j = 0; j < c; ++j){
-      if (j == i){
-        data[i*c + j] = 1.0;
+void matrix_zeroes(matrix A){
+  for (int i = 0; i < A.rows; ++i){
+    for (int j = 0; j < A.columns; ++j){
+      A.data[i*A.columns + j] = 0.0;
+    }
+  }
+}
+
+void matrix_identity(matrix A){
+  for (int i = 0; i < A.rows; ++i){
+    for (int j = 0; j < A.columns; ++j){
+      if (i == j){
+        A.data[i*A.columns + j] = 1.0;
       }else{
-        data[i*c + j] = 0.0;
+        A.data[i*A.columns + j] = 0.0;
       }
     }
   }
-  return matrix_create(r, c, data);*/
 }
 
 void matrix_multiply(matrix R, matrix A, matrix B){

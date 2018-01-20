@@ -1,5 +1,6 @@
 #include "matrix_lib.h"
 #include <stdio.h>
+#include <iostream>
 
 
 void print_matrix(matrix A){
@@ -56,18 +57,18 @@ int main(){
                      0.0,  0.0,  0.0};
   matrix G = matrix_create(3,3,dataG);
 
-  /*matrix C = A + B;
-  matrix D = A * B;
-  matrix E = matrix_transpose(A);
+  matrix_add(C, A, B);
+  matrix_multiply(D, A, B);
+  matrix_transpose(E, A);
 
-  matrix F = matrix_create_identity(3,3);
-  matrix G = F * E;
+  //matrix F = matrix_create_identity(3,3);
+  //matrix G = F * E;
 
   print_matrix(C);
   print_matrix(D);
   print_matrix(E);
   print_matrix(F);
-  print_matrix(G);*/
+  print_matrix(G);
 
 
   printf("---------------------\n");

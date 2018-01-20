@@ -15,7 +15,9 @@ struct matrix
 
 matrix matrix_create(int r, int c, double* d);
 
-void matrix_create_identity(int r, int c);
+void matrix_zeroes(matrix A);
+
+void matrix_identity(matrix A);
 
 void matrix_multiply(matrix R, matrix A, matrix B);
 
