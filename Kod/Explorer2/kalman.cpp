@@ -65,9 +65,8 @@ void Kalman::InitPreset(){
              dataB);
   B = matrix_create(3,1, dataB);
 
-  fillMatrix(1.0, 0.0,
-             0.0, 0.0,
-             0.0, 1.0,
+  fillMatrix(1.0, 0.0, 0.0, 
+             0.0-, 0.0, 1.0,
              dataH);
   H = matrix_create(2, 3, dataH);
 
@@ -166,6 +165,8 @@ void Kalman::Update(double baro, double acc, double dt){
   A.data[1] = dt;
   A.data[5] = dt;
   A.data[2] = dt*dt/2.0;
+  matrix_transpose(At, A);
+
 
   B.data[0] = dt*dt/2.0;
   B.data[1] = dt;
