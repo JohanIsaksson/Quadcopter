@@ -170,6 +170,7 @@ void Kalman::Update(double baro, double acc, double dt){
 
   B.data[0] = dt*dt/2.0;
   B.data[1] = dt;
+  B.data[2] = 1.0;
 
 
   // Predict new state 

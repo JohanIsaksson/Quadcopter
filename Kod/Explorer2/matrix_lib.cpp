@@ -70,7 +70,7 @@ void matrix_subtract(matrix R, matrix A, matrix B){
 void matrix_transpose(matrix R, matrix A){
   for (int i = 0; i < A.rows; ++i){
     for (int j = 0; j < A.columns; ++j){
-      R.data[i*A.columns + j] = A.data[j*A.columns + i];
+      R.data[i + j*A.rows] = A.data[i*A.columns + j];
     }
   }
 }
