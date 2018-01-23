@@ -6,6 +6,8 @@
  *
 */
 
+#ifndef KALMAN_H
+#define KALMAN_H
 
 #include "matrix_lib.h"
 
@@ -31,6 +33,8 @@ class Kalman{
 	
 public:
 
+	void Print();
+
 	void InitPreset();
 
 	void Update(double baro, double acc, double dt);
@@ -41,3 +45,5 @@ public:
 
 
 };
+
+#endif /* KALMAN_H */

@@ -48,6 +48,63 @@ void fillMatrix(double v0, double v1,
   data[1] = v1;
 }
 
+#define PLATFORM_WIN
+
+#ifdef PLATFORM_WIN
+#include <stdio.h>
+#include <string>
+
+void print_matrix(matrix A, std::string s){
+  printf("%s: (%d,%d)\n", s.c_str(), A.rows, A.columns);
+
+  for (int i = 0; i < A.rows; i++){
+    for (int j = 0; j < A.columns; j++){
+      printf("%f\t", A.data[i*A.columns + j]);
+    }
+    printf("\n");
+  }
+  printf("----------------------------------------\n");
+}
+#endif
+
+
+
+
+void Kalman::Print(){
+  #ifdef PLATFORM_WIN
+  print_matrix(A,"A");
+  print_matrix(At,"At");
+  print_matrix(B,"B");
+  print_matrix(H,"H");
+  print_matrix(Ht,"Ht");
+  print_matrix(P,"P");
+  print_matrix(P_p,"P_p");
+  print_matrix(Q,"Q");
+  print_matrix(I,"I");
+  print_matrix(K,"K");
+  print_matrix(R,"R");
+  print_matrix(x,"x");
+  print_matrix(w,"w");
+  print_matrix(x_p,"x_p");
+  print_matrix(y,"y");
+
+  print_matrix(Ax,"Ax");
+  print_matrix(Bu,"Bu");
+  print_matrix(Buw,"Buw");
+  print_matrix(AP,"AP");
+  print_matrix(APAt,"APAt");
+  print_matrix(PHt,"PHt");
+  print_matrix(HPHt,"HPHt");
+  print_matrix(HPHtR,"HPHtR");
+  print_matrix(HPHtR_,"HPHtR_");
+  print_matrix(Hx,"Hx");
+  print_matrix(yHx,"yHx");
+  print_matrix(KyHx,"KyHx");
+  print_matrix(KH,"KH");
+  print_matrix(IKH,"IKH");
+  #endif
+
+}
 
 void Kalman::InitPreset(){
 
@@ -66,7 +123,7 @@ void Kalman::InitPreset(){
   B = matrix_create(3,1, dataB);
 
   fillMatrix(1.0, 0.0, 0.0, 
-             0.0-, 0.0, 1.0,
+             0.0, 0.0, 1.0,
              dataH);
   H = matrix_create(2, 3, dataH);
 
@@ -91,7 +148,7 @@ void Kalman::InitPreset(){
   I = matrix_create(3,3,dataI);
   matrix_identity(I);
 
-  K = matrix_create(3,3,dataK);
+  K = matrix_create(3,2,dataK);
   matrix_zeroes(K);
 
   fillMatrix(0.3943, 0.0028,
@@ -108,7 +165,7 @@ void Kalman::InitPreset(){
   x_p = matrix_create(3,1,datax_p);
   matrix_zeroes(x_p);
 
-  y = matrix_create(3,1,datay);
+  y = matrix_create(2,1,datay);
   matrix_zeroes(y);
 
 

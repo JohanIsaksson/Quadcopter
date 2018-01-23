@@ -6,6 +6,9 @@
  *
 */
 
+#ifndef MATRIX_H
+#define MATRIX_H
+
 struct matrix
 {
 	int rows;
@@ -40,3 +43,6 @@ matrix operator/(matrix A, matrix B);
 matrix operator*(matrix A, double b);
 matrix operator*(double b, matrix A);
 */
+
+
+#endif /* MATRIX_H */
