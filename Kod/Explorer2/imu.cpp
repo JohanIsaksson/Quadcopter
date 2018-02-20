@@ -280,9 +280,10 @@ void IMU::CalculateAltitude(double dt){
   vertical_acc = -axs*sinp*cosr + ays*cosp*sinr + azs*cosp*cosr;
 
   // Run kalman 
-  kalman.Update(baro_altitude, vertical_acc, dt);
+  kalman.Update(baro_altitude, vertical_acc-0.985, dt);
   altitude = kalman.GetAltitude();
-  //altitude = baro_altitude;
+  vertical_speed = kalman.GetVerticalSpeed();
+  vertical_acc = kalman.GetVerticalAcceleration();
 }
 
 /* ------------------------------------------------------------------------- */
@@ -309,6 +310,13 @@ void IMU::MPU6050_init(){
     az_buf[i] = 0;
   }
   lp_pos = 0;
+
+  // Get initial values
+  for (int i = 0; i < LP_BUFFER_SIZE; i++){
+    MPU6050_update();
+    ComplementaryFilter(0.002);
+    delay(2);
+  }
   
 }
 

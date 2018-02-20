@@ -48,7 +48,7 @@ void fillMatrix(double v0, double v1,
   data[1] = v1;
 }
 
-#define PLATFORM_WIN
+//#define PLATFORM_WIN
 
 #ifdef PLATFORM_WIN
 #include <stdio.h>
@@ -139,9 +139,9 @@ void Kalman::InitPreset(){
   P_p = matrix_create(3,3,dataP_p);
   matrix_zeroes(P_p);
 
-  fillMatrix(0.00016,       0.0000000016,     0.0016777216,
-             0.0000000016,  0.00001,          0.0001048576,
-             0.0016777216,  0.00010485760011, 10.48576,
+  fillMatrix(0.0,       0.0,     0.0,
+             0.0,  0.0,          0.0,
+             0.06,  0.0, 0.01048576,
              dataQ);
   Q = matrix_create(3,3,dataQ); 
 
@@ -151,8 +151,8 @@ void Kalman::InitPreset(){
   K = matrix_create(3,2,dataK);
   matrix_zeroes(K);
 
-  fillMatrix(0.3943, 0.0028,
-             0.0028, 0.1338,
+  fillMatrix(0.3943, 0.0,
+             0.0, 0.1338,
              dataR);
   R = matrix_create(2,2,dataR);
 
@@ -232,10 +232,10 @@ void Kalman::Update(double baro, double acc, double dt){
 
   // Predict new state 
   //x_p = A*x + B*u + w;
-  matrix_multiply(Ax, A, x);  // Ax = 3*1
-  matrix_scale(Bu, B, u);     // Bu = 3*1
-  matrix_add(Buw, Bu, w);     // Buw = 3*1
-  matrix_add(x_p, Ax, Bu);   // 3,1
+  matrix_multiply(x_p/*Ax*/, A, x);  // Ax = 3*1
+  //matrix_scale(Bu, B, u);     // Bu = 3*1
+  //matrix_add(Buw, Bu, w);     // Buw = 3*1
+  //matrix_add(x_p, Ax, Bu);   // 3,1
 
   //P_p = A*P*At + Q;
   matrix_multiply(AP, A, P);      // 3,3

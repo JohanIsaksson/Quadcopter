@@ -1,19 +1,3 @@
-/*
-
-
-  TODO
-    - radio x
-    - motor speed x
-    - acro mode in imu
-    - 
-
-
-  TODO++
-    -KALMAN height controller
-
-
-*/
-
 
 #pragma GCC optimize("-O3")
 
@@ -134,30 +118,33 @@ uint32_t time_last;
 double timed;
 
 // Radio variables
-volatile byte last_channel_1, 
-      last_channel_2, 
-      last_channel_3, 
-      last_channel_4,
-      last_channel_5, 
-      last_channel_6;
-volatile int receiver_input_channel_1, 
-    receiver_input_channel_2, 
-    receiver_input_channel_3, 
-    receiver_input_channel_4, 
-    receiver_input_channel_5, 
-    receiver_input_channel_6;
-volatile uint32_t timer_1, 
-          timer_2, 
-          timer_3, 
-          timer_4,
-          timer_5,
-          timer_6;
+volatile byte last_channel_1;
+volatile byte last_channel_2; 
+volatile byte last_channel_3; 
+volatile byte last_channel_4;
+volatile byte last_channel_5; 
+volatile byte last_channel_6;
+
+volatile int receiver_input_channel_1;
+volatile int receiver_input_channel_2; 
+volatile int receiver_input_channel_3; 
+volatile int receiver_input_channel_4; 
+volatile int receiver_input_channel_5; 
+volatile int receiver_input_channel_6;
+
+volatile uint32_t timer_1;
+volatile uint32_t timer_2;
+volatile uint32_t timer_3;
+volatile uint32_t timer_4;
+volatile uint32_t timer_5;
+volatile uint32_t timer_6;
+                  
 double rad_roll, rad_pitch, rad_yaw;
 uint16_t rad_throttle;
 
 // Motor control variables
 bool motors_on, disable_sticks;
-uint32_t us, esc_time, start_time, end_time;
+uint32_t esc_time, start_time, end_time;
 
 // Flight mode control
 uint8_t flight_mode;
@@ -408,7 +395,11 @@ void setup(){
   SerialPort.println("Initializing ESCs...");
   //asign motors to pins
 
-  //DDRB |= B00001111; //set pins as outputs
+  //set pins as outputs
+  pinMode(fl_pin, OUTPUT);
+  pinMode(fr_pin, OUTPUT);
+  pinMode(bl_pin, OUTPUT);
+  pinMode(br_pin, OUTPUT);
 
   //initialize escs
   init_motors();
@@ -535,18 +526,17 @@ void loop(){
   time_diff = micros() - time_last;
   time_last = micros();
 
-  rad_throttle = map(receiver_input_channel_3, 1000, 2000, 1060, 1800);
+  set_motor_speeds_min();
 
-  imu.Update(((double)time_diff)/1000000.0);
+  //rad_throttle = map(receiver_input_channel_3, 1000, 2000, 1060, 1800);
 
-  //SerialPort.println(time_diff);
+
+  //SerialPort.println(imu.altitude);
   //SerialPort.print(", ");
-
-  //SerialPort.println("R");
-
-  SerialPort.print(imu.altitude);
-  SerialPort.print(", ");
-  SerialPort.println(imu.vertical_acc);
+  //SerialPort.print(imu.vertical_speed);
+  //SerialPort.print(", ");
+  //SerialPort.println(imu.vertical_acc);
+  
   /*
   SerialPort.print(imu.x_acc);
   SerialPort.print(", ");
@@ -581,17 +571,25 @@ void loop(){
   SerialPort.println(imu.z_gyr);
   */
 
-  //delay(20);
+  delay(20);
+
+  SerialPort.print(receiver_input_channel_1);
+  SerialPort.print(", ");
+  SerialPort.print(receiver_input_channel_2);
+  SerialPort.print(", ");
+  SerialPort.print(receiver_input_channel_3);
+  SerialPort.print(", ");
+  SerialPort.println(receiver_input_channel_4);
 
   return;
 
   //motor arming control
-  if (receiver_input_channel_6 < 1300){
+  /*if (receiver_input_channel_6 < 1300){
     motors_on = false;
   }else if (receiver_input_channel_6 > 1700){
     motors_on = true;
-  }
-
+  }*/
+  motors_on = true;
 
   //horizon stabilization or acrobatic mode
   if (receiver_input_channel_5 < 1300){
@@ -613,7 +611,7 @@ void loop(){
       receiver_input_channel_6 = 1000;
     }else{
       receiver_input_channel_6 = 2000;
-    }  
+    }
       
     
 
@@ -676,7 +674,7 @@ void loop(){
         Update_acro(time_diff);
       }    
       //apply new speed to motors
-      //SerialPort.println(micros() - time_last);
+      SerialPort.println(micros() - time_last);
       set_motor_speeds();
     }else{
       //keep motors Updated
@@ -717,17 +715,16 @@ void loop(){
  ##  ## ##  ## ####  #### ####
 */
 
-int radio_roll_pin, radio_pitch_pin, radio_throttle_pin, radio_yaw_pin, radio_mode_pin, radio_kill_pin;
-
+//int radio_roll_pin, radio_pitch_pin, radio_throttle_pin, radio_yaw_pin, radio_mode_pin, radio_kill_pin;
+//assign radion pins
+const byte radio_roll_pin = 9;
+const byte radio_pitch_pin = 8;
+const byte radio_throttle_pin = 7;
+const byte radio_yaw_pin = 6;
+const byte radio_mode_pin = 5;
+const byte radio_kill_pin = 3;
+  
 void setup_radio(){
-
-  //assign radion pins
-  radio_roll_pin = 9;
-  radio_pitch_pin = 8;
-  radio_throttle_pin = 7;
-  radio_yaw_pin = 6;
-  radio_mode_pin = 5;
-  radio_kill_pin = 3;
 
   pinMode(radio_roll_pin, INPUT);
   pinMode(radio_pitch_pin, INPUT);
@@ -735,18 +732,51 @@ void setup_radio(){
   pinMode(radio_yaw_pin, INPUT);
   pinMode(radio_mode_pin, INPUT);
   pinMode(radio_kill_pin, INPUT);
-                                                                                          //  channel:
-  /*attachInterrupt(digitalPinToInterrupt(radio_roll_pin), radio_roll_ISR, CHANGE);         //  1  
-  attachInterrupt(digitalPinToInterrupt(radio_pitch_pin), radio_pitch_ISR, CHANGE);       //  2
-  attachInterrupt(digitalPinToInterrupt(radio_throttle_pin), radio_throttle_ISR, CHANGE); //  3
-  attachInterrupt(digitalPinToInterrupt(radio_yaw_pin), radio_yaw_ISR, CHANGE);           //  4
-  attachInterrupt(digitalPinToInterrupt(radio_mode_pin), radio_mode_ISR, CHANGE);         //  5
-  attachInterrupt(digitalPinToInterrupt(radio_kill_pin), radio_kill_ISR, CHANGE);         //  6
-  */
+   /*                                                                                       //  channel:
+  attachInterrupt(digitalPinToInterrupt(radio_roll_pin), (voidFuncPtr)radio_roll_ISR, CHANGE);         //  1  
+  attachInterrupt(digitalPinToInterrupt(radio_pitch_pin), (voidFuncPtr)radio_pitch_ISR, CHANGE);       //  2
+  attachInterrupt(digitalPinToInterrupt(radio_throttle_pin), (voidFuncPtr)radio_throttle_ISR, CHANGE); //  3
+  attachInterrupt(digitalPinToInterrupt(radio_yaw_pin), (voidFuncPtr)radio_yaw_ISR, CHANGE);           //  4
+  attachInterrupt(digitalPinToInterrupt(radio_mode_pin), (voidFuncPtr)radio_mode_ISR, CHANGE);         //  5
+  attachInterrupt(digitalPinToInterrupt(radio_kill_pin), (voidFuncPtr)radio_kill_ISR, CHANGE);         //  6*/
+
+                                                                                           //  channel:
+  attachInterrupt(digitalPinToInterrupt(radio_roll_pin), (voidFuncPtr)updateRadio, CHANGE);         //  1  
+  attachInterrupt(digitalPinToInterrupt(radio_pitch_pin), (voidFuncPtr)updateRadio, CHANGE);       //  2
+  attachInterrupt(digitalPinToInterrupt(radio_throttle_pin), (voidFuncPtr)updateRadio, CHANGE); //  3
+  attachInterrupt(digitalPinToInterrupt(radio_yaw_pin), (voidFuncPtr)updateRadio, CHANGE);           //  4
+  attachInterrupt(digitalPinToInterrupt(radio_mode_pin), (voidFuncPtr)updateRadio, CHANGE);         //  5
+  attachInterrupt(digitalPinToInterrupt(radio_kill_pin), (voidFuncPtr)updateRadio, CHANGE);         //  6*/
+  
 }
 
 void radio_roll_ISR(){
-  us = micros();
+  updateRadio();
+}
+
+void radio_pitch_ISR(){
+  updateRadio();
+}
+
+void radio_throttle_ISR(){
+  updateRadio();  
+}
+
+void radio_yaw_ISR(){
+  updateRadio();  
+}
+
+void radio_mode_ISR(){
+  updateRadio();
+}
+
+void radio_kill_ISR(){
+  updateRadio();
+}
+
+void updateRadio(){
+  double us = micros();
+
   //Channel 1=========================================
   if(last_channel_1 == 0 && digitalRead(radio_roll_pin)){         //Input 9 changed from 0 to 1
     last_channel_1 = 1;                                 //Remember current input state
@@ -756,10 +786,7 @@ void radio_roll_ISR(){
     last_channel_1 = 0;                                 //Remember current input state
     receiver_input_channel_1 = us - timer_1;      //Channel 1 is micros() - timer_1
   }
-}
 
-void radio_pitch_ISR(){
-  us = micros();
   //Channel 2=========================================
   if(last_channel_2 == 0 && digitalRead(radio_pitch_pin)){         //Input 8 changed from 0 to 1
     last_channel_2 = 1;                                 //Remember current input state
@@ -769,10 +796,7 @@ void radio_pitch_ISR(){
     last_channel_2 = 0;                                 //Remember current input state
     receiver_input_channel_2 = us - timer_2;      //Channel 2 is micros() - timer_2
   }
-}
 
-void radio_throttle_ISR(){
-  us = micros();
   //Channel 3=========================================
   if(last_channel_3 == 0 && digitalRead(radio_throttle_pin)){         //Input 7 changed from 0 to 1
     last_channel_3 = 1;                                 //Remember current input state
@@ -782,10 +806,7 @@ void radio_throttle_ISR(){
     last_channel_3 = 0;                                 //Remember current input state
     receiver_input_channel_3 = us - timer_3;      //Channel 3 is micros() - timer_3
   }
-}
 
-void radio_yaw_ISR(){
-  us = micros();
   //Channel 4=========================================
   if(last_channel_4 == 0 && digitalRead(radio_yaw_pin)){         //Input 6 changed from 0 to 1
     last_channel_4 = 1;                                 //Remember current input state
@@ -795,11 +816,8 @@ void radio_yaw_ISR(){
     last_channel_4 = 0;                                 //Remember current input state
     receiver_input_channel_4 = us - timer_4;      //Channel 4 is micros() - timer_4
   }
-}
 
-void radio_mode_ISR(){
-  us = micros();
-  //Channel 5=========================================
+    //Channel 5=========================================
   if(last_channel_5 == 0 && digitalRead(radio_mode_pin)){         //Input 5 changed from 0 to 1
     last_channel_5 = 1;                                 //Remember current input state
     timer_5 = us;                                 //Set timer_3 to micros()
@@ -808,10 +826,7 @@ void radio_mode_ISR(){
     last_channel_5 = 0;                                 //Remember current input state
     receiver_input_channel_5 = us - timer_5;      //Channel 3 is micros() - timer_3
   }
-}
 
-void radio_kill_ISR(){
-  us = micros();
   //Channel 6=========================================
   if(last_channel_6 == 0 && digitalRead(radio_kill_pin)){         //Input 3 changed from 0 to 1
     last_channel_6 = 1;                                 //Remember current input state
