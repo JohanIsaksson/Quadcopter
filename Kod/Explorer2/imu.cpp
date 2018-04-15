@@ -69,7 +69,7 @@ void IMU::Init(){
       Fastwire::setup(400, true);
   #endif
 
-  SerialUSB.println("INIT IMU");
+  SerialUSB.println("Initializing IMU");
 
   BMP180_init();
   MPU6050_init();

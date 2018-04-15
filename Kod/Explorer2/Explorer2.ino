@@ -19,9 +19,10 @@
 #define LOST_CONNECTION_COUNT2 12000
 #define EMERGENCY_THROTTLE 0
 
+
 #define MODE_HORIZON 0
 #define MODE_ACRO 1
-
+#define MODE_ALT_HOLD 2
 
 //#define YPR_DATA
 //#define COMP_DATA
@@ -92,7 +93,9 @@ int left;
 int cw;
 
 // Horizon mode stabilzation outputs
-int pitch_stab, roll_stab, yaw_stab;
+int pitch_stab;
+int roll_stab;
+int yaw_stab;
 
 // PID controllers for each axis
 Pid pid_pitch_rate, pid_roll_rate, pid_yaw_rate;
@@ -140,7 +143,7 @@ volatile uint32_t timer_5;
 volatile uint32_t timer_6;
                   
 double rad_roll, rad_pitch, rad_yaw;
-uint16_t rad_throttle;
+volatile uint16_t rad_throttle;
 
 // Motor control variables
 bool motors_on, disable_sticks;
@@ -206,10 +209,9 @@ void init_motors(){
 
 // Limit integer x to interval [a,b]
 uint16_t limit(uint16_t x, uint16_t a, uint16_t b){
-  uint16_t r;
-  if (x < a) r = a;
-  else if (x > b) r = b;
-  return r;
+  if (x < a) return a;
+  else if (x > b) return b;
+  return x;
 }
 
 // Sets all motor pulses high
@@ -311,15 +313,6 @@ void setup(){
   SerialPort.begin(115200);
   SerialPort.println("Starting up");
 
-	//Arduino (Atmega) pins default to inputs, so they don't need to be explicitly declared as inputs
-  //Mask:                       Channel:    Signal:
-  /*PCMSK2 |= (1 << PCINT18); //  1           roll
-  PCMSK2 |= (1 << PCINT19); //  2           pitch
-  PCMSK2 |= (1 << PCINT20); //  3           throttle
-  PCMSK2 |= (1 << PCINT21); //  4           yaw
-  PCMSK2 |= (1 << PCINT22); //  5           ACRO/HORIZON
-  PCMSK2 |= (1 << PCINT23); //  6           -*/
-
   radio_off_counter = 0;
   receiver_input_channel_1 = 1500;
   receiver_input_channel_2 = 1500;
@@ -328,50 +321,23 @@ void setup(){
   receiver_input_channel_5 = 1000;
   receiver_input_channel_6 = 1000;
 
-  //retrieve pid parameters from eeprom
-  #ifndef TUNING_MODE
-    //EEPROM_get();
-    /*SerialPort.print(P_pitch_a); SerialPort.print("\t"); SerialPort.print(I_pitch_a); SerialPort.print("\t"); SerialPort.println(D_pitch_a);
-    SerialPort.print(P_yaw); SerialPort.print("\t"); SerialPort.print(I_yaw); SerialPort.print("\t"); SerialPort.println(D_yaw);
-    SerialPort.print(P_pitch_h); SerialPort.print("\t"); SerialPort.print(I_pitch_h); SerialPort.print("\t"); SerialPort.println(D_pitch_h);
-    SerialPort.println("Retrieved PID parameters.");*/
-  #else
-    /*EEPROM_get();
-    SerialPort.print(P_pitch_a); SerialPort.print("\t"); SerialPort.print(I_pitch_a); SerialPort.print("\t"); SerialPort.println(D_pitch_a);
-    SerialPort.print(1.2); SerialPort.print("\t"); SerialPort.print(0.8); SerialPort.print("\t"); SerialPort.println(0.06);
 
+  P_pitch_a = 1.2;
+  P_roll_a = 1.2;
 
-    SerialPort.println();
-    SerialPort.print(P_pitch_h); SerialPort.print("\t"); SerialPort.print(I_pitch_h); SerialPort.print("\t"); SerialPort.println(D_pitch_h);
-    SerialPort.print(4.0); SerialPort.print("\t"); SerialPort.print(0.0); SerialPort.print("\t"); SerialPort.println(0.0);
+  I_pitch_a = 0.8;
+  I_roll_a = 0.8;
 
-    SerialPort.println();
-    SerialPort.print(P_yaw); SerialPort.print("\t"); SerialPort.print(I_yaw); SerialPort.print("\t"); SerialPort.println(D_yaw);
-    SerialPort.print(2.0); SerialPort.print("\t"); SerialPort.print(0.0); SerialPort.print("\t"); SerialPort.println(0.0);*/
+  D_pitch_a = 0.06;
+  D_roll_a = 0.06;
 
+  P_pitch_h = 4.0;
+  P_roll_h = 4.0;
 
-    P_pitch_a = 1.2;
-    P_roll_a = 1.2;
+  P_yaw = 2.0;
+  I_yaw = 0.8;
 
-    I_pitch_a = 0.8;
-    I_roll_a = 0.8;
-
-    D_pitch_a = 0.06;
-    D_roll_a = 0.06;
-
-    P_pitch_h = 4.0;
-    P_roll_h = 4.0;
-
-    P_yaw = 2.0;
-    I_yaw = 0.8;
-
-    //
-    //EEPROM_put();
-  #endif
-
-
-  imu.Init();
-	
+  imu.Init();	
 
   pid_pitch_rate.Init();
   pid_pitch_rate.SetConstants(P_pitch_a, I_pitch_a, D_pitch_a, INTEGRAL_MAX);
@@ -393,7 +359,6 @@ void setup(){
 
   //wait for esc init;
   SerialPort.println("Initializing ESCs...");
-  //asign motors to pins
 
   //set pins as outputs
   pinMode(fl_pin, OUTPUT);
@@ -404,8 +369,6 @@ void setup(){
   //initialize escs
   init_motors();
   motors_on = false;
-  //motors_on = true;
-
 
   time_last = micros();
   SerialPort.println("Running...");
@@ -526,9 +489,9 @@ void loop(){
   time_diff = micros() - time_last;
   time_last = micros();
 
-  set_motor_speeds_min();
+  //set_motor_speeds_min();
 
-  //rad_throttle = map(receiver_input_channel_3, 1000, 2000, 1060, 1800);
+  rad_throttle = map(receiver_input_channel_3, 1000, 2000, 1060, 1800);
 
 
   //SerialPort.println(imu.altitude);
@@ -571,25 +534,41 @@ void loop(){
   SerialPort.println(imu.z_gyr);
   */
 
-  delay(20);
+  //delay(20);
 
-  SerialPort.print(receiver_input_channel_1);
+  /*SerialPort.print(receiver_input_channel_1);
   SerialPort.print(", ");
   SerialPort.print(receiver_input_channel_2);
   SerialPort.print(", ");
   SerialPort.print(receiver_input_channel_3);
   SerialPort.print(", ");
-  SerialPort.println(receiver_input_channel_4);
+  SerialPort.print(receiver_input_channel_4);
+  SerialPort.print(", ");
+  SerialPort.print(receiver_input_channel_5);
+  SerialPort.print(", ");
+  SerialPort.println(receiver_input_channel_6);
+  */
 
-  return;
+  /*SerialPort.print(motors_on ? "ON  " : "OFF ");
+  SerialPort.print(", ");
+  SerialPort.print(flight_mode ? "ACRO   " : "HORIZON");
+  SerialPort.print(", ");*/
+  SerialPort.print(throttle[0]);
+  SerialPort.print(", ");
+  SerialPort.print(throttle[1]);
+  SerialPort.print(", ");
+  SerialPort.print(throttle[2]);
+  SerialPort.print(", ");
+  SerialPort.println(throttle[3]);
+  //return;
 
   //motor arming control
-  /*if (receiver_input_channel_6 < 1300){
+  if (receiver_input_channel_6 < 1300){
     motors_on = false;
   }else if (receiver_input_channel_6 > 1700){
     motors_on = true;
-  }*/
-  motors_on = true;
+  }
+  //motors_on = true;
 
   //horizon stabilization or acrobatic mode
   if (receiver_input_channel_5 < 1300){
@@ -599,7 +578,7 @@ void loop(){
   }
 
 
-
+/*
   if (radio_off_counter >= LOST_CONNECTION_COUNT){
     receiver_input_channel_1 = 1500;
     receiver_input_channel_2 = 1500;
@@ -612,96 +591,25 @@ void loop(){
     }else{
       receiver_input_channel_6 = 2000;
     }
-      
+  }*/   
     
 
-    //radio_off_counter++;
+  //radio_off_counter++;
 
-
-
-    #ifdef TUNING_MODE
-
-      tun = map_d((double)receiver_input_channel_6, 1000.0, 2000.0, TUNING_MIN, TUNING_MAX);
-
-
-      switch (TUNING_MODE) {
-          case 0:            
-            pid_pitch_rate.SetConstants(tun, I_pitch_a, D_pitch_a, INTEGRAL_MAX);
-            pid_roll_rate.SetConstants(tun, I_pitch_a, D_pitch_a, INTEGRAL_MAX);
-            break;
-          case 1:
-            pid_pitch_rate.SetConstants(P_pitch_a, tun, D_pitch_a, INTEGRAL_MAX);
-            pid_roll_rate.SetConstants(P_pitch_a, tun, D_pitch_a, INTEGRAL_MAX);
-            break;
-          case 2:
-            pid_pitch_rate.SetConstants(P_pitch_a, I_pitch_a, tun, INTEGRAL_MAX);
-            pid_roll_rate.SetConstants(P_pitch_a, I_pitch_a, tun, INTEGRAL_MAX);
-            break;
-          case 3:
-            pid_yaw_rate.SetConstants(tun, I_yaw, D_yaw, INTEGRAL_MAX);
-            break;
-          case 4:
-            pid_yaw_rate.SetConstants(P_yaw, tun, D_yaw, INTEGRAL_MAX);
-            break;
-          case 5:
-            pid_yaw_rate.SetConstants(P_yaw, I_yaw, tun, INTEGRAL_MAX);
-            break;
-          case 6:
-            pid_pitch_stab.SetConstants(tun, I_pitch_h, D_pitch_h, INTEGRAL_MAX);
-            pid_roll_stab.SetConstants(tun, I_roll_h, D_roll_h, INTEGRAL_MAX);
-            break;
-          case 7:
-            pid_pitch_stab.SetConstants(P_pitch_h, tun, D_pitch_h, INTEGRAL_MAX);
-            pid_roll_stab.SetConstants(P_roll_h, tun, D_roll_h, INTEGRAL_MAX);
-            break;
-          case 8:
-            pid_pitch_stab.SetConstants(P_pitch_h, I_pitch_h, tun, INTEGRAL_MAX);
-            pid_roll_stab.SetConstants(P_roll_h, I_roll_h, tun, INTEGRAL_MAX);
-            break;
-
-      }
-
-      SerialPort.println(tun); delay(500);
-
-    #endif
-    
-
-    if (motors_on){
-      //Update according to set flight mode
-      if(flight_mode == MODE_HORIZON){
-        Update_horizon(time_diff);
-      }else if (flight_mode == MODE_ACRO){
-        Update_acro(time_diff);
-      }    
-      //apply new speed to motors
-      SerialPort.println(micros() - time_last);
-      set_motor_speeds();
-    }else{
-      //keep motors Updated
-      set_motor_speeds_min();
-    }
+ 
+  if (motors_on){
+    //Update according to set flight mode
+    if(flight_mode == MODE_HORIZON){
+      Update_horizon(time_diff);
+    }else if (flight_mode == MODE_ACRO){
+      Update_acro(time_diff);
+    }    
+    //apply new speed to motors
+    set_motor_speeds();
+  }else{
+    //keep motors Updated
+    set_motor_speeds_min();
   }
-  //delay(10);
-  //SerialPort.println(imu.ypr[1]);
-
-  /*delay(25);
-  SerialPort.print(receiver_input_channel_1);
-  SerialPort.print("\t\t");
-
-  SerialPort.print(receiver_input_channel_2);
-  SerialPort.print("\t\t");
-
-  SerialPort.print(receiver_input_channel_3);
-  SerialPort.print("\t\t");
-
-  SerialPort.print(receiver_input_channel_4);
-  SerialPort.print("\t\t");
-
-  SerialPort.print(receiver_input_channel_5);
-  SerialPort.print("\t\t");
-
-  SerialPort.print(receiver_input_channel_6);
-  SerialPort.println("\t\t");*/
 } 
 
 
@@ -723,6 +631,8 @@ const byte radio_throttle_pin = 7;
 const byte radio_yaw_pin = 6;
 const byte radio_mode_pin = 5;
 const byte radio_kill_pin = 3;
+const byte radio_ch7_pin = 2;
+const byte radio_ch8_pin = A0;
   
 void setup_radio(){
 
@@ -741,12 +651,12 @@ void setup_radio(){
   attachInterrupt(digitalPinToInterrupt(radio_kill_pin), (voidFuncPtr)radio_kill_ISR, CHANGE);         //  6*/
 
                                                                                            //  channel:
-  attachInterrupt(digitalPinToInterrupt(radio_roll_pin), (voidFuncPtr)updateRadio, CHANGE);         //  1  
-  attachInterrupt(digitalPinToInterrupt(radio_pitch_pin), (voidFuncPtr)updateRadio, CHANGE);       //  2
-  attachInterrupt(digitalPinToInterrupt(radio_throttle_pin), (voidFuncPtr)updateRadio, CHANGE); //  3
-  attachInterrupt(digitalPinToInterrupt(radio_yaw_pin), (voidFuncPtr)updateRadio, CHANGE);           //  4
-  attachInterrupt(digitalPinToInterrupt(radio_mode_pin), (voidFuncPtr)updateRadio, CHANGE);         //  5
-  attachInterrupt(digitalPinToInterrupt(radio_kill_pin), (voidFuncPtr)updateRadio, CHANGE);         //  6*/
+  attachInterrupt(radio_roll_pin, (voidFuncPtr)updateRadio, CHANGE);         //  1  
+  attachInterrupt(radio_pitch_pin, (voidFuncPtr)updateRadio, CHANGE);       //  2
+  attachInterrupt(radio_throttle_pin, (voidFuncPtr)updateRadio, CHANGE); //  3
+  attachInterrupt(radio_yaw_pin, (voidFuncPtr)updateRadio, CHANGE);           //  4
+  attachInterrupt(radio_mode_pin, (voidFuncPtr)updateRadio, CHANGE);         //  5
+  attachInterrupt(radio_kill_pin, (voidFuncPtr)updateRadio, CHANGE);         //  6*/
   
 }
 
