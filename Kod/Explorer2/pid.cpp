@@ -15,7 +15,7 @@ void Pid::SetConstants(double KP_, double KI_, double KD_, double INT_MAX_){
 	INTEGRAL_MAX = INT_MAX_;
 }
 
-void Pid::Update(int* out, double ref, double mea, double dt, double scale){
+void Pid::Calculate(double* out, double ref, double mea, double dt, double scale){
 	error = ref - mea;
 
 	//TODO:
@@ -43,5 +43,17 @@ void Pid::Update(int* out, double ref, double mea, double dt, double scale){
 	error_prev = error;
 
 	//set values
-	*out = (int)(scale*output);
+	*out = scale*output;
+}
+
+void Pid::Update(int* out, double ref, double mea, double dt, double scale){
+	double output;
+	Calculate(&output, ref, mea, dt, scale);
+
+	//truncate value
+	*out = (int)output;
+}
+
+void Pid::Update(double* out, double ref, double mea, double dt, double scale){
+	Calculate(out, ref, mea, dt, scale);
 }

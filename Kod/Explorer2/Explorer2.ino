@@ -93,9 +93,9 @@ int left;
 int cw;
 
 // Horizon mode stabilzation outputs
-int pitch_stab;
-int roll_stab;
-int yaw_stab;
+double pitch_stab;
+double roll_stab;
+double yaw_stab;
 
 // PID controllers for each axis
 Pid pid_pitch_rate, pid_roll_rate, pid_yaw_rate;
@@ -113,12 +113,23 @@ Pid pid_altitude_hold, pid_altitude_rate;
 double P_altitude_r, I_altitude_r, D_altitude_r,
         P_altitude_h, I_altitude_h, D_altitude_h;
 
+// PID outputs for altitude hold
+int altitude_rate_out;
+double altitude_hold_out;
+
+//
+double altitude_setpoint;
+
 // Maximum angle and rotation sppeds
 uint16_t max_pitch, max_roll, max_yaw;
 uint16_t max_p, max_r, max_y;
 
 // L.O.S. safety counter
 int radio_off_counter;
+
+// Air mode throttle
+int air_mode_throttle;
+#define AIR_MODE
 
 // Time keeping
 uint32_t time_diff;
@@ -156,6 +167,7 @@ uint32_t esc_time, start_time, end_time;
 
 // Flight mode control
 uint8_t flight_mode;
+uint8_t previous_flight_mode;
 
 // Yaw control
 bool set_yaw;
@@ -238,16 +250,36 @@ void stop_motor_pulses(){
 // Sets final throttle by combining outputs from all PIDs 
 void set_motor_speeds(){
   //front left
-  throttle[0] = rad_throttle + front + left + cw;
+  throttle[0] = rad_throttle + altitude_rate_out + front + left + cw;
 
   //front right
-  throttle[1] = rad_throttle + front - left - cw;
+  throttle[1] = rad_throttle + altitude_rate_out + front - left - cw;
 
   //back left
-  throttle[2] = rad_throttle - front + left - cw;
+  throttle[2] = rad_throttle + altitude_rate_out - front + left - cw;
 
   //back right
-  throttle[3] = rad_throttle - front - left + cw;
+  throttle[3] = rad_throttle + altitude_rate_out - front - left + cw;
+
+  #ifdef AIR_MODE
+  // Air mode adjustment
+  int min = SPEED_MIN;
+  int max = SPEED_MAX;
+  for(int i=0; i<4; i++){
+      if (throttle[i] < min)
+        min = throttle[i];
+      else if (throttle[i] > max)
+        max = throttle[i];
+  }
+  if (((min+max)>>1) > 1500)
+    air_mode_throttle = SPEED_MAX - max;
+  else if (((min+max)>>1) < 1500)
+    air_mode_throttle = SPEED_MIN - min;
+
+  for(int i=0; i<4; i++){
+      throttle[i] += air_mode_throttle;
+  }
+  #endif
 
   //check and set speeds
   throttle[0] = limit(throttle[0], SPEED_MIN, SPEED_MAX);
@@ -358,6 +390,15 @@ void setup(){
   pid_yaw_stab.Init();
   pid_yaw_stab.SetConstants(P_yaw, I_yaw, D_yaw, INTEGRAL_MAX);
 
+  P_altitude_r = 1.2;
+  P_altitude_h = 1.2;
+
+  I_altitude_r = 0.8;
+  I_altitude_h = 0.8;
+
+  D_altitude_r = 0.06;
+  D_altitude_h = 0.06;
+
   pid_altitude_rate.Init();
   pid_altitude_rate.SetConstants(P_altitude_r, I_altitude_r, D_altitude_r, INTEGRAL_MAX);
   pid_altitude_hold.Init();
@@ -407,6 +448,8 @@ void Update_horizon(uint32_t t){
   end_time = start_time + 2000;
   start_motor_pulses();
 
+  // Map throttle sent from radio
+  rad_throttle = map(receiver_input_channel_3, 1000, 2000, 1060, 1800);
 
   //compensate for mistimings with deadband
   if (receiver_input_channel_1 > 1485 && receiver_input_channel_1 < 1515) receiver_input_channel_1 = 1500; //roll
@@ -432,9 +475,9 @@ void Update_horizon(uint32_t t){
   pid_roll_stab.Update(&roll_stab, rad_roll, (imu.ypr[2]-0.35), timed, 1.0);     //(imu.ypr[2]-0.3)
   pid_yaw_stab.Update(&yaw_stab, rad_yaw, (imu.ypr[0]), timed, 1.0);
 
-  pid_pitch_rate.Update(&front, (double)pitch_stab, imu.y_gyr*RAD_TO_DEG, timed, -1.0);
-  pid_roll_rate.Update(&left, (double)roll_stab, imu.x_gyr*RAD_TO_DEG, timed, 1.0);
-  pid_yaw_rate.Update(&cw, (double)yaw_stab, -imu.z_gyr*RAD_TO_DEG, timed, -1.0);
+  pid_pitch_rate.Update(&front, pitch_stab, imu.y_gyr*RAD_TO_DEG, timed, -1.0);
+  pid_roll_rate.Update(&left, roll_stab, imu.x_gyr*RAD_TO_DEG, timed, 1.0);
+  pid_yaw_rate.Update(&cw, yaw_stab, -imu.z_gyr*RAD_TO_DEG, timed, -1.0);
 
 }
 
@@ -452,6 +495,9 @@ void Update_acro(uint32_t t){
 
   //Update only the gyroscope on the imu
   imu.UpdateAcro(timed); 
+
+  // Map throttle sent from radio
+  rad_throttle = map(receiver_input_channel_3, 1000, 2000, 1060, 1800);
 
   //start esc pulses
   start_time = micros(); 
@@ -496,13 +542,12 @@ void Update_altitude_hold(uint32_t t){
   timed = (double)t/1000000.0;
 
   //Update all sensors on the imu
-  imu.UpdateHorizon(timed); 
+  imu.Update(timed); 
 
   //start esc pulses
   start_time = micros(); 
   end_time = start_time + 2000;
   start_motor_pulses();
-
 
   //compensate for mistimings with deadband
   if (receiver_input_channel_1 > 1485 && receiver_input_channel_1 < 1515) receiver_input_channel_1 = 1500; //roll
@@ -528,12 +573,29 @@ void Update_altitude_hold(uint32_t t){
   pid_roll_stab.Update(&roll_stab, rad_roll, (imu.ypr[2]-0.35), timed, 1.0);     //(imu.ypr[2]-0.3)
   pid_yaw_stab.Update(&yaw_stab, rad_yaw, (imu.ypr[0]), timed, 1.0);
 
-  pid_pitch_rate.Update(&front, (double)pitch_stab, imu.y_gyr*RAD_TO_DEG, timed, -1.0);
-  pid_roll_rate.Update(&left, (double)roll_stab, imu.x_gyr*RAD_TO_DEG, timed, 1.0);
-  pid_yaw_rate.Update(&cw, (double)yaw_stab, -imu.z_gyr*RAD_TO_DEG, timed, -1.0);
+  pid_pitch_rate.Update(&front, pitch_stab, imu.y_gyr*RAD_TO_DEG, timed, -1.0);
+  pid_roll_rate.Update(&left, roll_stab, imu.x_gyr*RAD_TO_DEG, timed, 1.0);
+  pid_yaw_rate.Update(&cw, yaw_stab, -imu.z_gyr*RAD_TO_DEG, timed, -1.0);
 
-  pid_altitude_hold.Update(&altitude_hold_out, hold_altitude, imu.altitude, timed, 1.0);
-  pid_altitude_rate.Update(&altitude_rate_out, (double)altitude_hold_out, imu.vertical_speed, timed, 1.0);
+
+  // Altitude control
+  if (receiver_input_channel_3 > 1400 && receiver_input_channel_3 < 1600){
+    // Hold
+    if (previous_input_channel_3 < 1400 && previous_input_channel_3 > 1600)
+      altitude_setpoint = imu.altitude;
+    pid_altitude_hold.Update(&altitude_hold_out, hold_altitude, imu.altitude, timed, 1.0);
+
+  }else if (receiver_input_channel_3 < 1400){
+    // Descend
+    altitude_hold_out = -0.5;
+  }else if (receiver_input_channel_3 > 1600){
+    // Ascend
+    altitude_hold_out = 0.5;
+  } 
+
+  pid_altitude_rate.Update(&altitude_rate_out, altitude_hold_out, imu.vertical_speed, timed, 1.0);
+
+  previous_input_channel_3 = receiver_input_channel_3;
 
 }
 
@@ -554,7 +616,7 @@ void loop(){
 
   //set_motor_speeds_min();
 
-  rad_throttle = map(receiver_input_channel_3, 1000, 2000, 1060, 1800);
+  
 
 
   //SerialPort.println(imu.altitude);
@@ -634,13 +696,20 @@ void loop(){
   //motors_on = true;
 
   // Determine flight mode
-  if (receiver_input_channel_5 < 1300)
+  if (receiver_input_channel_5 < 1300){
     flight_mode = MODE_ALT_HOLD;
+    if (previous_flight_mode == MODE_HORIZON){
+      // Set altitude
+      altitude_setpoint = imu.altitude;
+    }
+  }
   else if (receiver_input_channel_5 > 1350 && receiver_input_channel_5 < 1650)
     flight_mode = MODE_HORIZON;    
   else if(receiver_input_channel_5 > 1700)
     flight_mode = MODE_ACRO;
   
+  previous_flight_mode = flight_mode;
+
 
 
 /*
