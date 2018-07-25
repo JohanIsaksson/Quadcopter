@@ -41,7 +41,7 @@ void setup(){
 
 
 
-  Serial.begin(38400); 
+  Serial.begin(115200); 
 
 
 }
@@ -50,7 +50,7 @@ void setup(){
 
 //Main program loop
 void loop(){
-  delay(250);
+  delay(100);
   print_signals();
 }
 

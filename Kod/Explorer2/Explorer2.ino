@@ -108,6 +108,11 @@ double P_pitch_a, I_pitch_a, D_pitch_a,
         P_roll_h, I_roll_h, D_roll_h,
         P_yaw, I_yaw, D_yaw;
 
+// Altitude hold PID
+Pid pid_altitude_hold, pid_altitude_rate;
+double P_altitude_r, I_altitude_r, D_altitude_r,
+        P_altitude_h, I_altitude_h, D_altitude_h;
+
 // Maximum angle and rotation sppeds
 uint16_t max_pitch, max_roll, max_yaw;
 uint16_t max_p, max_r, max_y;
@@ -353,6 +358,11 @@ void setup(){
   pid_yaw_stab.Init();
   pid_yaw_stab.SetConstants(P_yaw, I_yaw, D_yaw, INTEGRAL_MAX);
 
+  pid_altitude_rate.Init();
+  pid_altitude_rate.SetConstants(P_altitude_r, I_altitude_r, D_altitude_r, INTEGRAL_MAX);
+  pid_altitude_hold.Init();
+  pid_altitude_hold.SetConstants(P_altitude_h, I_altitude_h, D_altitude_h, INTEGRAL_MAX);
+
   front = 0;
   left = 0;
   cw = 0;
@@ -473,6 +483,59 @@ void Update_acro(uint32_t t){
   pid_yaw_rate.Update(&cw, rad_yaw, -imu.z_gyr*RAD_TO_DEG, timed, -1.0);
 }
 
+/*
+ ###### ##    ###### #### ###### ##  ## ####   ######
+ ##  ## ##      ##    ##    ##   ##  ## ## ##  ##
+ ##  ## ##      ##    ##    ##   ##  ## ##  ## ##
+ ###### ##      ##    ##    ##   ##  ## ##  ## ####
+ ##  ## ##      ##    ##    ##   ##  ## ##  ## ##
+ ##  ## ##      ##    ##    ##   ##  ## ## ##  ##
+ ##  ## ######  ##   ####   ##    ####  ####   ######
+*/
+void Update_altitude_hold(uint32_t t){
+  timed = (double)t/1000000.0;
+
+  //Update all sensors on the imu
+  imu.UpdateHorizon(timed); 
+
+  //start esc pulses
+  start_time = micros(); 
+  end_time = start_time + 2000;
+  start_motor_pulses();
+
+
+  //compensate for mistimings with deadband
+  if (receiver_input_channel_1 > 1485 && receiver_input_channel_1 < 1515) receiver_input_channel_1 = 1500; //roll
+  if (receiver_input_channel_2 > 1485 && receiver_input_channel_2 < 1515) receiver_input_channel_2 = 1500; //pitch
+  if (receiver_input_channel_4 > 1485 && receiver_input_channel_4 < 1515){                                  //yaw
+    receiver_input_channel_4 = 1500;
+    if (set_yaw){
+      rad_yaw = imu.ypr[0];
+    }
+    set_yaw = false;
+  }else{
+    set_yaw = true;
+  }
+
+  //map inputs to angles
+  rad_roll = map_d((double)receiver_input_channel_1,1000.0, 2000.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
+  rad_pitch = map_d((double)receiver_input_channel_2,1000.0, 2000.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
+  //rad_yaw = map_d((double)receiver_input_channel_4,1000.0, 2000.0, -REF_MAX_YAW, REF_MAX_YAW);
+
+  //calculate pids
+                                                                          //may need to calibrate for offsets
+  pid_pitch_stab.Update(&pitch_stab, rad_pitch, (imu.ypr[1]-0.4), timed, 1.0);  //(imu.ypr[1]-0.4)
+  pid_roll_stab.Update(&roll_stab, rad_roll, (imu.ypr[2]-0.35), timed, 1.0);     //(imu.ypr[2]-0.3)
+  pid_yaw_stab.Update(&yaw_stab, rad_yaw, (imu.ypr[0]), timed, 1.0);
+
+  pid_pitch_rate.Update(&front, (double)pitch_stab, imu.y_gyr*RAD_TO_DEG, timed, -1.0);
+  pid_roll_rate.Update(&left, (double)roll_stab, imu.x_gyr*RAD_TO_DEG, timed, 1.0);
+  pid_yaw_rate.Update(&cw, (double)yaw_stab, -imu.z_gyr*RAD_TO_DEG, timed, -1.0);
+
+  pid_altitude_hold.Update(&altitude_hold_out, hold_altitude, imu.altitude, timed, 1.0);
+  pid_altitude_rate.Update(&altitude_rate_out, (double)altitude_hold_out, imu.vertical_speed, timed, 1.0);
+
+}
 
 /*
  ##     ####   ####  #####
@@ -570,12 +633,14 @@ void loop(){
   }
   //motors_on = true;
 
-  //horizon stabilization or acrobatic mode
-  if (receiver_input_channel_5 < 1300){
+  // Determine flight mode
+  if (receiver_input_channel_5 < 1300)
+    flight_mode = MODE_ALT_HOLD;
+  else if (receiver_input_channel_5 > 1350 && receiver_input_channel_5 < 1650)
     flight_mode = MODE_HORIZON;    
-  }else if(receiver_input_channel_5 > 1700){
+  else if(receiver_input_channel_5 > 1700)
     flight_mode = MODE_ACRO;
-  }
+  
 
 
 /*
@@ -599,11 +664,22 @@ void loop(){
  
   if (motors_on){
     //Update according to set flight mode
-    if(flight_mode == MODE_HORIZON){
-      Update_horizon(time_diff);
-    }else if (flight_mode == MODE_ACRO){
-      Update_acro(time_diff);
-    }    
+    switch (flight_mode) {
+        case MODE_HORIZON:
+          Update_horizon(time_diff);
+          break;
+
+        case MODE_ACRO:
+          Update_acro(time_diff);
+          break;
+
+        case MODE_ALT_HOLD:
+          Update_altitude_hold(time_diff);
+          break;
+
+        default:
+          // do something
+    }   
     //apply new speed to motors
     set_motor_speeds();
   }else{
