@@ -51,20 +51,25 @@
 #define P_ (1.0 - P)
 
 #define BMP180_ADDR 0x77 // 7-bit address
-
 #define	BMP180_REG_CONTROL 0xF4
 #define	BMP180_REG_RESULT 0xF6
-
 #define	BMP180_COMMAND_TEMPERATURE 0x2E
 #define	BMP180_COMMAND_PRESSURE0 0x34
 #define	BMP180_COMMAND_PRESSURE1 0x74
 #define	BMP180_COMMAND_PRESSURE2 0xB4
 #define	BMP180_COMMAND_PRESSURE3 0xF4
 
+#define MS5611_ADDR 0x77
+#define	MS5611_COMMAND_TEMPERATURE 0x58
+#define	MS5611_COMMAND_PRESSURE 0x48
+#define	MS5611_ADC_READ 0x00
+#define	MS5611_PROM_READ 0x48
 
 class IMU{
 
 private:
+
+public:
 	uint8_t I2C_buffer[22];
 
 	//mpu6050 scaled data
@@ -77,24 +82,33 @@ private:
 
 	//MPU9250_DMP imu;
 
-	/* Barometer variables */
-	double temp;
-	double pressure, base_pressure;
-	double baro_altitude;
-	int16_t AC1,AC2,AC3,VB1,VB2,MB,MC,MD;
-	uint16_t AC4,AC5,AC6; 
-	double c5,c6,mc,md,x0,x1,x2,y0,y1,y2,p0,p1,p2;
+	// Barometer variables
 	uint8_t baro_state;
 	uint8_t baro_temp_count;
 
-	int16_t temp_buf[LP_TEMP_BUFFER_SIZE];
+	uint32_t temp_buf[LP_TEMP_BUFFER_SIZE];
 	int temp_pos;
-	int32_t temp_sum;
+	uint32_t temp_sum;
 
-	int32_t pressure_buf[LP_PRESSURE_BUFFER_SIZE];
+	uint32_t pressure_buf[LP_PRESSURE_BUFFER_SIZE];
 	int pressure_pos;
-	int32_t pressure_sum;
+	uint32_t pressure_sum;
 
+	// BMP180 variables
+	int16_t AC1,AC2,AC3,VB1,VB2,MB,MC,MD;
+	uint16_t AC4,AC5,AC6; 
+	double c5,c6,mc,md,x0,x1,x2,y0,y1,y2,p0,p1,p2;
+
+	// MS5611 variables
+	uint16_t C[7];
+	uint16_t C1,C2,C3,C4,C5,C6; 
+	int64_t OFF, OFF_C2, SENS, SENS_C1, P_s;
+	int32_t dT, dT_C5;
+	uint32_t raw_temp, lp_temp;
+	uint32_t raw_pressure, lp_pressure;
+
+
+	// Altitude kalman filter
 	Kalman kalman;
 
 
@@ -108,6 +122,13 @@ private:
 	void BMP180_init();
 	void BMP180_update();
 
+	void MS5611_temp_start();
+	void MS5611_temp_read();
+	void MS5611_pressure_start();
+	void MS5611_pressure_read();
+	void MS5611_init();
+	void MS5611_update();
+
 	void CalculateAltitude(double dt);
 
   void MPU6050_init();
@@ -117,7 +138,7 @@ private:
   void MPU9250_update();
 
 
-public:
+
 
   // mpu6050 raw data
   int16_t ax, ay, az;
@@ -135,6 +156,9 @@ public:
 	double x_gyr, y_gyr, z_gyr;
 
 	/* Altitude estimation */
+  double temp;  
+  double baro_altitude;
+  double pressure, base_pressure;
 	double altitude, vertical_speed, vertical_acc;
 
 	/* Initializes the gyro and sets parameters */

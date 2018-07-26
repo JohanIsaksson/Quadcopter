@@ -20,12 +20,15 @@ class Pid{
 
 	//double KP, KI, KD;
 	bool enable_integral;
+
+  void Calculate(double* out, double ref, double mea, double dt, double scale);
+ 
 public:
 	void Init();
 	void SetIntegration(bool b);
 	void SetConstants(double KP_, double KI_, double KD_, double INT_MAX_);
 	void Update(int* out, double ref, double mea, double dt, double scale);
-	void Update(double* out, double ref, double mea, double dt, double scale)
+	void Update(double* out, double ref, double mea, double dt, double scale);
 
 	//testing variable
 	double K_tmp;

@@ -71,7 +71,8 @@ void IMU::Init(){
 
   SerialUSB.println("Initializing IMU");
 
-  BMP180_init();
+  //BMP180_init();
+  MS5611_init();
   MPU6050_init();
 }
 
@@ -288,6 +289,164 @@ void IMU::CalculateAltitude(double dt){
 
 /* ------------------------------------------------------------------------- */
 
+void IMU::MS5611_temp_start(){
+  //I2Cdev::writeBytes(MS5611_ADDR, MS5611_COMMAND_TEMPERATURE, 0, NULL);
+  Wire.beginTransmission(MS5611_ADDR);
+  Wire.write(MS5611_COMMAND_TEMPERATURE);
+  Wire.endTransmission();
+}
+
+void IMU::MS5611_temp_read(){
+  //I2Cdev::readBytes(MS5611_ADDR, 0, 3, I2C_buffer);
+  Wire.beginTransmission(MS5611_ADDR);
+  Wire.write((uint8_t)0x00);
+  Wire.endTransmission();
+  Wire.requestFrom(MS5611_ADDR, 3);
+
+  raw_temp = Wire.read() << 16 | Wire.read() << 8 | Wire.read();
+}
+
+void IMU::MS5611_pressure_start(){
+  //I2Cdev::writeBytes(MS5611_ADDR, MS5611_COMMAND_PRESSURE, 0, NULL);
+  Wire.beginTransmission(MS5611_ADDR);
+  Wire.write(MS5611_COMMAND_PRESSURE);
+  Wire.endTransmission();
+}
+
+void IMU::MS5611_pressure_read(){
+  //I2Cdev::readBytes(MS5611_ADDR, 0, 3, I2C_buffer);
+  Wire.beginTransmission(MS5611_ADDR);
+  Wire.write((uint8_t)0x00);
+  Wire.endTransmission();
+  Wire.requestFrom(MS5611_ADDR, 3);
+  
+  raw_pressure = Wire.read() << 16 | Wire.read() << 8 | Wire.read();
+
+  /* low pass filter through moving average */
+  pressure_sum -= pressure_buf[pressure_pos];
+  pressure_buf[pressure_pos] = raw_pressure;
+  pressure_sum += raw_pressure;
+  lp_pressure = pressure_sum >> LP_PRESSURE_SHIFT;
+  pressure_pos = (pressure_pos + 1) % LP_PRESSURE_BUFFER_SIZE;
+
+  //Calculate pressure as explained in the datasheet of the MS-5611.
+  dT = C5;
+  dT <<= 8;
+  dT = raw_temp - dT;
+  OFF = OFF_C2 + (((int64_t)dT * (int64_t)C4) / 128);
+  SENS = SENS_C1 + (((int64_t)dT * (int64_t)C3) / 256);
+  P_s = ((((lp_pressure * SENS) / 2097152) - OFF) / 32768);
+  pressure = ((double)P_s)*0.01;
+
+  // Calculate altitude from air pressure
+  baro_altitude = 44330.0*(1-pow(pressure/base_pressure,1/5.255));
+}
+
+void IMU::MS5611_init(){
+
+  // Retrieve calibration data from device:
+  for (uint8_t start = 1; start <= 6; start++) {
+    Wire.beginTransmission(MS5611_ADDR);
+    Wire.write(0xA0 + start * 2);
+    Wire.endTransmission();
+
+    Wire.requestFrom(MS5611_ADDR, 2);
+    C[start] = Wire.read() << 8 | Wire.read();
+  }
+  
+  //I2Cdev::readBytes(MS5611_ADDR, 0xA0, 12, I2C_buffer);
+  C1 = C[1];
+  C2 = C[2];
+  C3 = C[3];
+  C4 = C[4];
+  C5 = C[5];
+  C6 = C[6];
+
+  OFF_C2 = C2 * 65536;
+  SENS_C1 = C1 * 32768;
+
+  // Reset LP filters
+  temp_sum = 0;
+  temp_pos = 0;
+  pressure_sum = 0;
+  pressure_pos = 0;
+
+  for (int i = 0; i < LP_TEMP_BUFFER_SIZE; i++){
+    temp_buf[i] = 0;
+  }
+  for (int i = 0; i < LP_PRESSURE_BUFFER_SIZE; i++){
+    pressure_buf[i] = 0;
+  }  
+
+  // Get initial values
+  for (int i = 0; i < 8; i++){
+    MS5611_temp_start();
+    delay(10);
+    MS5611_temp_read();
+    MS5611_pressure_start();
+    delay(30);
+    MS5611_pressure_read();
+  }
+
+  base_pressure = pressure;
+  altitude = 0.0;
+  baro_altitude = 0.0;
+  baro_state = 0;
+
+  // Init kalman filter
+  kalman.InitPreset();
+}
+
+void IMU::MS5611_update(){
+
+  // Alternates between reading temp and pressure
+  switch(baro_state){
+    case 0:
+      baro_temp_count = 0;
+      MS5611_temp_start();
+      baro_state++;
+      break;
+
+    case 1:
+      baro_state++;
+      break;
+
+    case 2:
+      // Read temp if meassured
+      if (baro_temp_count == 0){
+        MS5611_temp_read();
+      }
+
+      MS5611_pressure_start();      
+      baro_state++;
+      break;
+
+    case 3:
+      baro_state++;
+      break;
+
+    case 4:
+      MS5611_pressure_read();
+      
+      if (baro_temp_count >= 50){
+        baro_state = 1;
+        baro_temp_count = 0;
+        MS5611_temp_start();
+      }else{
+        baro_state = 2;
+        baro_temp_count++;
+      }
+      baro_state = 1;
+      break;
+
+    default:
+      baro_state = 0;
+      break;
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+
 void IMU::MPU6050_init(){
   I2Cdev::writeBits(MPU6050_ADDR, 0x6B, 2, 3, 0x01); //set internal clock to XGYRO - should be best
   I2Cdev::writeBits(MPU6050_ADDR, 0x1B, 4, 2, 0x00); //set full scale gyro range +- 250 deg/s
@@ -317,7 +476,6 @@ void IMU::MPU6050_init(){
     ComplementaryFilter(0.002);
     delay(2);
   }
-  
 }
 
 void IMU::MPU6050_update(){
@@ -385,7 +543,7 @@ void IMU::Update(double dt){
   ComplementaryFilter(dt);
 
   // Update altitude estimate
-  BMP180_update();
+  MS5611_update();
   CalculateAltitude(dt);
 
   // Update heading estimate

@@ -117,8 +117,9 @@ double P_altitude_r, I_altitude_r, D_altitude_r,
 int altitude_rate_out;
 double altitude_hold_out;
 
-//
+// altitude hold variables
 double altitude_setpoint;
+int previous_input_channel_3;
 
 // Maximum angle and rotation sppeds
 uint16_t max_pitch, max_roll, max_yaw;
@@ -583,7 +584,7 @@ void Update_altitude_hold(uint32_t t){
     // Hold
     if (previous_input_channel_3 < 1400 && previous_input_channel_3 > 1600)
       altitude_setpoint = imu.altitude;
-    pid_altitude_hold.Update(&altitude_hold_out, hold_altitude, imu.altitude, timed, 1.0);
+    pid_altitude_hold.Update(&altitude_hold_out, altitude_setpoint, imu.altitude, timed, 1.0);
 
   }else if (receiver_input_channel_3 < 1400){
     // Descend
@@ -598,6 +599,8 @@ void Update_altitude_hold(uint32_t t){
   previous_input_channel_3 = receiver_input_channel_3;
 
 }
+
+int print_cnt = 0;
 
 /*
  ##     ####   ####  #####
@@ -616,76 +619,133 @@ void loop(){
 
   //set_motor_speeds_min();
 
+  if (print_cnt >= 0){
+
+    /*SerialPort.print((motors_on ? "On " : "Off"));
+    SerialPort.print(", ");
   
-
-
-  //SerialPort.println(imu.altitude);
-  //SerialPort.print(", ");
-  //SerialPort.print(imu.vertical_speed);
-  //SerialPort.print(", ");
-  //SerialPort.println(imu.vertical_acc);
+    if (flight_mode == MODE_ACRO)
+      SerialPort.print("ACRO         ");
+    else if (flight_mode == MODE_HORIZON)
+      SerialPort.print("HORIZON      ");
+    else if (flight_mode == MODE_ALT_HOLD)
+      SerialPort.print("ALTITUDE HOLD");  
+    SerialPort.print(", ");
+    
+    SerialPort.print("ypr: ");
+    SerialPort.print(imu.ypr[0]);
+    SerialPort.print(", ");
+    SerialPort.print(imu.ypr[1]);
+    SerialPort.print(", ");
+    SerialPort.print(imu.ypr[2]);
+    SerialPort.print(", ");
   
-  /*
-  SerialPort.print(imu.x_acc);
-  SerialPort.print(", ");
-  SerialPort.println(imu.y_acc);
-  */
-  /*
-  SerialPort.print(imu.ax);
-  SerialPort.print(", ");
-  SerialPort.print(imu.ay);
-  SerialPort.print(", ");
-  SerialPort.print(imu.az);
-  SerialPort.print(", ");
-  SerialPort.print(imu.gx);
-  SerialPort.print(", ");
-  SerialPort.print(imu.gy);
-  SerialPort.print(", ");
-  SerialPort.println(imu.gz);
-  */
-  /*
-  SerialPort.print(imu.ypr[0]);
-  SerialPort.print(", ");
-  SerialPort.print(imu.ypr[1]);
-  SerialPort.print(", ");
-  SerialPort.println(imu.ypr[2]);
-  */
-  /*
-  SerialPort.print(", ");
-  SerialPort.print(imu.x_gyr);
-  SerialPort.print(", ");
-  SerialPort.print(imu.y_gyr);
-  SerialPort.print(", ");
-  SerialPort.println(imu.z_gyr);
-  */
+    SerialPort.print("pressure: ");
+    SerialPort.print(imu.pressure);
+    SerialPort.print(", ");
+  
+    SerialPort.print("temp: ");
+    SerialPort.print(imu.temp);
+    SerialPort.print(", ");
+  
+    SerialPort.print("baro altitude: ");
+    SerialPort.print(imu.baro_altitude);
+    SerialPort.print(", ");
+    
+    SerialPort.print("kalman: ");*/
+    SerialPort.println(imu.altitude);
+    /*SerialPort.print(", ");
+    SerialPort.print(imu.vertical_speed);
+    SerialPort.print(", ");
+    SerialPort.println(imu.vertical_acc);*/
+  
+    /*SerialPort.print(imu.C1);
+    SerialPort.print(", ");
+    SerialPort.print(imu.C2);
+    SerialPort.print(", ");
+    SerialPort.print(imu.C3);
+    SerialPort.print(", ");
+    SerialPort.print(imu.C4);
+    SerialPort.print(", ");
+    SerialPort.print(imu.C5);
+    SerialPort.print(", ");
+    SerialPort.println(imu.C6);*/
+  
+    
+    /*SerialPort.print("raw pressure: ");
+    SerialPort.print(imu.raw_pressure);
+    SerialPort.print(", ");
+  
+    SerialPort.print("raw temp: ");
+    SerialPort.print(imu.raw_temp);
+    SerialPort.println(", ");*/
+    
+    
+    /*
+    SerialPort.print(imu.x_acc);
+    SerialPort.print(", ");
+    SerialPort.println(imu.y_acc);
+    */
+    /*
+    SerialPort.print(imu.ax);
+    SerialPort.print(", ");
+    SerialPort.print(imu.ay);
+    SerialPort.print(", ");
+    SerialPort.print(imu.az);
+    SerialPort.print(", ");
+    SerialPort.print(imu.gx);
+    SerialPort.print(", ");
+    SerialPort.print(imu.gy);
+    SerialPort.print(", ");
+    SerialPort.println(imu.gz);
+    */
+    /*
+    SerialPort.print(imu.ypr[0]);
+    SerialPort.print(", ");
+    SerialPort.print(imu.ypr[1]);
+    SerialPort.print(", ");
+    SerialPort.println(imu.ypr[2]);
+    */
+    /*
+    SerialPort.print(", ");
+    SerialPort.print(imu.x_gyr);
+    SerialPort.print(", ");
+    SerialPort.print(imu.y_gyr);
+    SerialPort.print(", ");
+    SerialPort.println(imu.z_gyr);
+    */
+  
+    //delay(20);
+  
+    /*SerialPort.print(receiver_input_channel_1);
+    SerialPort.print(", ");
+    SerialPort.print(receiver_input_channel_2);
+    SerialPort.print(", ");
+    SerialPort.print(receiver_input_channel_3);
+    SerialPort.print(", ");
+    SerialPort.print(receiver_input_channel_4);
+    SerialPort.print(", ");
+    SerialPort.print(receiver_input_channel_5);
+    SerialPort.print(", ");
+    SerialPort.println(receiver_input_channel_6);
+    */
+  
+    /*SerialPort.print(motors_on ? "ON  " : "OFF ");
+    SerialPort.print(", ");
+    SerialPort.print(flight_mode ? "ACRO   " : "HORIZON");
+    SerialPort.print(", ");*/
+    /*SerialPort.print(throttle[0]);
+    SerialPort.print(", ");
+    SerialPort.print(throttle[1]);
+    SerialPort.print(", ");
+    SerialPort.print(throttle[2]);
+    SerialPort.print(", ");
+    SerialPort.println(throttle[3]);*/
+    //return;
 
-  //delay(20);
-
-  /*SerialPort.print(receiver_input_channel_1);
-  SerialPort.print(", ");
-  SerialPort.print(receiver_input_channel_2);
-  SerialPort.print(", ");
-  SerialPort.print(receiver_input_channel_3);
-  SerialPort.print(", ");
-  SerialPort.print(receiver_input_channel_4);
-  SerialPort.print(", ");
-  SerialPort.print(receiver_input_channel_5);
-  SerialPort.print(", ");
-  SerialPort.println(receiver_input_channel_6);
-  */
-
-  /*SerialPort.print(motors_on ? "ON  " : "OFF ");
-  SerialPort.print(", ");
-  SerialPort.print(flight_mode ? "ACRO   " : "HORIZON");
-  SerialPort.print(", ");*/
-  SerialPort.print(throttle[0]);
-  SerialPort.print(", ");
-  SerialPort.print(throttle[1]);
-  SerialPort.print(", ");
-  SerialPort.print(throttle[2]);
-  SerialPort.print(", ");
-  SerialPort.println(throttle[3]);
-  //return;
+    print_cnt = 0;
+  }
+  print_cnt++;
 
   //motor arming control
   if (receiver_input_channel_6 < 1300){
@@ -748,6 +808,7 @@ void loop(){
 
         default:
           // do something
+          break;
     }   
     //apply new speed to motors
     set_motor_speeds();
