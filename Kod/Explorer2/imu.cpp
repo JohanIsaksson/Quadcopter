@@ -281,10 +281,10 @@ void IMU::CalculateAltitude(double dt){
   vertical_acc = -axs*sinp*cosr + ays*cosp*sinr + azs*cosp*cosr;
 
   // Run kalman 
-  kalman.Update(baro_altitude, vertical_acc-0.985, dt);
+  kalman.Update(baro_altitude, vertical_acc-1.0, dt);
   altitude = kalman.GetAltitude();
   vertical_speed = kalman.GetVerticalSpeed();
-  vertical_acc = kalman.GetVerticalAcceleration();
+  //vertical_acc = kalman.GetVerticalAcceleration();
 }
 
 /* ------------------------------------------------------------------------- */
@@ -329,17 +329,25 @@ void IMU::MS5611_pressure_read(){
   lp_pressure = pressure_sum >> LP_PRESSURE_SHIFT;
   pressure_pos = (pressure_pos + 1) % LP_PRESSURE_BUFFER_SIZE;
 
-  //Calculate pressure as explained in the datasheet of the MS-5611.
-  dT = C5;
-  dT <<= 8;
-  dT = raw_temp - dT;
-  OFF = OFF_C2 + (((int64_t)dT * (int64_t)C4) / 128);
-  SENS = SENS_C1 + (((int64_t)dT * (int64_t)C3) / 256);
-  P_s = ((((lp_pressure * SENS) / 2097152) - OFF) / 32768);
+  // Calculate pressure as explained in the datasheet of the MS-5611.
+  dT = (int64_t)raw_temp - C5_8;                                         // D2 - C5 * 2^8
+  OFF = OFF_C2 + (((int64_t)dT * (int64_t)C4) / 128);           // OFF = C2 * 2^16 + (C4 * dT) / 2^7
+  SENS = SENS_C1 + (((int64_t)dT * (int64_t)C3) / 256);         // SENS = C1 * 2^15 + (C3 * dT) / 2^8
+  P_s = ((((int64_t)raw_pressure * SENS) / 2097152) - OFF) / 32768;    // P = (D1 * SENS / 2^21 - OFF) / 2^15
   pressure = ((double)P_s)*0.01;
 
+  // Second order temperature compensation
+  /*if (temp < 20.0){
+    T2 = dT*dT
+
+    
+  }*/  
+
   // Calculate altitude from air pressure
-  baro_altitude = 44330.0*(1-pow(pressure/base_pressure,1/5.255));
+  baro_altitude = 44330.0 * (1.0 - pow(pressure / base_pressure, 0.190294957)); //1/5.255));
+  TEMP = 2000 + (dT * (int64_t)C6) / 8388608;
+  temp = (double)TEMP * 0.01;
+  //baro_altitude = 153.8*(273.15 + (double)temp_calc*0.01)*(pow(base_pressure/pressure,1/5.257));
 }
 
 void IMU::MS5611_init(){
@@ -362,8 +370,9 @@ void IMU::MS5611_init(){
   C5 = C[5];
   C6 = C[6];
 
-  OFF_C2 = C2 * 65536;
-  SENS_C1 = C1 * 32768;
+  OFF_C2 = (int64_t)C2 * 65536;
+  SENS_C1 = (int64_t)C1 * 32768;
+  C5_8 = (int64_t)C5 * 256;
 
   // Reset LP filters
   temp_sum = 0;
@@ -428,7 +437,7 @@ void IMU::MS5611_update(){
     case 4:
       MS5611_pressure_read();
       
-      if (baro_temp_count >= 50){
+      if (baro_temp_count >= 0){
         baro_state = 1;
         baro_temp_count = 0;
         MS5611_temp_start();
@@ -454,13 +463,13 @@ void IMU::MPU6050_init(){
   I2Cdev::writeBit(MPU6050_ADDR, 0x6B, 6, false); //set sleep to false
 
   //set offsets (on chip 1)
-  I2Cdev::writeWord(MPU6050_ADDR, 0x06, 217); //x acc
-  I2Cdev::writeWord(MPU6050_ADDR, 0x08, -3180); //y acc
-  I2Cdev::writeWord(MPU6050_ADDR, 0x0A, 2319); //z acc
+  I2Cdev::writeWord(MPU6050_ADDR, 0x06, -772); //x acc
+  I2Cdev::writeWord(MPU6050_ADDR, 0x08, -622); //y acc
+  I2Cdev::writeWord(MPU6050_ADDR, 0x0A, 1000); //z acc
 
-  I2Cdev::writeWord(MPU6050_ADDR, 0x13, 28);// 98); //x gyro
-  I2Cdev::writeWord(MPU6050_ADDR, 0x15, -19);// 32); //y gyro
-  I2Cdev::writeWord(MPU6050_ADDR, 0x17, 70);// 18); //z gyro
+  I2Cdev::writeWord(MPU6050_ADDR, 0x13, 77);// 98); //x gyro
+  I2Cdev::writeWord(MPU6050_ADDR, 0x15, 28);// 32); //y gyro
+  I2Cdev::writeWord(MPU6050_ADDR, 0x17, -24);// 18); //z gyro
 
   // Reset low pass filters
   for (int i = 0; i < LP_BUFFER_SIZE; i++){

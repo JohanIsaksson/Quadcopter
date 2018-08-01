@@ -647,14 +647,14 @@ void loop(){
     SerialPort.print("temp: ");
     SerialPort.print(imu.temp);
     SerialPort.print(", ");
-  
+
     SerialPort.print("baro altitude: ");
     SerialPort.print(imu.baro_altitude);
     SerialPort.print(", ");
     
-    SerialPort.print("kalman: ");*/
-    SerialPort.println(imu.altitude);
-    /*SerialPort.print(", ");
+    SerialPort.print("kalman: ");
+    SerialPort.print(imu.altitude);
+    SerialPort.print(", ");
     SerialPort.print(imu.vertical_speed);
     SerialPort.print(", ");
     SerialPort.println(imu.vertical_acc);*/
@@ -670,6 +670,18 @@ void loop(){
     SerialPort.print(imu.C5);
     SerialPort.print(", ");
     SerialPort.println(imu.C6);*/
+
+    /*SerialPort.print(imu.dT);
+    SerialPort.print(", ");
+    SerialPort.print((int)imu.OFF);
+    SerialPort.print(", ");
+    SerialPort.print((int)imu.SENS);
+    SerialPort.print(", ");
+
+    //SerialPort.print("baro altitude: ");*/
+    SerialPort.print(imu.baro_altitude);
+    SerialPort.print(", ");
+    SerialPort.println(imu.vertical_acc);
   
     
     /*SerialPort.print("raw pressure: ");
@@ -747,6 +759,7 @@ void loop(){
   }
   print_cnt++;
 
+/*
   //motor arming control
   if (receiver_input_channel_6 < 1300){
     motors_on = false;
@@ -769,7 +782,11 @@ void loop(){
     flight_mode = MODE_ACRO;
   
   previous_flight_mode = flight_mode;
+*/
 
+  flight_mode = MODE_ALT_HOLD;
+  motors_on = true;
+  previous_flight_mode = flight_mode;
 
 
 /*

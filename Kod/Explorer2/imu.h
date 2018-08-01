@@ -102,8 +102,8 @@ public:
 	// MS5611 variables
 	uint16_t C[7];
 	uint16_t C1,C2,C3,C4,C5,C6; 
-	int64_t OFF, OFF_C2, SENS, SENS_C1, P_s;
-	int32_t dT, dT_C5;
+	int64_t OFF, OFF_C2, C5_8, SENS, SENS_C1, P_s;
+	int64_t dT, dT_C5, TEMP;
 	uint32_t raw_temp, lp_temp;
 	uint32_t raw_pressure, lp_pressure;
 
