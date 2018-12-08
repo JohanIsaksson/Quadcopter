@@ -46,3 +46,4 @@ matrix operator*(double b, matrix A);
 
 
 #endif /* MATRIX_H */
+

@@ -130,18 +130,18 @@ void Kalman::InitPreset(){
   Ht = matrix_create(3,2, dataHt);
   matrix_transpose(Ht, H);
 
-  fillMatrix(0.0084,    0.0023,    0.0001,
-             0.0023,    0.0099,    0.0000,
-             0.0001,    0.0000,    0.1321,
+  fillMatrix(0.000992,    0.005000,    0.000126,
+             0.000023,    0.000107,    0.000535,
+             0.000069,    0.001700,    0.012100,
              dataP);
   P = matrix_create(3,3,dataP);
 
   P_p = matrix_create(3,3,dataP_p);
   matrix_zeroes(P_p);
 
-  fillMatrix(0.0,       0.0,     0.0,
-             0.0,  0.0,          0.0,
-             0.06,  0.0, 0.01048576,
+  fillMatrix(0.0,       0.0001,     0.00001,
+             0.0,       0.0,        0.0,
+             0.0,       0.0001,     0.001,
              dataQ);
   Q = matrix_create(3,3,dataQ); 
 
@@ -151,8 +151,8 @@ void Kalman::InitPreset(){
   K = matrix_create(3,2,dataK);
   matrix_zeroes(K);
 
-  fillMatrix(0.3943, 0.0,
-             0.0, 0.1338,
+  fillMatrix(0.05,       0.00044675,
+             0.00044675, 0.1338,
              dataR);
   R = matrix_create(2,2,dataR);
 
@@ -267,8 +267,6 @@ void Kalman::Update(double baro, double acc, double dt){
   matrix_multiply(KH, K, H);      // 3,3
   matrix_subtract(IKH, I, KH);    // 3,3
   matrix_multiply(P, IKH, P_p);   // 3,3
-
-
 }
 
 double Kalman::GetAltitude(){
@@ -282,3 +280,4 @@ double Kalman::GetVerticalSpeed(){
 double Kalman::GetVerticalAcceleration(){
   return x.data[2];
 }
+

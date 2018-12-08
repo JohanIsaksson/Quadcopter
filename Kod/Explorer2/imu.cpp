@@ -278,13 +278,22 @@ void IMU::CalculateAltitude(double dt){
   double cosp = cos(ypr_rad[PITCH]);
 
   // Calculate vertical acceleration (needs more testing)
-  vertical_acc = -axs*sinp*cosr + ays*cosp*sinr + azs*cosp*cosr;
+  vertical_acc = 0.8*vertical_acc + 0.2*(-axs*sinp*cosr + ays*cosp*sinr + azs*cosp*cosr -1.0025);
 
   // Run kalman 
-  kalman.Update(baro_altitude, vertical_acc-1.0, dt);
+  kalman.Update(baro_altitude, vertical_acc-1.0025, dt);
   altitude = kalman.GetAltitude();
-  vertical_speed = kalman.GetVerticalSpeed();
+  //vertical_speed = kalman.GetVerticalSpeed();
   //vertical_acc = kalman.GetVerticalAcceleration();
+  /*altitude = 0.98*altitude + 0.02*baro_altitude;
+  if (abs(baro_altitude - altitude) > 0.2){
+      altitude += 0.1*(baro_altitude - altitude);      
+  }
+  
+
+  vertical_speed = 0.98*vertical_speed + 0.02*(0.8*(altitude - altitude_last)/dt + 0.2*vertical_acc*9.82*dt); //
+
+  altitude_last = altitude;*/
 }
 
 /* ------------------------------------------------------------------------- */
@@ -304,6 +313,13 @@ void IMU::MS5611_temp_read(){
   Wire.requestFrom(MS5611_ADDR, 3);
 
   raw_temp = Wire.read() << 16 | Wire.read() << 8 | Wire.read();
+
+  /* low pass filter through moving average */
+  temp_sum -= temp_buf[temp_pos];
+  temp_buf[temp_pos] = raw_temp;
+  temp_sum += raw_temp;
+  lp_temp = temp_sum >> LP_TEMP_SHIFT;
+  temp_pos = (temp_pos + 1) % LP_TEMP_BUFFER_SIZE;
 }
 
 void IMU::MS5611_pressure_start(){
@@ -330,10 +346,10 @@ void IMU::MS5611_pressure_read(){
   pressure_pos = (pressure_pos + 1) % LP_PRESSURE_BUFFER_SIZE;
 
   // Calculate pressure as explained in the datasheet of the MS-5611.
-  dT = (int64_t)raw_temp - C5_8;                                         // D2 - C5 * 2^8
+  dT = (int64_t)lp_temp - C5_8;                                         // D2 - C5 * 2^8
   OFF = OFF_C2 + (((int64_t)dT * (int64_t)C4) / 128);           // OFF = C2 * 2^16 + (C4 * dT) / 2^7
   SENS = SENS_C1 + (((int64_t)dT * (int64_t)C3) / 256);         // SENS = C1 * 2^15 + (C3 * dT) / 2^8
-  P_s = ((((int64_t)raw_pressure * SENS) / 2097152) - OFF) / 32768;    // P = (D1 * SENS / 2^21 - OFF) / 2^15
+  P_s = ((((int64_t)lp_pressure * SENS) / 2097152) - OFF) / 32768;    // P = (D1 * SENS / 2^21 - OFF) / 2^15
   pressure = ((double)P_s)*0.01;
 
   // Second order temperature compensation
@@ -573,3 +589,4 @@ void IMU::UpdateAcro(double dt){
   MPU6050_update();
   CalculateGyro();
 }
+

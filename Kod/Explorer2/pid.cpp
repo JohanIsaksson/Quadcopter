@@ -57,3 +57,4 @@ void Pid::Update(int* out, double ref, double mea, double dt, double scale){
 void Pid::Update(double* out, double ref, double mea, double dt, double scale){
 	Calculate(out, ref, mea, dt, scale);
 }
+

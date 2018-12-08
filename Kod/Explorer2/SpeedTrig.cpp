@@ -230,3 +230,4 @@ float Speed_Trig::atan2(float opp, float adj) {
 
 //Initialize SpeedTrig object:
 Speed_Trig SpeedTrig;
+

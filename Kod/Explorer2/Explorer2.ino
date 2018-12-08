@@ -19,40 +19,20 @@
 #define LOST_CONNECTION_COUNT2 12000
 #define EMERGENCY_THROTTLE 0
 
-
+// Flight modes
 #define MODE_HORIZON 0
 #define MODE_ACRO 1
 #define MODE_ALT_HOLD 2
 
-//#define YPR_DATA
-//#define COMP_DATA
-//#define PID_DATA
-//#define MAG_DATA
-//#define JAVA_DATA
-//#define RADIO_DATA
-//#define ESC_DATA
+// Arming modes
+#define UNARMED 0
+#define ARMED 1
+#define UNSAFE 2
 
+// Debug mode (prints via serial)
+#define DEBUG
 
-// Tuning control
-#define TUNING_MAX 10.0
-#define TUNING_MIN 0.0
-//#define TUNING_MODE 6
-double tun;
-/*
-0   -   P pitch/roll acro
-1   -   I pitch/roll acro
-2   -   D pitch/roll acro
-3   -   P yaw
-4   -   I yaw
-5   -   D yaw
-6   -   P pitch/roll horizon
-7   -   I pitch/roll horizon
-8   -   D pitch/roll horizon
-9   -   
-
-
-*/
-
+// Inertial measurement unit
 IMU imu;
 
 // Motor signals
@@ -120,6 +100,7 @@ double altitude_hold_out;
 // altitude hold variables
 double altitude_setpoint;
 int previous_input_channel_3;
+bool altitude_startup;
 
 // Maximum angle and rotation sppeds
 uint16_t max_pitch, max_roll, max_yaw;
@@ -127,10 +108,11 @@ uint16_t max_p, max_r, max_y;
 
 // L.O.S. safety counter
 int radio_off_counter;
+bool failSafe; 
 
-// Air mode throttle
+// TODO: Air mode throttle
 int air_mode_throttle;
-#define AIR_MODE
+//#define AIR_MODE
 
 // Time keeping
 uint32_t time_diff;
@@ -138,33 +120,24 @@ uint32_t time_last;
 double timed;
 
 // Radio variables
-volatile byte last_channel_1;
-volatile byte last_channel_2; 
-volatile byte last_channel_3; 
-volatile byte last_channel_4;
-volatile byte last_channel_5; 
-volatile byte last_channel_6;
 
-volatile int receiver_input_channel_1;
-volatile int receiver_input_channel_2; 
-volatile int receiver_input_channel_3; 
-volatile int receiver_input_channel_4; 
-volatile int receiver_input_channel_5; 
-volatile int receiver_input_channel_6;
+volatile uint16_t receiver_input_channel_1;
+volatile uint16_t receiver_input_channel_2; 
+volatile uint16_t receiver_input_channel_3; 
+volatile uint16_t receiver_input_channel_4; 
+volatile uint16_t receiver_input_channel_5; 
+volatile uint16_t receiver_input_channel_6;
 
-volatile uint32_t timer_1;
-volatile uint32_t timer_2;
-volatile uint32_t timer_3;
-volatile uint32_t timer_4;
-volatile uint32_t timer_5;
-volatile uint32_t timer_6;
-                  
 double rad_roll, rad_pitch, rad_yaw;
 volatile uint16_t rad_throttle;
 
 // Motor control variables
 bool motors_on, disable_sticks;
 uint32_t esc_time, start_time, end_time;
+
+// Arming control
+uint8_t arm_mode;
+uint8_t next_arm_mode;
 
 // Flight mode control
 uint8_t flight_mode;
@@ -174,7 +147,10 @@ uint8_t previous_flight_mode;
 bool set_yaw;
 
 // Serial bus for SAMD21
+#ifdef DEBUG
 #define SerialPort SerialUSB
+int print_cnt = 0;
+#endif
 
 // Mapping function for double data type
 double map_d(double x, double in_min, double in_max, double out_min, double out_max){
@@ -309,24 +285,14 @@ void set_motor_speeds(){
 
 // Sets minimum throttle for all motors
 void set_motor_speeds_min(){
-  //start esc pulses
-  start_time = micros(); 
-  end_time = start_time + 1000;
-  start_motor_pulses();
-
 
   while(end_time > micros());
   stop_motor_pulses();
 
-    
   while(micros() - time_last < 4000);
 }
 
 void set_motor_speeds_max(){
-  //start esc pulses
-  start_time = micros(); 
-  end_time = start_time + 2000;
-  start_motor_pulses();
 
   while(end_time > micros());
   stop_motor_pulses();
@@ -348,10 +314,15 @@ void set_motor_speeds_max(){
 void setup(){
   delay(2000);
 
+#ifdef DEBUG
   SerialPort.begin(115200);
   SerialPort.println("Starting up");
+#endif
 
+  // Communication with radio
+  Serial1.begin(100000, SERIAL_8E2);
   radio_off_counter = 0;
+  failSafe = false;
   receiver_input_channel_1 = 1500;
   receiver_input_channel_2 = 1500;
   receiver_input_channel_3 = 1000;
@@ -359,7 +330,7 @@ void setup(){
   receiver_input_channel_5 = 1000;
   receiver_input_channel_6 = 1000;
 
-
+  // PID values
   P_pitch_a = 1.2;
   P_roll_a = 1.2;
 
@@ -409,8 +380,9 @@ void setup(){
   left = 0;
   cw = 0;
 
-  //wait for esc init;
+  #ifdef DEBUG
   SerialPort.println("Initializing ESCs...");
+  #endif
 
   //set pins as outputs
   pinMode(fl_pin, OUTPUT);
@@ -418,14 +390,19 @@ void setup(){
   pinMode(bl_pin, OUTPUT);
   pinMode(br_pin, OUTPUT);
 
-  //initialize escs
+  // Initialize ESCs
   init_motors();
+
+  // Initialize arm controls
+  arm_mode = UNARMED;
   motors_on = false;
+  pinMode(13, OUTPUT);
 
   time_last = micros();
-  SerialPort.println("Running...");
 
-  setup_radio();
+  #ifdef DEBUG
+  SerialPort.println("Running...");
+  #endif
 }
 
 
@@ -438,20 +415,9 @@ void setup(){
  ##  ## ##  ## ## ##   ##  ##     ##  ## ##  ##
  ##  ##  ####  ##  ## #### ######  ####  ##  ##
 */
-void Update_horizon(uint32_t t){
-  timed = (double)t/1000000.0;
-
-  //Update all sensor on the imu
-  imu.UpdateHorizon(timed); 
-
-  //start esc pulses
-  start_time = micros(); 
-  end_time = start_time + 2000;
-  start_motor_pulses();
-
-  // Map throttle sent from radio
-  rad_throttle = map(receiver_input_channel_3, 1000, 2000, 1060, 1800);
-
+void Update_horizon(double t)
+{
+  
   //compensate for mistimings with deadband
   if (receiver_input_channel_1 > 1485 && receiver_input_channel_1 < 1515) receiver_input_channel_1 = 1500; //roll
   if (receiver_input_channel_2 > 1485 && receiver_input_channel_2 < 1515) receiver_input_channel_2 = 1500; //pitch
@@ -472,13 +438,13 @@ void Update_horizon(uint32_t t){
 
   //calculate pids
                                                                           //may need to calibrate for offsets
-  pid_pitch_stab.Update(&pitch_stab, rad_pitch, (imu.ypr[1]-0.4), timed, 1.0);  //(imu.ypr[1]-0.4)
-  pid_roll_stab.Update(&roll_stab, rad_roll, (imu.ypr[2]-0.35), timed, 1.0);     //(imu.ypr[2]-0.3)
-  pid_yaw_stab.Update(&yaw_stab, rad_yaw, (imu.ypr[0]), timed, 1.0);
+  pid_pitch_stab.Update(&pitch_stab, rad_pitch, (imu.ypr[1]-0.4), t, 1.0);  //(imu.ypr[1]-0.4)
+  pid_roll_stab.Update(&roll_stab, rad_roll, (imu.ypr[2]-0.35), t, 1.0);     //(imu.ypr[2]-0.3)
+  pid_yaw_stab.Update(&yaw_stab, rad_yaw, (imu.ypr[0]), t, 1.0);
 
-  pid_pitch_rate.Update(&front, pitch_stab, imu.y_gyr*RAD_TO_DEG, timed, -1.0);
-  pid_roll_rate.Update(&left, roll_stab, imu.x_gyr*RAD_TO_DEG, timed, 1.0);
-  pid_yaw_rate.Update(&cw, yaw_stab, -imu.z_gyr*RAD_TO_DEG, timed, -1.0);
+  pid_pitch_rate.Update(&front, pitch_stab, imu.y_gyr*RAD_TO_DEG, t, -1.0);
+  pid_roll_rate.Update(&left, roll_stab, imu.x_gyr*RAD_TO_DEG, t, 1.0);
+  pid_yaw_rate.Update(&cw, yaw_stab, -imu.z_gyr*RAD_TO_DEG, t, -1.0);
 
 }
 
@@ -491,19 +457,8 @@ void Update_horizon(uint32_t t){
  ##  ## ##  ## ## ##  ##  ## ##  ## ##  ## ##    ## ##  ##
  ##  ##  ####  ##  ##  ####  #####  ##  ## ##   #### ####
 */
-void Update_acro(uint32_t t){
-  timed = (double)t/1000000.0;
-
-  //Update only the gyroscope on the imu
-  imu.UpdateAcro(timed); 
-
-  // Map throttle sent from radio
-  rad_throttle = map(receiver_input_channel_3, 1000, 2000, 1060, 1800);
-
-  //start esc pulses
-  start_time = micros(); 
-  end_time = start_time + 2000;
-  start_motor_pulses();
+void Update_acro(double t)
+{
 
   //compensate for mistimings with deadband
   if (receiver_input_channel_1 > 1475 && receiver_input_channel_1 < 1525) receiver_input_channel_1 = 1500;
@@ -525,9 +480,9 @@ void Update_acro(uint32_t t){
 
 
   //calculate pids
-  pid_pitch_rate.Update(&front, rad_pitch, imu.y_gyr*RAD_TO_DEG, timed, -1.0);
-  pid_roll_rate.Update(&left, rad_roll, imu.x_gyr*RAD_TO_DEG, timed, 1.0);
-  pid_yaw_rate.Update(&cw, rad_yaw, -imu.z_gyr*RAD_TO_DEG, timed, -1.0);
+  pid_pitch_rate.Update(&front, rad_pitch, imu.y_gyr*RAD_TO_DEG, t, -1.0);
+  pid_roll_rate.Update(&left, rad_roll, imu.x_gyr*RAD_TO_DEG, t, 1.0);
+  pid_yaw_rate.Update(&cw, rad_yaw, -imu.z_gyr*RAD_TO_DEG, t, -1.0);
 }
 
 /*
@@ -539,16 +494,8 @@ void Update_acro(uint32_t t){
  ##  ## ##      ##    ##    ##   ##  ## ## ##  ##
  ##  ## ######  ##   ####   ##    ####  ####   ######
 */
-void Update_altitude_hold(uint32_t t){
-  timed = (double)t/1000000.0;
-
-  //Update all sensors on the imu
-  imu.Update(timed); 
-
-  //start esc pulses
-  start_time = micros(); 
-  end_time = start_time + 2000;
-  start_motor_pulses();
+void Update_altitude_hold(double t)
+{
 
   //compensate for mistimings with deadband
   if (receiver_input_channel_1 > 1485 && receiver_input_channel_1 < 1515) receiver_input_channel_1 = 1500; //roll
@@ -570,13 +517,13 @@ void Update_altitude_hold(uint32_t t){
 
   //calculate pids
                                                                           //may need to calibrate for offsets
-  pid_pitch_stab.Update(&pitch_stab, rad_pitch, (imu.ypr[1]-0.4), timed, 1.0);  //(imu.ypr[1]-0.4)
-  pid_roll_stab.Update(&roll_stab, rad_roll, (imu.ypr[2]-0.35), timed, 1.0);     //(imu.ypr[2]-0.3)
-  pid_yaw_stab.Update(&yaw_stab, rad_yaw, (imu.ypr[0]), timed, 1.0);
+  pid_pitch_stab.Update(&pitch_stab, rad_pitch, (imu.ypr[1]-0.4), t, 1.0);  //(imu.ypr[1]-0.4)
+  pid_roll_stab.Update(&roll_stab, rad_roll, (imu.ypr[2]-0.35), t, 1.0);     //(imu.ypr[2]-0.3)
+  pid_yaw_stab.Update(&yaw_stab, rad_yaw, (imu.ypr[0]), t, 1.0);
 
-  pid_pitch_rate.Update(&front, pitch_stab, imu.y_gyr*RAD_TO_DEG, timed, -1.0);
-  pid_roll_rate.Update(&left, roll_stab, imu.x_gyr*RAD_TO_DEG, timed, 1.0);
-  pid_yaw_rate.Update(&cw, yaw_stab, -imu.z_gyr*RAD_TO_DEG, timed, -1.0);
+  pid_pitch_rate.Update(&front, pitch_stab, imu.y_gyr*RAD_TO_DEG, t, -1.0);
+  pid_roll_rate.Update(&left, roll_stab, imu.x_gyr*RAD_TO_DEG, t, 1.0);
+  pid_yaw_rate.Update(&cw, yaw_stab, -imu.z_gyr*RAD_TO_DEG, t, -1.0);
 
 
   // Altitude control
@@ -584,23 +531,21 @@ void Update_altitude_hold(uint32_t t){
     // Hold
     if (previous_input_channel_3 < 1400 && previous_input_channel_3 > 1600)
       altitude_setpoint = imu.altitude;
-    pid_altitude_hold.Update(&altitude_hold_out, altitude_setpoint, imu.altitude, timed, 1.0);
+    pid_altitude_hold.Update(&altitude_hold_out, altitude_setpoint, imu.altitude, t, 1.0);
 
   }else if (receiver_input_channel_3 < 1400){
     // Descend
-    altitude_hold_out = -0.5;
+    if (!altitude_startup)
+      altitude_hold_out = -0.5;
   }else if (receiver_input_channel_3 > 1600){
     // Ascend
     altitude_hold_out = 0.5;
   } 
 
-  pid_altitude_rate.Update(&altitude_rate_out, altitude_hold_out, imu.vertical_speed, timed, 1.0);
+  pid_altitude_rate.Update(&altitude_rate_out, altitude_hold_out, imu.vertical_speed, t, 1.0);
 
   previous_input_channel_3 = receiver_input_channel_3;
-
 }
-
-int print_cnt = 0;
 
 /*
  ##     ####   ####  #####
@@ -611,17 +556,90 @@ int print_cnt = 0;
  ##    ##  ## ##  ## ##
  ###### ####   ####  ##
 */
-void loop(){
+void loop()
+{
 
 
   time_diff = micros() - time_last;
   time_last = micros();
 
-  //set_motor_speeds_min();
 
-  if (print_cnt >= 0){
+  uint8_t sbus_packet[25];
+  uint16_t channels[16];
+  if (Serial1.available() >= 25)
+  {
+    //SerialPort.println(Serial1.available());
+    if (Serial1.available() == 25)
+    {
+      for (int i = 0; i < 25; i++)
+      {
+        sbus_packet[i] = Serial1.read();
+      }
 
-    /*SerialPort.print((motors_on ? "On " : "Off"));
+      // Verify packet
+      if ((sbus_packet[0] == 0x0F))// && (sbus_packet[24] == 0x00))
+      {
+        // Read channels
+        
+        // Channel 1
+        receiver_input_channel_1 = (sbus_packet[2] & 0x07);
+        receiver_input_channel_1 <<= 8;
+        receiver_input_channel_1 += sbus_packet[1];
+        receiver_input_channel_1 = map(receiver_input_channel_1, 192, 1792, 1000, 2000);
+
+        // Channel 2
+        receiver_input_channel_2 = (sbus_packet[3] & 0x3F);
+        receiver_input_channel_2 <<= 5;
+        receiver_input_channel_2 += ((sbus_packet[2] & 0xF7) >> 3);
+        receiver_input_channel_2 = map(receiver_input_channel_2, 192, 1792, 1000, 2000);
+
+        // Channel 3
+        receiver_input_channel_3 = (sbus_packet[5] & 0x01);
+        receiver_input_channel_3 <<= 8;
+        receiver_input_channel_3 += sbus_packet[4];
+        receiver_input_channel_3 <<= 2;
+        receiver_input_channel_3 += ((sbus_packet[3] & 0xC0) >> 6);
+        receiver_input_channel_3 = map(receiver_input_channel_3, 192, 1792, 1000, 2000);
+
+        // Channel 4
+        receiver_input_channel_4 = (sbus_packet[6] & 0x0F);
+        receiver_input_channel_4 <<= 7;
+        receiver_input_channel_4 += ((sbus_packet[5] & 0xFE) >> 1);
+        receiver_input_channel_4 = map(receiver_input_channel_4, 192, 1792, 1000, 2000);
+
+        // Channel 5
+        receiver_input_channel_5 = (sbus_packet[7] & 0x7F);
+        receiver_input_channel_5 <<= 4;
+        receiver_input_channel_5 += ((sbus_packet[6] & 0xF0) >> 4) ;
+        receiver_input_channel_5 = map(receiver_input_channel_5, 192, 1792, 1000, 2000);
+
+        // Channel 6
+        receiver_input_channel_6 = (sbus_packet[9] & 0x03);
+        receiver_input_channel_6 <<= 8;
+        receiver_input_channel_6 += sbus_packet[8];
+        receiver_input_channel_6 <<= 1;
+        receiver_input_channel_6 += ((sbus_packet[7] & 0x80) >> 7);
+        receiver_input_channel_6 = map(receiver_input_channel_6, 192, 1792, 1000, 2000);
+
+        // Failsafe
+        failSafe = (sbus_packet[23] & 0x10) ? true : false;
+      }
+    }
+    else
+    {
+      // Remove bad data
+      while (Serial1.available() > 0)
+      {
+        Serial1.read();
+      }
+    }
+  }
+
+#ifdef DEBUG
+
+  if (print_cnt >= 10){
+
+    SerialPort.print((motors_on ? "On " : "Off"));
     SerialPort.print(", ");
   
     if (flight_mode == MODE_ACRO)
@@ -629,107 +647,10 @@ void loop(){
     else if (flight_mode == MODE_HORIZON)
       SerialPort.print("HORIZON      ");
     else if (flight_mode == MODE_ALT_HOLD)
-      SerialPort.print("ALTITUDE HOLD");  
-    SerialPort.print(", ");
-    
-    SerialPort.print("ypr: ");
-    SerialPort.print(imu.ypr[0]);
-    SerialPort.print(", ");
-    SerialPort.print(imu.ypr[1]);
-    SerialPort.print(", ");
-    SerialPort.print(imu.ypr[2]);
-    SerialPort.print(", ");
-  
-    SerialPort.print("pressure: ");
-    SerialPort.print(imu.pressure);
-    SerialPort.print(", ");
-  
-    SerialPort.print("temp: ");
-    SerialPort.print(imu.temp);
+      SerialPort.print("ALTITUDE HOLD");
     SerialPort.print(", ");
 
-    SerialPort.print("baro altitude: ");
-    SerialPort.print(imu.baro_altitude);
-    SerialPort.print(", ");
-    
-    SerialPort.print("kalman: ");
-    SerialPort.print(imu.altitude);
-    SerialPort.print(", ");
-    SerialPort.print(imu.vertical_speed);
-    SerialPort.print(", ");
-    SerialPort.println(imu.vertical_acc);*/
-  
-    /*SerialPort.print(imu.C1);
-    SerialPort.print(", ");
-    SerialPort.print(imu.C2);
-    SerialPort.print(", ");
-    SerialPort.print(imu.C3);
-    SerialPort.print(", ");
-    SerialPort.print(imu.C4);
-    SerialPort.print(", ");
-    SerialPort.print(imu.C5);
-    SerialPort.print(", ");
-    SerialPort.println(imu.C6);*/
-
-    /*SerialPort.print(imu.dT);
-    SerialPort.print(", ");
-    SerialPort.print((int)imu.OFF);
-    SerialPort.print(", ");
-    SerialPort.print((int)imu.SENS);
-    SerialPort.print(", ");
-
-    //SerialPort.print("baro altitude: ");*/
-    SerialPort.print(imu.baro_altitude);
-    SerialPort.print(", ");
-    SerialPort.println(imu.vertical_acc);
-  
-    
-    /*SerialPort.print("raw pressure: ");
-    SerialPort.print(imu.raw_pressure);
-    SerialPort.print(", ");
-  
-    SerialPort.print("raw temp: ");
-    SerialPort.print(imu.raw_temp);
-    SerialPort.println(", ");*/
-    
-    
-    /*
-    SerialPort.print(imu.x_acc);
-    SerialPort.print(", ");
-    SerialPort.println(imu.y_acc);
-    */
-    /*
-    SerialPort.print(imu.ax);
-    SerialPort.print(", ");
-    SerialPort.print(imu.ay);
-    SerialPort.print(", ");
-    SerialPort.print(imu.az);
-    SerialPort.print(", ");
-    SerialPort.print(imu.gx);
-    SerialPort.print(", ");
-    SerialPort.print(imu.gy);
-    SerialPort.print(", ");
-    SerialPort.println(imu.gz);
-    */
-    /*
-    SerialPort.print(imu.ypr[0]);
-    SerialPort.print(", ");
-    SerialPort.print(imu.ypr[1]);
-    SerialPort.print(", ");
-    SerialPort.println(imu.ypr[2]);
-    */
-    /*
-    SerialPort.print(", ");
-    SerialPort.print(imu.x_gyr);
-    SerialPort.print(", ");
-    SerialPort.print(imu.y_gyr);
-    SerialPort.print(", ");
-    SerialPort.println(imu.z_gyr);
-    */
-  
-    //delay(20);
-  
-    /*SerialPort.print(receiver_input_channel_1);
+    SerialPort.print(receiver_input_channel_1);
     SerialPort.print(", ");
     SerialPort.print(receiver_input_channel_2);
     SerialPort.print(", ");
@@ -739,34 +660,82 @@ void loop(){
     SerialPort.print(", ");
     SerialPort.print(receiver_input_channel_5);
     SerialPort.print(", ");
-    SerialPort.println(receiver_input_channel_6);
-    */
-  
-    /*SerialPort.print(motors_on ? "ON  " : "OFF ");
+    SerialPort.print(receiver_input_channel_6);
     SerialPort.print(", ");
-    SerialPort.print(flight_mode ? "ACRO   " : "HORIZON");
+    SerialPort.println(failSafe ? "Disconnected" : "Connected   ");
+    /*SerialPort.print(receiver_input_channel_7);
+    SerialPort.print(", ");
+    SerialPort.println(receiver_input_channel_8);*/
+    
+    /*SerialPort.print("ypr: ");
+    SerialPort.print(imu.ypr[0]);
+    SerialPort.print(", ");
+    SerialPort.print(imu.ypr[1]);
+    SerialPort.print(", ");
+    SerialPort.print(imu.ypr[2]);
     SerialPort.print(", ");*/
-    /*SerialPort.print(throttle[0]);
+  
+    /*SerialPort.print("pressure: ");
+    SerialPort.print(imu.pressure);
+    SerialPort.print(", ");*/
+  
+    /*SerialPort.print("temp: ");
+    SerialPort.print(imu.temp);
     SerialPort.print(", ");
-    SerialPort.print(throttle[1]);
+
+    SerialPort.print("baro altitude: ");
+    SerialPort.print(imu.baro_altitude);
+    SerialPort.print(", ");*/
+    
+    /*SerialPort.print("kalman: ");
+    SerialPort.print(imu.altitude);
     SerialPort.print(", ");
-    SerialPort.print(throttle[2]);
-    SerialPort.print(", ");
-    SerialPort.println(throttle[3]);*/
-    //return;
+    SerialPort.println(imu.vertical_speed);*/
 
     print_cnt = 0;
   }
   print_cnt++;
+#endif
 
-/*
-  //motor arming control
-  if (receiver_input_channel_6 < 1300){
-    motors_on = false;
-  }else if (receiver_input_channel_6 > 1700){
+  // Motor arming control
+  switch (arm_mode)
+  {
+    case UNARMED:
+      if (receiver_input_channel_6 > 1700)
+      {
+        if (receiver_input_channel_3 < 1050)
+        {
+          arm_mode = ARMED;
+        }
+        else
+        {
+          arm_mode = UNSAFE;
+        }
+      }
+      break;
+
+    case ARMED:
+      if (receiver_input_channel_6 < 1300)
+      {
+        arm_mode = UNARMED;
+      }
+      break;
+
+    case UNSAFE:
+      if (receiver_input_channel_6 < 1300 && receiver_input_channel_3 < 1050)
+      {
+        arm_mode = UNARMED;
+      }
+  }
+
+  if (arm_mode == ARMED)
+  {
     motors_on = true;
   }
-  //motors_on = true;
+  else
+  {
+    motors_on = false;
+  }
 
   // Determine flight mode
   if (receiver_input_channel_5 < 1300){
@@ -777,196 +746,78 @@ void loop(){
     }
   }
   else if (receiver_input_channel_5 > 1350 && receiver_input_channel_5 < 1650)
-    flight_mode = MODE_HORIZON;    
+    flight_mode = MODE_HORIZON;
   else if(receiver_input_channel_5 > 1700)
     flight_mode = MODE_ACRO;
+
+  previous_flight_mode = flight_mode;
+
+  // Emergency landing and stop
+  if (failSafe)
+  {
+    /*if (radio_off_counter >= LOST_CONNECTION_COUNT)
+    {
+      receiver_input_channel_1 = 1500;
+      receiver_input_channel_2 = 1500;
+      receiver_input_channel_3 = 1100;
+      receiver_input_channel_4 = 1500;
+      receiver_input_channel_5 = 1000;
   
-  previous_flight_mode = flight_mode;
-*/
+      if (radio_off_counter >= LOST_CONNECTION_COUNT2){
+        receiver_input_channel_6 = 1000;
+      }
+    }*/
+    radio_off_counter++;
+  }
+  else
+  {
+    radio_off_counter = 0;
+  }
 
-  flight_mode = MODE_ALT_HOLD;
-  motors_on = true;
-  previous_flight_mode = flight_mode;
+  // Update all sensors in the imu
+  timed = (double)time_diff/1000000.0;
+  imu.Update(timed); 
 
+  // Start esc pulses
+  start_time = micros();  
+  start_motor_pulses();
 
-/*
-  if (radio_off_counter >= LOST_CONNECTION_COUNT){
-    receiver_input_channel_1 = 1500;
-    receiver_input_channel_2 = 1500;
-    receiver_input_channel_3 = 1100;
-    receiver_input_channel_4 = 1500;
-    receiver_input_channel_5 = 1000;
+  // Map throttle sent from radio
+  rad_throttle = map(receiver_input_channel_3, 1000, 2000, 1060, 1800);
 
-    if (radio_off_counter >= LOST_CONNECTION_COUNT2){
-      receiver_input_channel_6 = 1000;
-    }else{
-      receiver_input_channel_6 = 2000;
-    }
-  }*/   
-    
-
-  //radio_off_counter++;
-
- 
-  if (motors_on){
-    //Update according to set flight mode
-    switch (flight_mode) {
+  if (motors_on)
+  {
+    digitalWrite(13, HIGH);
+    // Update according to set flight mode
+    switch (flight_mode)
+    {
         case MODE_HORIZON:
-          Update_horizon(time_diff);
+          Update_horizon(timed);
           break;
 
         case MODE_ACRO:
-          Update_acro(time_diff);
+          Update_acro(timed);
           break;
 
         case MODE_ALT_HOLD:
-          Update_altitude_hold(time_diff);
+          Update_altitude_hold(timed);
           break;
 
         default:
           // do something
           break;
     }   
-    //apply new speed to motors
+    // Apply new speeds to motors
+    end_time = start_time + 2000;
     set_motor_speeds();
-  }else{
-    //keep motors Updated
+  }
+  else
+  {
+    digitalWrite(13, LOW);
+    // Keep motors updated
+    end_time = start_time + 1015;
     set_motor_speeds_min();
   }
-} 
-
-
-/*
- #####    ##   ####  #### ####
- ##  ##  ####  ## ##  ## ##  ##
- ##  ## ##  ## ##  ## ## ##  ##
- #####  ###### ##  ## ## ##  ##
- ####   ##  ## ##  ## ## ##  ##
- ## ##  ##  ## ## ##  ## ##  ##
- ##  ## ##  ## ####  #### ####
-*/
-
-//int radio_roll_pin, radio_pitch_pin, radio_throttle_pin, radio_yaw_pin, radio_mode_pin, radio_kill_pin;
-//assign radion pins
-const byte radio_roll_pin = 9;
-const byte radio_pitch_pin = 8;
-const byte radio_throttle_pin = 7;
-const byte radio_yaw_pin = 6;
-const byte radio_mode_pin = 5;
-const byte radio_kill_pin = 3;
-const byte radio_ch7_pin = 2;
-const byte radio_ch8_pin = A0;
-  
-void setup_radio(){
-
-  pinMode(radio_roll_pin, INPUT);
-  pinMode(radio_pitch_pin, INPUT);
-  pinMode(radio_throttle_pin, INPUT);
-  pinMode(radio_yaw_pin, INPUT);
-  pinMode(radio_mode_pin, INPUT);
-  pinMode(radio_kill_pin, INPUT);
-   /*                                                                                       //  channel:
-  attachInterrupt(digitalPinToInterrupt(radio_roll_pin), (voidFuncPtr)radio_roll_ISR, CHANGE);         //  1  
-  attachInterrupt(digitalPinToInterrupt(radio_pitch_pin), (voidFuncPtr)radio_pitch_ISR, CHANGE);       //  2
-  attachInterrupt(digitalPinToInterrupt(radio_throttle_pin), (voidFuncPtr)radio_throttle_ISR, CHANGE); //  3
-  attachInterrupt(digitalPinToInterrupt(radio_yaw_pin), (voidFuncPtr)radio_yaw_ISR, CHANGE);           //  4
-  attachInterrupt(digitalPinToInterrupt(radio_mode_pin), (voidFuncPtr)radio_mode_ISR, CHANGE);         //  5
-  attachInterrupt(digitalPinToInterrupt(radio_kill_pin), (voidFuncPtr)radio_kill_ISR, CHANGE);         //  6*/
-
-                                                                                           //  channel:
-  attachInterrupt(radio_roll_pin, (voidFuncPtr)updateRadio, CHANGE);         //  1  
-  attachInterrupt(radio_pitch_pin, (voidFuncPtr)updateRadio, CHANGE);       //  2
-  attachInterrupt(radio_throttle_pin, (voidFuncPtr)updateRadio, CHANGE); //  3
-  attachInterrupt(radio_yaw_pin, (voidFuncPtr)updateRadio, CHANGE);           //  4
-  attachInterrupt(radio_mode_pin, (voidFuncPtr)updateRadio, CHANGE);         //  5
-  attachInterrupt(radio_kill_pin, (voidFuncPtr)updateRadio, CHANGE);         //  6*/
-  
 }
 
-void radio_roll_ISR(){
-  updateRadio();
-}
 
-void radio_pitch_ISR(){
-  updateRadio();
-}
-
-void radio_throttle_ISR(){
-  updateRadio();  
-}
-
-void radio_yaw_ISR(){
-  updateRadio();  
-}
-
-void radio_mode_ISR(){
-  updateRadio();
-}
-
-void radio_kill_ISR(){
-  updateRadio();
-}
-
-void updateRadio(){
-  double us = micros();
-
-  //Channel 1=========================================
-  if(last_channel_1 == 0 && digitalRead(radio_roll_pin)){         //Input 9 changed from 0 to 1
-    last_channel_1 = 1;                                 //Remember current input state
-    timer_1 = us;                                 //Set timer_1 to micros()
-  }
-  else if(last_channel_1 == 1 && !(digitalRead(radio_roll_pin))){  //Input 9 changed from 1 to 0
-    last_channel_1 = 0;                                 //Remember current input state
-    receiver_input_channel_1 = us - timer_1;      //Channel 1 is micros() - timer_1
-  }
-
-  //Channel 2=========================================
-  if(last_channel_2 == 0 && digitalRead(radio_pitch_pin)){         //Input 8 changed from 0 to 1
-    last_channel_2 = 1;                                 //Remember current input state
-    timer_2 = us;                                 //Set timer_2 to micros()
-  }
-  else if(last_channel_2 == 1 && !(digitalRead(radio_pitch_pin))){  //Input 8 changed from 1 to 0
-    last_channel_2 = 0;                                 //Remember current input state
-    receiver_input_channel_2 = us - timer_2;      //Channel 2 is micros() - timer_2
-  }
-
-  //Channel 3=========================================
-  if(last_channel_3 == 0 && digitalRead(radio_throttle_pin)){         //Input 7 changed from 0 to 1
-    last_channel_3 = 1;                                 //Remember current input state
-    timer_3 = us;                                 //Set timer_3 to micros()
-  }
-  else if(last_channel_3 == 1 && !(digitalRead(radio_throttle_pin))){  //Input 7 changed from 1 to 0
-    last_channel_3 = 0;                                 //Remember current input state
-    receiver_input_channel_3 = us - timer_3;      //Channel 3 is micros() - timer_3
-  }
-
-  //Channel 4=========================================
-  if(last_channel_4 == 0 && digitalRead(radio_yaw_pin)){         //Input 6 changed from 0 to 1
-    last_channel_4 = 1;                                 //Remember current input state
-    timer_4 = us;                                 //Set timer_4 to micros()
-  }
-  else if(last_channel_4 == 1 && !(digitalRead(radio_yaw_pin))){  //Input 6 changed from 1 to 0
-    last_channel_4 = 0;                                 //Remember current input state
-    receiver_input_channel_4 = us - timer_4;      //Channel 4 is micros() - timer_4
-  }
-
-    //Channel 5=========================================
-  if(last_channel_5 == 0 && digitalRead(radio_mode_pin)){         //Input 5 changed from 0 to 1
-    last_channel_5 = 1;                                 //Remember current input state
-    timer_5 = us;                                 //Set timer_3 to micros()
-  }
-  else if(last_channel_5 == 1 && !(digitalRead(radio_mode_pin))){  //Input 5 changed from 1 to 0
-    last_channel_5 = 0;                                 //Remember current input state
-    receiver_input_channel_5 = us - timer_5;      //Channel 3 is micros() - timer_3
-  }
-
-  //Channel 6=========================================
-  if(last_channel_6 == 0 && digitalRead(radio_kill_pin)){         //Input 3 changed from 0 to 1
-    last_channel_6 = 1;                                 //Remember current input state
-    timer_6 = us;                                 //Set timer_4 to micros()
-  }
-  else if(last_channel_6 == 1 && !(digitalRead(radio_kill_pin))){  //Input 3 changed from 1 to 0
-    last_channel_6 = 0;                                 //Remember current input state
-    receiver_input_channel_6 = us - timer_6;      //Channel 4 is micros() - timer_4
-  }
-}

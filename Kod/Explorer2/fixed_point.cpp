@@ -26,3 +26,4 @@ double decode_d(uint32_t b){
 	}
 	return d;
 }
+

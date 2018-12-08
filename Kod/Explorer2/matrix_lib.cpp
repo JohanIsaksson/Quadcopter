@@ -9,16 +9,16 @@ matrix matrix_create(int r, int c, double* d){
 }
 
 void matrix_zeroes(matrix A){
-  for (int i = 0; i < A.rows; ++i){
-    for (int j = 0; j < A.columns; ++j){
+  for (int i = 0; i < A.rows; i++){
+    for (int j = 0; j < A.columns; j++){
       A.data[i*A.columns + j] = 0.0;
     }
   }
 }
 
 void matrix_identity(matrix A){
-  for (int i = 0; i < A.rows; ++i){
-    for (int j = 0; j < A.columns; ++j){
+  for (int i = 0; i < A.rows; i++){
+    for (int j = 0; j < A.columns; j++){
       if (i == j){
         A.data[i*A.columns + j] = 1.0;
       }else{
@@ -30,10 +30,10 @@ void matrix_identity(matrix A){
 
 void matrix_multiply(matrix R, matrix A, matrix B){
   double s;
-  for (int i = 0; i < A.rows; ++i){
-    for (int j = 0; j < B.columns; ++j){
+  for (int i = 0; i < A.rows; i++){
+    for (int j = 0; j < B.columns; j++){
       s = 0;
-      for (int k = 0; k < B.rows; ++k){
+      for (int k = 0; k < B.rows; k++){
         s += (A.data[i*A.columns + k]) * (B.data[k*B.rows + j]);
       }
       R.data[i*R.columns + j] = s;
@@ -42,16 +42,16 @@ void matrix_multiply(matrix R, matrix A, matrix B){
 }
 
 void matrix_scale(matrix R, matrix A, double b){
-  for (int i = 0; i < A.rows; ++i){
-    for (int j = 0; j < A.columns; ++j){
+  for (int i = 0; i < A.rows; i++){
+    for (int j = 0; j < A.columns; j++){
       R.data[i*A.columns + j] = A.data[i*A.columns + j] * b;
     }
   }
 }
 
 void matrix_add(matrix R, matrix A, matrix B){
-  for (int i = 0; i < A.rows; ++i){
-    for (int j = 0; j < A.columns; ++j){
+  for (int i = 0; i < A.rows; i++){
+    for (int j = 0; j < A.columns; j++){
       R.data[i*A.columns + j] = A.data[i*A.columns + j] + B.data[i*A.columns + j];
     }
   }
@@ -59,8 +59,8 @@ void matrix_add(matrix R, matrix A, matrix B){
 
 
 void matrix_subtract(matrix R, matrix A, matrix B){
-  for (int i = 0; i < A.rows; ++i){
-    for (int j = 0; j < A.columns; ++j){
+  for (int i = 0; i < A.rows; i++){
+    for (int j = 0; j < A.columns; j++){
       R.data[i*A.columns + j] = A.data[i*A.columns + j] - B.data[i*A.columns + j];
     }
   }
@@ -68,8 +68,8 @@ void matrix_subtract(matrix R, matrix A, matrix B){
 
 
 void matrix_transpose(matrix R, matrix A){
-  for (int i = 0; i < A.rows; ++i){
-    for (int j = 0; j < A.columns; ++j){
+  for (int i = 0; i < A.rows; i++){
+    for (int j = 0; j < A.columns; j++){
       R.data[i + j*A.rows] = A.data[i*A.columns + j];
     }
   }
@@ -116,3 +116,4 @@ matrix operator/(matrix A, matrix B){
   return D;
 }
 */
+

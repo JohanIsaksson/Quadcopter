@@ -159,7 +159,7 @@ public:
   double temp;  
   double baro_altitude;
   double pressure, base_pressure;
-	double altitude, vertical_speed, vertical_acc;
+	double altitude, altitude_last, vertical_speed, vertical_acc;
 
 	/* Initializes the gyro and sets parameters */
 	void Init();
@@ -177,3 +177,4 @@ public:
 };
 
 #endif
+
