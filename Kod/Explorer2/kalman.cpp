@@ -1,9 +1,9 @@
 #include "kalman.h"
 
-void fillMatrix(double v0, double v1, double v2, 
-  double v3, double v4, double v5, 
-  double v6, double v7, double v8,
-  double* data){
+void fillMatrix(value v0, value v1, value v2, 
+  value v3, value v4, value v5, 
+  value v6, value v7, value v8,
+  value* data){
   data[0] = v0;
   data[1] = v1;
   data[2] = v2;
@@ -15,25 +15,25 @@ void fillMatrix(double v0, double v1, double v2,
   data[8] = v8;
 }
 
-void fillMatrix(double v0, double v1, 
-  double v2, double v3,
-  double* data){
+void fillMatrix(value v0, value v1, 
+  value v2, value v3,
+  value* data){
   data[0] = v0;
   data[1] = v1;
   data[2] = v2;
   data[3] = v3;
 }
 
-void fillMatrix(double v0, double v1, double v2, 
-  double* data){
+void fillMatrix(value v0, value v1, value v2, 
+  value* data){
   data[0] = v0;
   data[1] = v1;
   data[2] = v2;
 }
 
-void fillMatrix(double v0, double v1, double v2, 
-  double v3, double v4, double v5, 
-  double* data){
+void fillMatrix(value v0, value v1, value v2, 
+  value v3, value v4, value v5, 
+  value* data){
   data[0] = v0;
   data[1] = v1;
   data[2] = v2;
@@ -42,8 +42,8 @@ void fillMatrix(double v0, double v1, double v2,
   data[5] = v5;
 }
 
-void fillMatrix(double v0, double v1,
-  double* data){
+void fillMatrix(value v0, value v1,
+  value* data){
   data[0] = v0;
   data[1] = v1;
 }
@@ -216,7 +216,7 @@ void Kalman::InitPreset(){
   u = -0.98*9.82;
 }
 
-void Kalman::Update(double baro, double acc, double dt){
+void Kalman::Update(value baro, value acc, value dt){
 
   // set A and B matrices 	
   A.data[1] = dt;

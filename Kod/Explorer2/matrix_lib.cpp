@@ -1,6 +1,6 @@
 #include "matrix_lib.h"
 
-matrix matrix_create(int r, int c, double* d){
+matrix matrix_create(int r, int c, value* d){
   matrix m;
   m.rows = r;
   m.columns = c;
@@ -29,7 +29,7 @@ void matrix_identity(matrix A){
 }
 
 void matrix_multiply(matrix R, matrix A, matrix B){
-  double s;
+  value s;
   for (int i = 0; i < A.rows; i++){
     for (int j = 0; j < B.columns; j++){
       s = 0;
@@ -41,7 +41,7 @@ void matrix_multiply(matrix R, matrix A, matrix B){
   }
 }
 
-void matrix_scale(matrix R, matrix A, double b){
+void matrix_scale(matrix R, matrix A, value b){
   for (int i = 0; i < A.rows; i++){
     for (int j = 0; j < A.columns; j++){
       R.data[i*A.columns + j] = A.data[i*A.columns + j] * b;
@@ -82,7 +82,7 @@ void matrix_inverse(matrix R, matrix A){
   R.data[3] = A.data[0];
   R.data[1] = -A.data[1];
   R.data[2] = -A.data[2];
-  double s = A.data[0] * A.data[3] - A.data[2] * A.data[1];
+  value s = A.data[0] * A.data[3] - A.data[2] * A.data[1];
   matrix_scale(R, R, 1.0/s);
 }
 
@@ -92,11 +92,11 @@ matrix operator*(matrix A, matrix B){
   return matrix_multiply(A,B);
 }
 
-matrix operator*(matrix A, double b){
+matrix operator*(matrix A, value b){
   return matrix_scale(A, b);
 }
 
-matrix operator*(double b, matrix A){
+matrix operator*(value b, matrix A){
   return matrix_scale(A, b);
 }
 

@@ -563,6 +563,68 @@ void loop()
   time_diff = micros() - time_last;
   time_last = micros();
 
+  #ifdef DEBUG
+
+  if (print_cnt >= 10){
+
+    /*SerialPort.print((motors_on ? "On " : "Off"));
+    SerialPort.print(", ");
+  
+    if (flight_mode == MODE_ACRO)
+      SerialPort.print("ACRO         ");
+    else if (flight_mode == MODE_HORIZON)
+      SerialPort.print("HORIZON      ");
+    else if (flight_mode == MODE_ALT_HOLD)
+      SerialPort.print("ALTITUDE HOLD");
+    SerialPort.print(", ");*/
+
+    /*SerialPort.print(receiver_input_channel_1);
+    SerialPort.print(", ");
+    SerialPort.print(receiver_input_channel_2);
+    SerialPort.print(", ");
+    SerialPort.print(receiver_input_channel_3);
+    SerialPort.print(", ");
+    SerialPort.print(receiver_input_channel_4);
+    SerialPort.print(", ");
+    SerialPort.print(receiver_input_channel_5);
+    SerialPort.print(", ");
+    SerialPort.print(receiver_input_channel_6);
+    SerialPort.print(", ");
+    SerialPort.println(failSafe ? "Disconnected" : "Connected   ");*/
+    /*SerialPort.print(receiver_input_channel_7);
+    SerialPort.print(", ");
+    SerialPort.println(receiver_input_channel_8);*/
+    
+    /*SerialPort.print("ypr: ");
+    SerialPort.print(imu.ypr[0]);
+    SerialPort.print(", ");
+    SerialPort.print(imu.ypr[1]);
+    SerialPort.print(", ");
+    SerialPort.print(imu.ypr[2]);
+    SerialPort.print(", ");*/
+  
+    /*SerialPort.print("pressure: ");
+    SerialPort.print(imu.pressure);
+    SerialPort.print(", ");*/
+  
+    /*SerialPort.print("temp: ");
+    SerialPort.print(imu.temp);
+    SerialPort.print(", ");
+
+    SerialPort.print("baro altitude: ");
+    SerialPort.print(imu.baro_altitude);
+    SerialPort.print(", ");*/
+    
+    //SerialPort.print("kalman: ");
+    SerialPort.print(imu.altitude);
+    SerialPort.print(", ");
+    SerialPort.println(time_diff);
+
+    print_cnt = 0;
+  }
+  print_cnt++;
+#endif
+
 
   uint8_t sbus_packet[25];
   uint16_t channels[16];
@@ -634,68 +696,6 @@ void loop()
       }
     }
   }
-
-#ifdef DEBUG
-
-  if (print_cnt >= 10){
-
-    SerialPort.print((motors_on ? "On " : "Off"));
-    SerialPort.print(", ");
-  
-    if (flight_mode == MODE_ACRO)
-      SerialPort.print("ACRO         ");
-    else if (flight_mode == MODE_HORIZON)
-      SerialPort.print("HORIZON      ");
-    else if (flight_mode == MODE_ALT_HOLD)
-      SerialPort.print("ALTITUDE HOLD");
-    SerialPort.print(", ");
-
-    SerialPort.print(receiver_input_channel_1);
-    SerialPort.print(", ");
-    SerialPort.print(receiver_input_channel_2);
-    SerialPort.print(", ");
-    SerialPort.print(receiver_input_channel_3);
-    SerialPort.print(", ");
-    SerialPort.print(receiver_input_channel_4);
-    SerialPort.print(", ");
-    SerialPort.print(receiver_input_channel_5);
-    SerialPort.print(", ");
-    SerialPort.print(receiver_input_channel_6);
-    SerialPort.print(", ");
-    SerialPort.println(failSafe ? "Disconnected" : "Connected   ");
-    /*SerialPort.print(receiver_input_channel_7);
-    SerialPort.print(", ");
-    SerialPort.println(receiver_input_channel_8);*/
-    
-    /*SerialPort.print("ypr: ");
-    SerialPort.print(imu.ypr[0]);
-    SerialPort.print(", ");
-    SerialPort.print(imu.ypr[1]);
-    SerialPort.print(", ");
-    SerialPort.print(imu.ypr[2]);
-    SerialPort.print(", ");*/
-  
-    /*SerialPort.print("pressure: ");
-    SerialPort.print(imu.pressure);
-    SerialPort.print(", ");*/
-  
-    /*SerialPort.print("temp: ");
-    SerialPort.print(imu.temp);
-    SerialPort.print(", ");
-
-    SerialPort.print("baro altitude: ");
-    SerialPort.print(imu.baro_altitude);
-    SerialPort.print(", ");*/
-    
-    /*SerialPort.print("kalman: ");
-    SerialPort.print(imu.altitude);
-    SerialPort.print(", ");
-    SerialPort.println(imu.vertical_speed);*/
-
-    print_cnt = 0;
-  }
-  print_cnt++;
-#endif
 
   // Motor arming control
   switch (arm_mode)
