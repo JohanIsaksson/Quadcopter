@@ -34,10 +34,9 @@ class Kalman{
 public:
 
 	void Print();
-
 	void InitPreset();
-
 	void Update(value baro, value acc, value dt);
+  void Reset(bool hard);
 
 	double GetAltitude();
 	double GetVerticalSpeed();

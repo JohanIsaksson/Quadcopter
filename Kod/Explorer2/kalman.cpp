@@ -269,6 +269,20 @@ void Kalman::Update(value baro, value acc, value dt){
   matrix_multiply(P, IKH, P_p);   // 3,3
 }
 
+void Kalman::Reset(bool hard)
+{
+  if (hard)
+  {
+    InitPreset();
+  }
+  else
+  {
+    x.data[0] = 0;
+    x.data[1] = 0;
+    x.data[2] = 0;
+  }
+}
+
 double Kalman::GetAltitude(){
   return x.data[0];
 }
