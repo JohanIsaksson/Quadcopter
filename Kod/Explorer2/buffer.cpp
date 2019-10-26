@@ -11,69 +11,76 @@ Buffer::Buffer(int mSize)
   {
     maxSize = BUFFER_SIZE;
   }
-  start = 0;
-  end = 0;
-  size = 0;
+  startPos = 0;
+  endPos = 0;
+  currentSize = 0;
 }
 
 //----------------------------------------------------------------------------
 void Buffer::PushFront(uint8_t data)
 {
-  start = mapIndex(start - 1);
-  buffer[start] = data;
+  startPos = mapIndex(startPos - 1);
+  buffer[startPos] = data;
 }
 
 //----------------------------------------------------------------------------
 void Buffer::PushBack(uint8_t data)
 {
-  buffer[end] = data;
-  end = mapIndex(end + 1);
+  buffer[endPos] = data;
+  endPos = mapIndex(endPos + 1);
 }
 
 //----------------------------------------------------------------------------
 uint8_t Buffer::PopFront()
 {
-  uint8_t r = buffer[start];
-  start = mapIndex(start + 1);
+  uint8_t r = buffer[startPos];
+  startPos = mapIndex(startPos + 1);
   return r;
 }
 
 //----------------------------------------------------------------------------
 uint8_t Buffer::PopBack()
 {
-  end = mapIndex(end - 1);
-  return buffer[end];
+  endPos = mapIndex(endPos - 1);
+  return buffer[endPos];
 }
 
 //----------------------------------------------------------------------------
 int Buffer::Size()
 {
-  if (start > end)
+  if (startPos > endPos)
   {
-    size = maxSize - (start -end);
+    currentSize = maxSize - (startPos - endPos);
   }
   else
   {
-    size = end - start;
+    currentSize = endPos - startPos;
   }
+  return currentSize;
+}
+
+//----------------------------------------------------------------------------
+int Buffer::MaxSize()
+{
+  return maxSize;
 }
 
 //----------------------------------------------------------------------------
 int Buffer::StartPos()
 {
-  return start;
+  return startPos;
 }
 
 //----------------------------------------------------------------------------
 int Buffer::EndPos()
 {
-  return end;
+  return endPos;
 }
 
 //----------------------------------------------------------------------------
 uint8_t Buffer::At(int pos)
 {
-  return buffer[mapIndex(start + pos)];
+  return buffer[mapIndex(startPos + pos)];
 }
 
 //----------------------------------------------------------------------------

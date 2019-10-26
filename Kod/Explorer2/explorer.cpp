@@ -6,48 +6,20 @@ float Explorer::map_f(float x, float in_min, float in_max, float out_min, float 
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 // Initalizes ESCs by keeping throttle low for 3s. (MUST BE DONE ASAP AT POWER ON)
-void Explorer::init_motors()
+void Explorer::initMotors()
 {
-  uint32_t init_esc_time = micros() + 3000000;
+  uint32_t initializationTime = micros() + 3000000;
   for(int i = 0; i < 4; i++){
     throttle[i] = SPEED_MIN;
   }
 
-  while (micros() < init_esc_time){ //run for 3s approx
+  // Set speed
+  motorControl.SetSpeedFrontLeft(throttle[0]);
+  motorControl.SetSpeedFrontRight(throttle[1]);
+  motorControl.SetSpeedBackLeft(throttle[2]);
+  motorControl.SetSpeedFBackLeft(throttle[3]);
 
-    start_time = micros();
-    end_time = start_time + 2000;
-    start_motor_pulses();
-
-    esc_time = micros();
-
-    while(end_time > esc_time){                         
-      if (esc_time - start_time >= throttle[0]) *clr_fl = fl_MASK; //front left
-      if (esc_time - start_time >= throttle[1]) *clr_fr = fr_MASK; //front right
-      if (esc_time - start_time >= throttle[2]) *clr_bl = bl_MASK; //back left
-      if (esc_time - start_time >= throttle[3]) *clr_br = br_MASK; //back right
-      esc_time = micros();
-    }
-
-    stop_motor_pulses(); //for safety, set all outputs to 0*/
-
-
-    /*PORTB |= B00001111; // set all inputs to 1
-
-    esc_time = micros();
-
-    while(end_time > esc_time){                         
-      if (esc_time - start_time >= throttle[0]) PORTB &= B11111110; //front left
-      if (esc_time - start_time >= throttle[1]) PORTB &= B11111101; //front right
-      if (esc_time - start_time >= throttle[2]) PORTB &= B11111011; //back left
-      if (esc_time - start_time >= throttle[3]) PORTB &= B11110111; //back right
-      esc_time = micros();
-    }
-
-    PORTB &= B11110000; //for sfety, set all outputs to 0*/
-      
-    while(micros() - time_last < 4500);
-  }
+  while (micros() < initializationTime);
 }
 
 // Limit integer x to interval [a,b]
@@ -58,26 +30,8 @@ uint16_t Explorer::limit(uint16_t x, uint16_t a, uint16_t b)
   return x;
 }
 
-// Sets all motor pulses high
-void Explorer::start_motor_pulses()
-{
-  *set_fl = fl_MASK; //front left
-  *set_fr = fr_MASK; //front right
-  *set_bl = bl_MASK; //back left
-  *set_br = br_MASK; //back right
-}
-
-// Sets all motor pulses low
-void Explorer::stop_motor_pulses()
-{
-  *clr_fl = fl_MASK; //front left
-  *clr_fr = fr_MASK; //front right
-  *clr_bl = bl_MASK; //back left
-  *clr_br = br_MASK; //back right
-}
-
 // Sets final throttle by combining outputs from all PIDs 
-void Explorer::set_motor_speeds()
+void Explorer::UpdateMotorSpeeds()
 {
   //front left
   throttle[0] = rad_throttle + altitude_rate_out + front + left + cw;
@@ -111,49 +65,34 @@ void Explorer::set_motor_speeds()
   }
   #endif
 
-  //check and set speeds
+  // Verify that speeds are valid
   throttle[0] = limit(throttle[0], SPEED_MIN, SPEED_MAX);
   throttle[1] = limit(throttle[1], SPEED_MIN, SPEED_MAX);
   throttle[2] = limit(throttle[2], SPEED_MIN, SPEED_MAX);
   throttle[3] = limit(throttle[3], SPEED_MIN, SPEED_MAX);
-    
-  esc_time = micros();
 
-  while(end_time > esc_time){
-    if (esc_time - start_time >= throttle[0]) *clr_fl = fl_MASK; //front left
-    if (esc_time - start_time >= throttle[1]) *clr_fr = fr_MASK; //front right
-    if (esc_time - start_time >= throttle[2]) *clr_bl = bl_MASK; //back left
-    if (esc_time - start_time >= throttle[3]) *clr_br = br_MASK; //back right
-    esc_time = micros();
-  }
-  //turn all pulses off for safety
-  stop_motor_pulses();
-
-  if (flight_mode == MODE_HORIZON){
-    while(micros() - time_last < 4000);
-  }else if (flight_mode == MODE_ACRO){
-    while(micros() - time_last < 2800);
-  }
+  // Set speed
+  motorControl.SetSpeedFrontLeft(throttle[0]);
+  motorControl.SetSpeedFrontRight(throttle[1]);
+  motorControl.SetSpeedBackLeft(throttle[2]);
+  motorControl.SetSpeedFBackLeft(throttle[3]);
 }
 
 // Sets minimum throttle for all motors
-void Explorer::set_motor_speeds_min()
+void Explorer::setMotorSpeedsMin()
 {
-
-  while(end_time > micros());
-  stop_motor_pulses();
-
-  while(micros() - time_last < 4000);
+  motorControl.SetSpeedFrontLeft(SPEED_MIN);
+  motorControl.SetSpeedFrontRight(SPEED_MIN);
+  motorControl.SetSpeedBackLeft(SPEED_MIN);
+  motorControl.SetSpeedFBackLeft(SPEED_MIN);
 }
 
-void Explorer::set_motor_speeds_max()
+void Explorer::setMotorSpeedsMax()
 {
-
-  while(end_time > micros());
-  stop_motor_pulses();
-
-    
-  while(micros() - time_last < 4000);
+  motorControl.SetSpeedFrontLeft(SPEED_MAX);
+  motorControl.SetSpeedFrontRight(SPEED_MAX);
+  motorControl.SetSpeedBackLeft(SPEED_MAX);
+  motorControl.SetSpeedFBackLeft(SPEED_MAX);
 }
 
 void Explorer::Print()
@@ -161,41 +100,41 @@ void Explorer::Print()
 
   if (print_cnt >= 10){
 
-    /*SerialPort.print((motors_on ? "On " : "Off"));
-    SerialPort.print(", ");
+    SerialUSB.print((motors_on ? "On " : "Off"));
+    SerialUSB.print(", ");
   
     if (flight_mode == MODE_ACRO)
-      SerialPort.print("ACRO         ");
+      SerialUSB.print("ACRO         ");
     else if (flight_mode == MODE_HORIZON)
-      SerialPort.print("HORIZON      ");
+      SerialUSB.print("HORIZON      ");
     else if (flight_mode == MODE_ALT_HOLD)
-      SerialPort.print("ALTITUDE HOLD");
-    SerialPort.print(", ");*/
+      SerialUSB.print("ALTITUDE HOLD");
+    SerialUSB.print(", ");
 
-    SerialPort.print(rx.GetChannelData(0));
-    SerialPort.print(", ");
-    SerialPort.print(rx.GetChannelData(1));
-    SerialPort.print(", ");
-    SerialPort.print(rx.GetChannelData(2));
-    SerialPort.print(", ");
-    SerialPort.print(rx.GetChannelData(3));
-    SerialPort.print(", ");
-    SerialPort.print(rx.GetChannelData(4));
-    SerialPort.print(", ");
-    SerialPort.print(rx.GetChannelData(5));
-    SerialPort.print(", ");
-    SerialPort.println(failSafe ? "Disconnected" : "Connected   ");
+    SerialUSB.print(rx.GetChannelData(0));
+    SerialUSB.print(", ");
+    SerialUSB.print(rx.GetChannelData(1));
+    SerialUSB.print(", ");
+    SerialUSB.print(rx.GetChannelData(2));
+    SerialUSB.print(", ");
+    SerialUSB.print(rx.GetChannelData(3));
+    SerialUSB.print(", ");
+    SerialUSB.print(rx.GetChannelData(4));
+    SerialUSB.print(", ");
+    SerialUSB.print(rx.GetChannelData(5));
+    SerialUSB.print(", ");
+    SerialUSB.print(failSafe ? "Disconnected" : "Connected   ");
     /*SerialPort.print(receiver_input_channel_7);
     SerialPort.print(", ");
     SerialPort.println(receiver_input_channel_8);*/
     
-    /*SerialPort.print("ypr: ");
-    SerialPort.print(imu.ypr[0]);
-    SerialPort.print(", ");
-    SerialPort.print(imu.ypr[1]);
-    SerialPort.print(", ");
-    SerialPort.print(imu.ypr[2]);
-    SerialPort.print(", ");*/
+    SerialUSB.print("ypr: ");
+    SerialUSB.print(imu.ypr[0]);
+    SerialUSB.print(", ");
+    SerialUSB.print(imu.ypr[1]);
+    SerialUSB.print(", ");
+    SerialUSB.print(imu.ypr[2]);
+    SerialUSB.print(", ");
   
     /*SerialPort.print("pressure: ");
     SerialPort.print(imu.pressure);
@@ -210,13 +149,19 @@ void Explorer::Print()
     SerialPort.print(", ");*/
     
     //SerialPort.print("kalman: ");
-    /*SerialPort.print(imu.altitude);
-    SerialPort.print(", ");
-    SerialPort.println(time_diff);*/
+    /*SerialPort.print(imu.altitude);*/
+    SerialUSB.print(", ");
+    SerialUSB.println(time_diff);
 
     print_cnt = 0;
   }
   print_cnt++;
+}
+
+
+Explorer::Explorer()
+{
+
 }
 
 /*
@@ -228,15 +173,8 @@ void Explorer::Print()
  ##  ## ##       ##   ##  ## ##
   ####  ######   ##    ####  ##
 */
-Explorer::Explorer()
+void Explorer::Setup()
 {
-  delay(2000);
-
-  #ifdef DEBUG
-  SerialPort.begin(115200);
-  SerialPort.println("Starting up");
-  #endif
-
   // Communication with radio
   Serial1.begin(100000, SERIAL_8E2);
   radio_off_counter = 0;
@@ -288,6 +226,8 @@ Explorer::Explorer()
   pid_altitude_hold.Init();
   pid_altitude_hold.SetConstants(P_altitude_h, I_altitude_h, D_altitude_h, INTEGRAL_MAX);
 
+  motorControl.Setup();
+
   front = 0;
   left = 0;
   cw = 0;
@@ -296,14 +236,8 @@ Explorer::Explorer()
   SerialPort.println("Initializing ESCs...");
   #endif
 
-  //set pins as outputs
-  pinMode(fl_pin, OUTPUT);
-  pinMode(fr_pin, OUTPUT);
-  pinMode(bl_pin, OUTPUT);
-  pinMode(br_pin, OUTPUT);
-
   // Initialize ESCs
-  init_motors();
+  initMotors();
 
   // Initialize arm controls
   arm_mode = UNARMED;
@@ -327,7 +261,7 @@ Explorer::Explorer()
  ##  ## ##  ## ## ##   ##  ##     ##  ## ##  ##
  ##  ##  ####  ##  ## #### ######  ####  ##  ##
 */
-void Explorer::Update_horizon(float t)
+void Explorer::UpdateHorizon(float t)
 {
   //map inputs to angles
   rad_roll = map_f((float)rx.GetChannelData(0),1000.0, 2000.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
@@ -346,15 +280,15 @@ void Explorer::Update_horizon(float t)
 }
 
 /*
-   ##    ####  #####   ####  #####    ## ###### #### ####
-  ####  ##  ## ##  ## ##  ## ##  ##  ####  ##    ## ##  ##
- ##  ## ##     ##  ## ##  ## ##  ## ##  ## ##    ## ##
- ###### ##     #####  ##  ## #####  ###### ##    ## ##
- ##  ## ##     ####   ##  ## ##  ## ##  ## ##    ## ##
- ##  ## ##  ## ## ##  ##  ## ##  ## ##  ## ##    ## ##  ##
- ##  ##  ####  ##  ##  ####  #####  ##  ## ##   #### ####
+   ##    ####  #####   ####  #####    ##   ###### ####  ####
+  ####  ##  ## ##  ## ##  ## ##  ##  ####    ##    ##  ##  ##
+ ##  ## ##     ##  ## ##  ## ##  ## ##  ##   ##    ##  ##
+ ###### ##     #####  ##  ## #####  ######   ##    ##  ##
+ ##  ## ##     ####   ##  ## ##  ## ##  ##   ##    ##  ##
+ ##  ## ##  ## ## ##  ##  ## ##  ## ##  ##   ##    ##  ##  ##
+ ##  ##  ####  ##  ##  ####  #####  ##  ##   ##   ####  ####
 */
-void Explorer::Update_acro(float t)
+void Explorer::UpdateAcro(float t)
 {
   rad_roll = map_f((float)rx.GetChannelData(0),1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
   rad_pitch = map_f((float)rx.GetChannelData(1),1000.0, 2000.0, -REF_MAX_ACRO, REF_MAX_ACRO);
@@ -375,7 +309,7 @@ void Explorer::Update_acro(float t)
  ##  ## ##      ##    ##    ##   ##  ## ## ##  ##
  ##  ## ######  ##   ####   ##    ####  ####   ######
 */
-void Explorer::Update_altitude_hold(float t)
+void Explorer::UpdateAltitudeHold(float t)
 {
   //map inputs to angles
   rad_roll = map_f((float)rx.GetChannelData(0),1000.0, 2000.0, -REF_MAX_HORIZON, REF_MAX_HORIZON);
@@ -415,27 +349,26 @@ void Explorer::Update_altitude_hold(float t)
 }
 
 /*
- ##     ####   ####  #####
- ##    ##  ## ##  ## ##  ##
- ##    ##  ## ##  ## ##  ##
- ##    ##  ## ##  ## #####
- ##    ##  ## ##  ## ##
- ##    ##  ## ##  ## ##
- ###### ####   ####  ##
+ ##      ####   ####  #####
+ ##     ##  ## ##  ## ##  ##
+ ##     ##  ## ##  ## ##  ##
+ ##     ##  ## ##  ## #####
+ ##     ##  ## ##  ## ##
+ ##     ##  ## ##  ## ##
+ ######  ####   ####  ##
 */
 void Explorer::Update()
 {
-
+  SerialUSB.println("Update");
 
   time_diff = micros() - time_last;
   time_last = micros();
 
   #ifdef DEBUG
-  Print();
+  //Print();
   #endif
-
+  
   rx.Update();
-
 
   // Motor arming control
   switch (arm_mode)
@@ -516,11 +449,9 @@ void Explorer::Update()
 
   // Update all sensors in the imu
   timed = (float)time_diff/1000000.0;
-  imu.Update(timed); 
-
-  // Start esc pulses
-  start_time = micros();  
-  start_motor_pulses();
+  uint32_t watch = micros();
+  imu.Update(timed);
+  SerialUSB.println(micros() - watch);
 
   // Map throttle sent from radio
   rad_throttle = map(rx.GetChannelData(2), 1000, 2000, 1060, 1800);
@@ -532,15 +463,15 @@ void Explorer::Update()
     switch (flight_mode)
     {
         case MODE_HORIZON:
-          Update_horizon(timed);
+          UpdateHorizon(timed);
           break;
 
         case MODE_ACRO:
-          Update_acro(timed);
+          UpdateAcro(timed);
           break;
 
         case MODE_ALT_HOLD:
-          Update_altitude_hold(timed);
+          UpdateAltitudeHold(timed);
           break;
 
         default:
@@ -548,15 +479,13 @@ void Explorer::Update()
           break;
     }   
     // Apply new speeds to motors
-    end_time = start_time + 2000;
-    set_motor_speeds();
+    UpdateMotorSpeeds();
   }
   else
   {
     digitalWrite(13, LOW);
     // Keep motors updated
-    end_time = start_time + 1015;
-    set_motor_speeds_min();
+    setMotorSpeedsMin();
   }
 }
 

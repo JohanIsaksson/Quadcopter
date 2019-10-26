@@ -38,7 +38,7 @@ void SbusDecoder::Update()
     for (int i = 0; i < buffer.Size() - SBUS_PACKET_SIZE; i++)
     {
       if (buffer.At(i) == SBUS_START_BYTE &&
-          buffer.At(i + SBUS_PACKET_SIZE) == SBUS_END_BYTE)
+          buffer.At(i + SBUS_PACKET_SIZE - 2) == SBUS_END_BYTE)
       {
         // Complete frame found
         lastReceived = micros();

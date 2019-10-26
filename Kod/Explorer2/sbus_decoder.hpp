@@ -50,7 +50,7 @@ public:
 
 
 private:
-  Buffer buffer{};
+  Buffer buffer{128};
   uint16_t channels[18];
 
   uint64_t lastReceived;

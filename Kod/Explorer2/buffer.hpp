@@ -14,14 +14,15 @@ public:
   uint8_t PopFront();
   uint8_t PopBack();
   int Size();
+  int MaxSize();
   int StartPos();
   int EndPos();
   uint8_t At(int pos);
 
 private:
-  int start;
-  int end;
-  int size;
+  int startPos;
+  int endPos;
+  int currentSize;
   int maxSize;
   bool overflow;
   uint8_t buffer[BUFFER_SIZE];

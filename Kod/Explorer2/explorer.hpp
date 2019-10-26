@@ -4,6 +4,7 @@
 #include "imu.h"
 #include "pid.h"
 #include "sbus_decoder.hpp"
+#include "motor_control.hpp"
 #include <Arduino.h>
 
 #define SPEED_MIN 1000
@@ -47,31 +48,7 @@ private:
                       2 = back left
                       3 = back right
                     */
-
-  // Motor pins
-  #define fl_pin 10 //front left
-  #define fr_pin 11 //front right
-  #define bl_pin 12 //back left
-  #define br_pin 13 //back right
-
-  // Faster IO for samd21
-  #ifdef _VARIANT_ARDUINO_ZERO_
-    volatile uint32_t *set_fl = &PORT->Group[g_APinDescription[fl_pin].ulPort].OUTSET.reg;
-    volatile uint32_t *clr_fl = &PORT->Group[g_APinDescription[fl_pin].ulPort].OUTCLR.reg;
-    const uint32_t  fl_MASK = (1ul << g_APinDescription[fl_pin].ulPin);
-
-    volatile uint32_t *set_fr = &PORT->Group[g_APinDescription[fr_pin].ulPort].OUTSET.reg;
-    volatile uint32_t *clr_fr = &PORT->Group[g_APinDescription[fr_pin].ulPort].OUTCLR.reg;
-    const uint32_t  fr_MASK = (1ul << g_APinDescription[fr_pin].ulPin);
-
-    volatile uint32_t *set_bl = &PORT->Group[g_APinDescription[bl_pin].ulPort].OUTSET.reg;
-    volatile uint32_t *clr_bl = &PORT->Group[g_APinDescription[bl_pin].ulPort].OUTCLR.reg;
-    const uint32_t  bl_MASK = (1ul << g_APinDescription[bl_pin].ulPin);
-
-    volatile uint32_t *set_br = &PORT->Group[g_APinDescription[br_pin].ulPort].OUTSET.reg;
-    volatile uint32_t *clr_br = &PORT->Group[g_APinDescription[br_pin].ulPort].OUTCLR.reg;
-    const uint32_t  br_MASK = (1ul << g_APinDescription[br_pin].ulPin);
-  #endif
+  MotorControl motorControl;
 
   // PID outputs for each axis
   int front;
@@ -133,7 +110,6 @@ private:
 
   // Motor control variables
   bool motors_on, disable_sticks;
-  uint32_t esc_time, start_time, end_time;
 
   // Arming control
   uint8_t arm_mode;
@@ -154,25 +130,24 @@ private:
   #endif
 
   float map_f(float x, float in_min, float in_max, float out_min, float out_max);
-  void init_motors();
+  void initMotors();
   uint16_t limit(uint16_t x, uint16_t a, uint16_t b);
 
-  void start_motor_pulses();
-  void stop_motor_pulses();
-  void set_motor_speeds();
+  void UpdateMotorSpeeds();
 
-  void set_motor_speeds_min();
-  void set_motor_speeds_max();
+  void setMotorSpeedsMin();
+  void setMotorSpeedsMax();
 
-  void Update_horizon(float t);
-  void Update_acro(float t);
-  void Update_altitude_hold(float t);
+  void UpdateHorizon(float t);
+  void UpdateAcro(float t);
+  void UpdateAltitudeHold(float t);
 
   void Print();
 
 
 public:
   Explorer();
+  void Setup();
   void Update();
 
 
