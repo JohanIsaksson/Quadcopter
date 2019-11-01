@@ -196,7 +196,7 @@ void Explorer::Setup()
   P_yaw = 2.0;
   I_yaw = 0.8;
 
-  imu.Init();
+  imu.Setup();
 
   pitchRatePID.Init();
   pitchRatePID.SetConstants(P_pitch_a, I_pitch_a, D_pitch_a, INTEGRAL_MAX);

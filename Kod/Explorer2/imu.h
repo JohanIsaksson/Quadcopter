@@ -49,9 +49,11 @@
 #define MS5611_ADC_READ 0x00
 #define MS5611_PROM_READ 0x48
 
-class IMU{
+class IMU
+{
 
 private:
+  void I2C_writeWord(uint8_t devAddress, uint16_t regAddress, int16_t data);
 
 public:
   uint8_t I2C_buffer[22];
@@ -128,7 +130,7 @@ public:
   float altitude, altitude_last, vertical_speed, vertical_acc;
 
   /* Initializes the gyro and sets parameters */
-  void Init();
+  void Setup();
 
   /* Update Everything: Gyroscope, Accelerometer, Barometer, (GPS) */
   void Update(float dt);

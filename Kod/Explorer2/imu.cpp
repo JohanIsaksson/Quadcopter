@@ -1,11 +1,11 @@
 
 #include "SpeedTrig.h"
 #include "imu.h"
-#include "Wire.h"
-#include "I2Cdev.h"
+#include "I2C_DMAC.h"
 
 
-void IMU::ComplementaryFilter(float tim){
+void IMU::ComplementaryFilter(float tim)
+{
 
   // Low pass filter accelerometer data through moving average */
   ax_sum -= ax_buf[lp_pos];
@@ -63,11 +63,12 @@ void IMU::CalculateGyro(){
 }
 
 /* Initializes the imu and sets parameters */
-void IMU::Init(){
+void IMU::Setup(){
   // join I2C bus
-  Wire.end();
+  /*Wire.end();
   Wire.begin();
-  Wire.setClock(400000);
+  Wire.setClock(400000);*/
+  I2C.begin(400000);
 
   SerialUSB.println("Initializing IMU");
 
@@ -76,7 +77,6 @@ void IMU::Init(){
 }
 
 /* ------------------------------------------------------------------------- */
-
 void IMU::CalculateAltitude(float dt){
 
   float cosr = cos(ypr_rad[ROLL]);
@@ -108,20 +108,25 @@ void IMU::CalculateAltitude(float dt){
 void IMU::MS5611_temp_start(){
   SerialUSB.println("MS5611_temp_start");
   //I2Cdev::writeBytes(MS5611_ADDR, MS5611_COMMAND_TEMPERATURE, 0, NULL);
-  Wire.beginTransmission(MS5611_ADDR);
+  /*Wire.beginTransmission(MS5611_ADDR);
   Wire.write(MS5611_COMMAND_TEMPERATURE);
-  Wire.endTransmission();
+  Wire.endTransmission();*/
+
+  I2C.writeBytes(MS5611_ADDR, MS5611_COMMAND_TEMPERATURE, I2C_buffer, 0);
 }
 
 void IMU::MS5611_temp_read(){
   SerialUSB.println("MS5611_temp_read");
   //I2Cdev::readBytes(MS5611_ADDR, 0, 3, I2C_buffer);
-  Wire.beginTransmission(MS5611_ADDR);
+  /*Wire.beginTransmission(MS5611_ADDR);
   Wire.write((uint8_t)0x00);
   Wire.endTransmission();
-  Wire.requestFrom(MS5611_ADDR, 3);
+  Wire.requestFrom(MS5611_ADDR, 3);*/
+  I2C.initReadBytes(MS5611_ADDR, I2C_buffer, 3);
+  I2C.read();
+  while(I2C.readBusy);
 
-  raw_temp = Wire.read() << 16 | Wire.read() << 8 | Wire.read();
+  raw_temp = (uint32_t)I2C_buffer[0] << 16 | (uint32_t)I2C_buffer[1] << 8 | (uint32_t)I2C_buffer[2];
 
   /* low pass filter through moving average */
   temp_sum -= temp_buf[temp_pos];
@@ -134,20 +139,24 @@ void IMU::MS5611_temp_read(){
 void IMU::MS5611_pressure_start(){
   SerialUSB.println("MS5611_pressure_start");
   //I2Cdev::writeBytes(MS5611_ADDR, MS5611_COMMAND_PRESSURE, 0, NULL);
-  Wire.beginTransmission(MS5611_ADDR);
+  /*Wire.beginTransmission(MS5611_ADDR);
   Wire.write(MS5611_COMMAND_PRESSURE);
-  Wire.endTransmission();
+  Wire.endTransmission();*/
+  I2C.writeBytes(MS5611_ADDR, MS5611_COMMAND_PRESSURE, I2C_buffer, 0);
 }
 
 void IMU::MS5611_pressure_read(){
   SerialUSB.println("MS5611_pressure_read");
   //I2Cdev::readBytes(MS5611_ADDR, 0, 3, I2C_buffer);
-  Wire.beginTransmission(MS5611_ADDR);
+  /*Wire.beginTransmission(MS5611_ADDR);
   Wire.write((uint8_t)0x00);
   Wire.endTransmission();
-  Wire.requestFrom(MS5611_ADDR, 3);
-  
-  raw_pressure = Wire.read() << 16 | Wire.read() << 8 | Wire.read();
+  Wire.requestFrom(MS5611_ADDR, 3);*/
+  I2C.initReadBytes(MS5611_ADDR, I2C_buffer, 3);
+  I2C.read();
+  while(I2C.readBusy);
+
+  raw_pressure = (uint32_t)I2C_buffer[0] << 16 | (uint32_t)I2C_buffer[1] << 8 | (uint32_t)I2C_buffer[2];
 
   /* low pass filter through moving average */
   pressure_sum -= pressure_buf[pressure_pos];
@@ -181,17 +190,17 @@ void IMU::MS5611_init(){
   SerialUSB.println("MS5611_init");
   // Retrieve calibration data from device:
   for (uint8_t start = 1; start <= 6; start++) {
-    SerialUSB.println("------ 1");
-    Wire.beginTransmission(MS5611_ADDR);
-    SerialUSB.println("------ 2");
+    /*Wire.beginTransmission(MS5611_ADDR);
     Wire.write(0xA0 + start * 2);
-    SerialUSB.println("------ 3");
     Wire.endTransmission();
+    Wire.requestFrom(MS5611_ADDR, 2);*/
+    I2C.writeBytes(MS5611_ADDR, 0xA0 + start * 2, I2C_buffer, 0);
+    I2C.initReadBytes(MS5611_ADDR, I2C_buffer, 2);
+    I2C.read();
+    while(I2C.readBusy);
 
-    SerialUSB.println("before request");
-    Wire.requestFrom(MS5611_ADDR, 2);
-    SerialUSB.println("after request");
-    C[start] = Wire.read() << 8 | Wire.read();
+    //C[start] = Wire.read() << 8 | Wire.read();
+    C[start] = (uint16_t)I2C_buffer[0] << 8 | (uint16_t)I2C_buffer[1];
   }
   
   //I2Cdev::readBytes(MS5611_ADDR, 0xA0, 12, I2C_buffer);
@@ -286,21 +295,39 @@ void IMU::MS5611_update(){
 }
 
 /* ------------------------------------------------------------------------- */
+void IMU::I2C_writeWord(uint8_t devAddress, uint16_t regAddress, int16_t data)
+{
+  uint8_t bytes[2];
+  bytes[0] = (uint8_t)((data & 0xFF00) >> 8);
+  bytes[1] = (uint8_t)(data & 0x00FF);
+  I2C.writeBytes(devAddress, regAddress, bytes, 2);
+}
+
+
+/* ------------------------------------------------------------------------- */
 
 void IMU::MPU6050_init(){
-  I2Cdev::writeBits(MPU6050_ADDR, 0x6B, 2, 3, 0x01); //set internal clock to XGYRO - should be best
+/*  I2Cdev::writeBits(MPU6050_ADDR, 0x6B, 2, 3, 0x01); //set internal clock to XGYRO - should be best
   I2Cdev::writeBits(MPU6050_ADDR, 0x1B, 4, 2, 0x00); //set full scale gyro range +- 250 deg/s
   I2Cdev::writeBits(MPU6050_ADDR, 0x1C, 4, 2, 0x00); //set full scale accelerometer range +- 2g
-  I2Cdev::writeBit(MPU6050_ADDR, 0x6B, 6, false); //set sleep to false
+  I2Cdev::writeBit(MPU6050_ADDR, 0x6B, 6, false); //set sleep to false*/
+  I2C.writeByte(MPU6050_ADDR, 0x6B, 0x01);              // Wake up set external clock to xgyro
+  I2C.writeByte(MPU6050_ADDR, 0x1A, 0x00);              // gyro/accel filter to ~256Hz  
+  I2C.writeByte(MPU6050_ADDR, 0x1B, 0x08);    // Set full scale range to +/-500 degrees/s  
+  I2C.writeByte(MPU6050_ADDR, 0x1C, 0x08);   // Set full scale range to +/-4g
 
   //set offsets (on chip 1)
-  I2Cdev::writeWord(MPU6050_ADDR, 0x06, -772); //x acc
-  I2Cdev::writeWord(MPU6050_ADDR, 0x08, -622); //y acc
-  I2Cdev::writeWord(MPU6050_ADDR, 0x0A, 1000); //z acc
+  I2C_writeWord(MPU6050_ADDR, 0x06, -772); //x acc
+  I2C_writeWord(MPU6050_ADDR, 0x08, -622); //y acc
+  I2C_writeWord(MPU6050_ADDR, 0x0A, 1000); //z acc
 
-  I2Cdev::writeWord(MPU6050_ADDR, 0x13, 77);// 98); //x gyro
-  I2Cdev::writeWord(MPU6050_ADDR, 0x15, 28);// 32); //y gyro
-  I2Cdev::writeWord(MPU6050_ADDR, 0x17, -24);// 18); //z gyro
+  I2C_writeWord(MPU6050_ADDR, 0x13, 77);// 98); //x gyro
+  I2C_writeWord(MPU6050_ADDR, 0x15, 28);// 32); //y gyro
+  I2C_writeWord(MPU6050_ADDR, 0x17, -24);// 18); //z gyro
+
+
+  
+  
 
   // Reset low pass filters
   for (int i = 0; i < LP_BUFFER_SIZE; i++){
@@ -319,7 +346,10 @@ void IMU::MPU6050_init(){
 }
 
 void IMU::MPU6050_update(){
-  I2Cdev::readBytes(MPU6050_ADDR, MPU6050_DATAREG, 14, I2C_buffer);
+  //I2Cdev::readBytes(MPU6050_ADDR, MPU6050_DATAREG, 14, I2C_buffer);
+  I2C.initReadBytes(MPU6050_ADDR, I2C_buffer, 14);
+  I2C.read();
+  while(I2C.readBusy);
   ax = (((int16_t)I2C_buffer[0]) << 8) | I2C_buffer[1];
   ay = (((int16_t)I2C_buffer[2]) << 8) | I2C_buffer[3];
   az = (((int16_t)I2C_buffer[4]) << 8) | I2C_buffer[5];
